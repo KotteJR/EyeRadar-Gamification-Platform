@@ -31,10 +31,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize and cleanup application resources"""
+    logger.info("Starting EyeRadar API — initializing database...")
     await init_db()
+    logger.info("Database initialized successfully.")
 
-    # Probe LLM providers (OpenAI or Ollama)
-    llm_status = await check_ollama()
+    # Probe LLM providers (OpenAI or Ollama) — never let this crash the app
+    try:
+        llm_status = await check_ollama()
+    except Exception as exc:
+        logger.error("LLM probe crashed unexpectedly: %s", exc)
+        llm_status = {"status": "unavailable", "provider": "none", "error": str(exc)}
+
     app.state.ollama_status = llm_status
 
     provider = llm_status.get("provider", "none")
@@ -61,6 +68,7 @@ async def lifespan(app: FastAPI):
             "Set OPENAI_API_KEY for cloud AI or start Ollama for local AI."
         )
 
+    logger.info("EyeRadar API ready on port %s", os.getenv("PORT", "8000"))
     yield
 
 
