@@ -220,7 +220,7 @@ function ExercisePlayContent() {
               {areaLabel}
             </span>
             <span className="text-xs text-slate-400">Lv. {session.difficulty_level}</span>
-            {currentItem?.extra_data?.ai_generated && (
+            {Boolean(currentItem?.extra_data?.ai_generated) && (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-600" title="AI-generated content">
                 ✨ AI
               </span>
