@@ -5,15 +5,16 @@
 This system generates personalized dyslexia intervention exercises
 based on EyeRadar eye-tracking diagnostic data.
 
-Uses local Ollama LLMs for AI-enhanced content generation:
-  - qwen3-vl:8b  (heavy): stories, comprehension, inference
-  - qwen3-vl:4b  (light): word banks, rhymes, hints
+LLM support (auto-switches based on environment):
+  - OpenAI: set OPENAI_API_KEY env var (used on Railway/cloud)
+  - Ollama: local llama3.2 models (used in development)
 
 Author: EyeRadar Team
-Version: 1.1.0
+Version: 1.2.0
 """
 
 import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -32,22 +33,32 @@ async def lifespan(app: FastAPI):
     """Initialize and cleanup application resources"""
     await init_db()
 
-    # Probe local Ollama for AI content generation
-    ollama_status = await check_ollama()
-    app.state.ollama_status = ollama_status
-    if ollama_status["status"] == "ready":
-        logger.info("Ollama AI content generation is ACTIVE")
-    elif ollama_status["status"] == "models_missing":
+    # Probe LLM providers (OpenAI or Ollama)
+    llm_status = await check_ollama()
+    app.state.ollama_status = llm_status
+
+    provider = llm_status.get("provider", "none")
+    status = llm_status.get("status", "unknown")
+
+    if status == "ready":
+        logger.info(
+            "AI content generation ACTIVE via %s (heavy=%s, light=%s)",
+            provider.upper(),
+            llm_status.get("heavy_model"),
+            llm_status.get("light_model"),
+        )
+    elif status == "models_missing":
         logger.warning(
-            "Ollama is running but models not found. "
+            "LLM provider %s is running but models not found. "
             "Pull them with:  ollama pull %s && ollama pull %s",
-            ollama_status["heavy_model"],
-            ollama_status["light_model"],
+            provider,
+            llm_status.get("heavy_model"),
+            llm_status.get("light_model"),
         )
     else:
         logger.warning(
-            "Ollama not available — using template-based content generation. "
-            "Start Ollama for AI-enhanced exercises."
+            "No LLM available — using template-based content generation. "
+            "Set OPENAI_API_KEY for cloud AI or start Ollama for local AI."
         )
 
     yield
@@ -56,7 +67,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="EyeRadar Dyslexia Exercise API",
     description="AI-powered personalized exercise generation for dyslexia intervention",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=lifespan,
 )
 
@@ -83,7 +94,7 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytic
 async def root():
     return {
         "message": "EyeRadar Dyslexia Exercise API",
-        "version": "1.0.0",
+        "version": "1.2.0",
         "documentation": "/docs",
     }
 
@@ -92,15 +103,17 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "ai_content": getattr(app.state, "ollama_status", {}).get("status", "unknown"),
+        "ai_provider": getattr(app.state, "ollama_status", {}).get("provider", "none"),
+        "ai_status": getattr(app.state, "ollama_status", {}).get("status", "unknown"),
     }
 
 
 @app.get("/ai-status")
 async def ai_status():
-    """Check the status of the local Ollama LLM integration."""
+    """Check the status of the LLM integration (OpenAI or Ollama)."""
     return getattr(app.state, "ollama_status", {"status": "not_initialized"})
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
