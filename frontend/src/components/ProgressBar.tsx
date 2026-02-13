@@ -22,15 +22,15 @@ export default function ProgressBar({
     <div className="w-full">
       {(label || showPercentage) && (
         <div className="flex justify-between items-center mb-1.5">
-          {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
+          {label && <span className="text-sm font-medium text-neutral-700">{label}</span>}
           {showPercentage && (
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-neutral-500">
               {Math.round(percent)}%
             </span>
           )}
         </div>
       )}
-      <div className={`w-full bg-slate-100 rounded-full overflow-hidden ${heights[size]}`}>
+      <div className={`w-full bg-neutral-100 rounded-full overflow-hidden ${heights[size]}`}>
         <div
           className={`progress-fill ${heights[size]} rounded-full`}
           style={{ width: `${percent}%`, backgroundColor: color }}

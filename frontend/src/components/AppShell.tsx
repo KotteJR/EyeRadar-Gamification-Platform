@@ -76,12 +76,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Standard layout with sidebar
+  // Standard layout with top navbar
   return (
     <>
       <Sidebar />
-      <main className="ml-64 min-h-screen bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-8 py-8">{children}</div>
+      <main className="pt-14 min-h-screen bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
       </main>
     </>
   );

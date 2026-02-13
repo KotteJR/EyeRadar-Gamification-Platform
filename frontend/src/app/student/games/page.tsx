@@ -8,6 +8,12 @@ import { api } from "@/lib/api";
 import type { GameDefinition, DeficitArea } from "@/types";
 import { DEFICIT_AREA_LABELS, DEFICIT_AREA_COLORS } from "@/types";
 import GameCard from "@/components/GameCard";
+import { CATEGORY_ASSETS } from "@/lib/game-assets";
+import {
+  Sparkles,
+  ChevronRight,
+  Shuffle,
+} from "lucide-react";
 
 const ALL_AREAS: DeficitArea[] = [
   "phonological_awareness",
@@ -17,15 +23,6 @@ const ALL_AREAS: DeficitArea[] = [
   "reading_fluency",
   "comprehension",
 ];
-
-const AREA_DESCRIPTIONS: Record<string, string> = {
-  phonological_awareness: "Sound and letter games",
-  rapid_naming: "Quick naming challenges",
-  working_memory: "Memory and recall",
-  visual_processing: "Eye and pattern training",
-  reading_fluency: "Speed reading practice",
-  comprehension: "Understanding text",
-};
 
 export default function StudentGamesPage() {
   const { user } = useAuth();
@@ -85,112 +82,106 @@ export default function StudentGamesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <div className="student-ui flex items-center justify-center h-96">
+        <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="student-ui">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
-        <Link href="/student" className="hover:text-indigo-600 transition-colors">
+      <div className="flex items-center gap-2 text-[13px] text-neutral-400 mb-6 font-medium">
+        <Link href="/student" className="hover:text-neutral-900 transition-colors">
           Dashboard
         </Link>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-slate-700 font-medium">Games</span>
+        <ChevronRight size={14} />
+        <span className="text-neutral-900 font-semibold">Games</span>
       </div>
 
-      {/* Generate Game Section */}
-      <div className="bg-gradient-to-br from-indigo-50/80 to-purple-50/60 rounded-2xl border border-indigo-100/60 p-6 mb-8">
-        <div className="flex items-start justify-between mb-5">
+      {/* ─── Generate Game Section ──────────────────────────── */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-1">
+            <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">
               Generate a Game
             </h2>
-            <p className="text-sm text-slate-500">
-              Pick a skill area and we&apos;ll create a personalized game just for you!
+            <p className="text-[13px] text-neutral-400 mt-0.5">
+              Pick a skill area and we&apos;ll create a personalized game just for you.
             </p>
           </div>
-          <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-full bg-neutral-100 text-neutral-500">
+            <Sparkles size={12} />
             AI Powered
           </span>
         </div>
 
-        {/* Skill Area Cards */}
+        {/* Skill Area Image Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
           {ALL_AREAS.map((area) => {
-            const color = DEFICIT_AREA_COLORS[area];
+            const catAsset = CATEGORY_ASSETS[area];
             const count = ageGames.filter((g) => g.deficit_area === area).length;
             return (
               <button
                 key={area}
                 onClick={() => handleQuickPlay(area)}
                 disabled={generating || count === 0}
-                className="p-4 rounded-xl border-2 text-left transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed bg-white"
-                style={{ borderColor: `${color}30` }}
+                className="group relative overflow-hidden rounded-2xl aspect-[4/3] transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 text-xs font-bold text-white"
-                  style={{ backgroundColor: color }}
-                >
-                  {count}
+                  className="absolute inset-0"
+                  style={{ background: `linear-gradient(135deg, ${catAsset.gradient[0]}, ${catAsset.gradient[1]})` }}
+                />
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                  style={{ backgroundImage: `url(${catAsset.image})` }}
+                />
+                <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 z-[1]">
+                  <p className="text-[12px] font-semibold text-white leading-tight drop-shadow-sm">
+                    {DEFICIT_AREA_LABELS[area]}
+                  </p>
+                  <p className="text-[10px] text-white/60 font-medium">
+                    {count} {count === 1 ? "game" : "games"}
+                  </p>
                 </div>
-                <p className="text-xs font-semibold text-slate-800 leading-tight">
-                  {DEFICIT_AREA_LABELS[area]}
-                </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  {AREA_DESCRIPTIONS[area]}
-                </p>
               </button>
             );
           })}
         </div>
 
-        {/* Random Generate Button */}
+        {/* Random Generate */}
         <div className="flex items-center gap-3">
-          <select
-            value={selectedAreaForGen}
-            onChange={(e) =>
-              setSelectedAreaForGen(e.target.value as DeficitArea | "")
-            }
-            className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700"
-          >
-            <option value="">Any skill area</option>
-            {ALL_AREAS.map((area) => (
-              <option key={area} value={area}>
-                {DEFICIT_AREA_LABELS[area]}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={selectedAreaForGen}
+              onChange={(e) =>
+                setSelectedAreaForGen(e.target.value as DeficitArea | "")
+              }
+              className="text-[13px] appearance-none bg-transparent text-neutral-500 font-medium pr-5 cursor-pointer hover:text-neutral-900 transition-colors focus:outline-none"
+            >
+              <option value="">Any skill area</option>
+              {ALL_AREAS.map((area) => (
+                <option key={area} value={area}>
+                  {DEFICIT_AREA_LABELS[area]}
+                </option>
+              ))}
+            </select>
+            <ChevronRight size={13} className="absolute right-0 top-1/2 -translate-y-1/2 rotate-90 text-neutral-400 pointer-events-none" />
+          </div>
           <button
             onClick={handleGenerateRandom}
             disabled={generating || ageGames.length === 0}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shadow-indigo-200"
+            className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {generating ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+                <Shuffle size={15} />
                 Surprise Me!
               </>
             )}
@@ -198,40 +189,30 @@ export default function StudentGamesPage() {
         </div>
       </div>
 
-      {/* Browse All Games */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Browse All Games</h1>
-        <p className="text-slate-400 mt-1 text-sm">
+      {/* ─── Browse All Games ──────────────────────────────── */}
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold text-neutral-900 tracking-tight">Browse All Games</h2>
+        <p className="text-neutral-400 mt-0.5 text-[13px]">
           {ageGames.length} games available for your age.
         </p>
       </div>
 
-      {/* Area Filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Pill Tab Filters */}
+      <div className="flex flex-wrap gap-1.5 mb-6">
         <button
           onClick={() => setActiveArea("all")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-            activeArea === "all"
-              ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-          }`}
+          className={`pill-tab ${activeArea === "all" ? "active" : ""}`}
         >
           All ({ageGames.length})
         </button>
         {ALL_AREAS.map((area) => {
-          const color = DEFICIT_AREA_COLORS[area];
           const count = ageGames.filter((g) => g.deficit_area === area).length;
           if (count === 0) return null;
           return (
             <button
               key={area}
               onClick={() => setActiveArea(area)}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-all border"
-              style={{
-                backgroundColor: activeArea === area ? color : "white",
-                color: activeArea === area ? "white" : color,
-                borderColor: activeArea === area ? color : `${color}30`,
-              }}
+              className={`pill-tab ${activeArea === area ? "active" : ""}`}
             >
               {DEFICIT_AREA_LABELS[area]} ({count})
             </button>
@@ -240,7 +221,7 @@ export default function StudentGamesPage() {
       </div>
 
       {/* Games Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((game) => (
           <GameCard key={game.id} game={game} studentId={user.studentId} />
         ))}

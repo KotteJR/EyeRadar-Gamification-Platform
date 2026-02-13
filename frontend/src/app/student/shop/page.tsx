@@ -14,6 +14,21 @@ import {
 import Avatar from "@/components/Avatar";
 import type { AvatarConfig } from "@/components/Avatar";
 import type { Student } from "@/types";
+import {
+  ChevronRight,
+  Star,
+  Check,
+  Lock,
+  ShoppingCart,
+  Shirt,
+  Palette,
+  Glasses,
+  Eye as EyeIcon,
+  Smile,
+  User,
+  Paintbrush,
+  Crown,
+} from "lucide-react";
 
 const ALL_CATEGORIES: AvatarCategory[] = [
   "top",
@@ -26,6 +41,18 @@ const ALL_CATEGORIES: AvatarCategory[] = [
   "hairColor",
   "hatColor",
 ];
+
+const CATEGORY_ICONS: Record<AvatarCategory, React.ReactNode> = {
+  top: <Crown size={14} />,
+  clothing: <Shirt size={14} />,
+  clothesColor: <Palette size={14} />,
+  accessories: <Glasses size={14} />,
+  eyes: <EyeIcon size={14} />,
+  mouth: <Smile size={14} />,
+  skinColor: <User size={14} />,
+  hairColor: <Paintbrush size={14} />,
+  hatColor: <Palette size={14} />,
+};
 
 export default function ShopPage() {
   const { user, purchaseItem, updateAvatar } = useAuth();
@@ -55,7 +82,6 @@ export default function ShopPage() {
     [selectedItem]
   );
 
-  // Stable preview config: only compute when selected item changes
   const previewConfig = useMemo<AvatarConfig | null>(() => {
     if (!selectedItemData) return null;
     return {
@@ -112,64 +138,62 @@ export default function ShopPage() {
   if (!user) return null;
 
   return (
-    <div>
+    <div className="student-ui">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
-        <Link href="/student" className="hover:text-indigo-600 transition-colors">
+      <div className="flex items-center gap-2 text-[13px] text-neutral-400 mb-6 font-medium">
+        <Link href="/student" className="hover:text-neutral-900 transition-colors">
           Dashboard
         </Link>
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-slate-700 font-medium">Avatar Shop</span>
+        <ChevronRight size={14} />
+        <span className="text-neutral-900 font-semibold">Avatar Shop</span>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* ─── Sticky Avatar Preview ───────────────────────────────── */}
-        <div className="lg:w-80 flex-shrink-0">
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden lg:sticky lg:top-6 shadow-sm">
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-8 flex flex-col items-center">
+        {/* ─── Sticky Avatar Preview ───────────────────────── */}
+        <div className="lg:w-72 flex-shrink-0">
+          <div className="bg-cream rounded-2xl overflow-hidden lg:sticky lg:top-6">
+            <div className="p-8 flex flex-col items-center">
               <Avatar
                 config={previewConfig || currentConfig}
                 seed={user.username}
-                size={180}
+                size={160}
               />
               <div
-                className={`mt-3 text-xs font-medium px-3 py-1 rounded-full transition-opacity duration-200 ${
-                  previewConfig ? "opacity-100 bg-amber-100 text-amber-700" : "opacity-0"
+                className={`mt-3 text-[11px] font-medium px-3 py-1 rounded-full transition-opacity duration-200 ${
+                  previewConfig ? "opacity-100 bg-amber-50 text-amber-600" : "opacity-0"
                 }`}
               >
                 Preview Mode
               </div>
             </div>
-            <div className="p-5 text-center border-t border-slate-100">
-              <p className="text-xs text-slate-400 mb-1">Points Available</p>
-              <p className="text-3xl font-bold text-indigo-600">
-                {points.toLocaleString()}
-              </p>
+            <div className="p-4 text-center">
+              <p className="text-[11px] text-neutral-400 font-medium mb-1">Points Available</p>
+              <div className="flex items-center justify-center gap-1.5">
+                <Star size={18} className="text-amber-400" fill="currentColor" />
+                <p className="text-2xl font-semibold text-neutral-900">
+                  {points.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ─── Shop Content ──────────────────────────────────────── */}
+        {/* ─── Shop Content ────────────────────────────────── */}
         <div className="flex-1 min-w-0">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">Avatar Shop</h1>
-            <p className="text-slate-500 mt-1">
+          <div className="mb-5">
+            <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Avatar Shop</h1>
+            <p className="text-neutral-400 mt-0.5 text-[13px]">
               Click an item to preview, then buy or equip it.
             </p>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          {/* Category Pill Tabs */}
+          <div className="flex flex-wrap gap-1.5 mb-5">
             <button
               onClick={() => { setActiveCategory("all"); setSelectedItem(null); }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeCategory === "all"
-                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
+              className={`pill-tab ${activeCategory === "all" ? "active" : ""}`}
             >
+              <ShoppingCart size={13} />
               All ({AVATAR_ITEMS.length})
             </button>
             {ALL_CATEGORIES.map((cat) => {
@@ -179,12 +203,9 @@ export default function ShopPage() {
                 <button
                   key={cat}
                   onClick={() => { setActiveCategory(cat); setSelectedItem(null); }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                    activeCategory === cat
-                      ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
+                  className={`pill-tab ${activeCategory === cat ? "active" : ""}`}
                 >
+                  {CATEGORY_ICONS[cat]}
                   {CATEGORY_LABELS[cat]} ({count})
                 </button>
               );
@@ -192,7 +213,7 @@ export default function ShopPage() {
           </div>
 
           {/* Item List */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {filtered.map((item) => {
               const isOwned = owned.includes(item.id) || item.cost === 0;
               const isEq = isEquipped(item);
@@ -204,91 +225,77 @@ export default function ShopPage() {
                 <div
                   key={item.id}
                   onClick={() => setSelectedItem(isSelected ? null : item.id)}
-                  className={`flex items-center gap-4 rounded-xl border p-4 cursor-pointer transition-all duration-150 ${
+                  className={`flex items-center gap-3 rounded-xl p-3 cursor-pointer transition-all duration-150 ${
                     isSelected
-                      ? "bg-indigo-50 border-indigo-300 shadow-sm ring-1 ring-indigo-200"
+                      ? "bg-neutral-100"
                       : isEq
-                      ? "bg-white border-indigo-200"
-                      : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                      ? "bg-emerald-50/50"
+                      : "hover:bg-cream"
                   }`}
                 >
-                  {/* Preview emoji */}
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-colors ${
-                      isSelected ? "bg-indigo-100" : "bg-slate-50"
-                    }`}
-                  >
+                  {/* Preview circle */}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 bg-neutral-50">
                     {item.preview}
                   </div>
 
                   {/* Name + Description */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                    <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                      <p className="text-[13px] font-semibold text-neutral-900">{item.name}</p>
                       <span
-                        className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
-                        style={{
-                          backgroundColor: `${rarityColor}15`,
-                          color: rarityColor,
-                        }}
+                        className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: `${rarityColor}10`, color: rarityColor }}
                       >
                         {item.rarity}
                       </span>
                       {isEq && (
-                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600">
+                        <span className="flex items-center gap-0.5 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">
+                          <Check size={9} />
                           Equipped
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400">{item.description}</p>
+                    <p className="text-xs text-neutral-400">{item.description}</p>
                   </div>
 
                   {/* Price + Action */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {item.cost > 0 && !isOwned && (
-                      <span className="text-sm font-bold text-slate-600">
-                        {item.cost}{" "}
-                        <span className="text-xs font-normal text-slate-400">pts</span>
+                      <span className="flex items-center gap-1 text-[13px] font-medium text-neutral-600">
+                        <Star size={12} className="text-amber-400" fill="currentColor" />
+                        {item.cost}
                       </span>
                     )}
                     {(item.cost === 0 || isOwned) && !isEq && (
-                      <span className="text-xs font-medium text-emerald-500">
+                      <span className="text-[11px] font-medium text-emerald-500">
                         {isOwned ? "Owned" : "Free"}
                       </span>
                     )}
 
                     {isEq ? (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUnequip(item);
-                        }}
-                        className="px-4 py-2 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleUnequip(item); }}
+                        className="btn-outline text-[12px] px-3 py-1.5 min-h-0"
                       >
                         Unequip
                       </button>
                     ) : isOwned ? (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEquip(item);
-                        }}
-                        className="px-4 py-2 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleEquip(item); }}
+                        className="btn-primary text-[12px] px-3 py-1.5 min-h-0"
                       >
                         Equip
                       </button>
                     ) : canAfford ? (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBuy(item);
-                        }}
-                        className="px-4 py-2 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleBuy(item); }}
+                        className="btn-primary text-[12px] px-3 py-1.5 min-h-0"
                       >
                         Buy
                       </button>
                     ) : (
-                      <span className="px-4 py-2 text-xs font-medium rounded-lg bg-slate-100 text-slate-400">
+                      <span className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium rounded-full bg-neutral-50 text-neutral-400">
+                        <Lock size={11} />
                         Locked
                       </span>
                     )}

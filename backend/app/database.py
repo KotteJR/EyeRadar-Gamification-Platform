@@ -19,7 +19,21 @@ async def get_db() -> aiosqlite.Connection:
     if _db is None:
         _db = await aiosqlite.connect(DB_PATH)
         _db.row_factory = aiosqlite.Row
+        # Enable WAL mode for better concurrent read/write
+        await _db.execute("PRAGMA journal_mode=WAL")
+        await _db.execute("PRAGMA busy_timeout=5000")
     return _db
+
+
+async def reset_db_connection():
+    """Reset the DB connection if it gets into a bad state."""
+    global _db
+    if _db is not None:
+        try:
+            await _db.close()
+        except Exception:
+            pass
+    _db = None
 
 
 async def init_db():
@@ -35,6 +49,7 @@ async def init_db():
             language TEXT DEFAULT 'en',
             interests TEXT DEFAULT '[]',
             assessment TEXT,
+            diagnostic TEXT DEFAULT '{}',
             current_levels TEXT DEFAULT '{}',
             total_points INTEGER DEFAULT 0,
             current_streak INTEGER DEFAULT 0,
@@ -77,6 +92,13 @@ async def init_db():
     )
     await db.commit()
 
+    # Migrate: add diagnostic column if missing (for existing DBs)
+    try:
+        await db.execute("SELECT diagnostic FROM students LIMIT 1")
+    except Exception:
+        await db.execute("ALTER TABLE students ADD COLUMN diagnostic TEXT DEFAULT '{}'")
+        await db.commit()
+
 
 # ─── Student CRUD ─────────────────────────────────────────────────────────────
 
@@ -84,11 +106,12 @@ async def init_db():
 async def create_student(student_data: Dict[str, Any]) -> Dict[str, Any]:
     db = await get_db()
     await db.execute(
-        """INSERT INTO students (id, name, age, grade, language, interests, current_levels, created_at)
-           VALUES (:id, :name, :age, :grade, :language, :interests, :current_levels, :created_at)""",
+        """INSERT INTO students (id, name, age, grade, language, interests, diagnostic, current_levels, created_at)
+           VALUES (:id, :name, :age, :grade, :language, :interests, :diagnostic, :current_levels, :created_at)""",
         {
             **student_data,
             "interests": json.dumps(student_data.get("interests", [])),
+            "diagnostic": json.dumps(student_data.get("diagnostic", {})),
             "current_levels": json.dumps(student_data.get("current_levels", {})),
         },
     )
@@ -118,7 +141,7 @@ async def update_student(student_id: str, data: Dict[str, Any]) -> Optional[Dict
     params = {}
     for key, value in data.items():
         if value is not None:
-            if key in ("interests", "current_levels", "badges", "assessment"):
+            if key in ("interests", "current_levels", "badges", "assessment", "diagnostic"):
                 params[key] = json.dumps(value) if isinstance(value, (list, dict)) else value
             else:
                 params[key] = value
@@ -157,6 +180,13 @@ def _parse_student_row(row: Dict[str, Any]) -> Dict[str, Any]:
             row[field] = json.loads(row[field])
     if isinstance(row.get("assessment"), str):
         row["assessment"] = json.loads(row["assessment"])
+    if isinstance(row.get("diagnostic"), str):
+        try:
+            row["diagnostic"] = json.loads(row["diagnostic"])
+        except (json.JSONDecodeError, TypeError):
+            row["diagnostic"] = {}
+    if row.get("diagnostic") is None:
+        row["diagnostic"] = {}
     return row
 
 

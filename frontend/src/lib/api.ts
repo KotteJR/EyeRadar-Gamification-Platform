@@ -42,6 +42,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  updateStudent: (id: string, data: Partial<StudentCreate>) =>
+    fetchAPI<Student>(`/students/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
   deleteStudent: (id: string) =>
     fetchAPI<{ message: string }>(`/students/${id}`, { method: "DELETE" }),
   importAssessment: (studentId: string, assessment: Record<string, unknown>) =>

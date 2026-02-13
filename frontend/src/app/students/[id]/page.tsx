@@ -11,8 +11,14 @@ import type {
   ExerciseRecommendation,
   GamificationSummary,
   EyeRadarAssessment,
+  DiagnosticInfo,
 } from "@/types";
-import { DEFICIT_AREA_LABELS, DEFICIT_AREA_COLORS } from "@/types";
+import {
+  DEFICIT_AREA_LABELS,
+  DEFICIT_AREA_COLORS,
+  DYSLEXIA_TYPE_LABELS,
+  SEVERITY_LABELS,
+} from "@/types";
 import StatsCard from "@/components/StatsCard";
 import ProgressBar from "@/components/ProgressBar";
 import BadgeCard from "@/components/BadgeCard";
@@ -91,10 +97,15 @@ export default function StudentDetailPage() {
   if (loading || !student) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#FF5A39] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
+
+  const diagData = (student.diagnostic && Object.keys(student.diagnostic).length > 0
+    ? student.diagnostic
+    : null) as DiagnosticInfo | null;
+  const hasDiag = diagData && diagData.dyslexia_type && diagData.dyslexia_type !== "unspecified";
 
   const deficitAreas = Object.keys(student.current_levels || {});
   const completedSessions = sessions.filter((s) => s.status === "completed");
@@ -127,35 +138,58 @@ export default function StudentDetailPage() {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
-        <Link href="/students" className="hover:text-indigo-600 transition-colors">
+      <div className="flex items-center gap-2 text-sm text-neutral-400 mb-6">
+        <Link href="/students" className="hover:text-[#FF5A39] transition-colors">
           Students
         </Link>
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-slate-700 font-medium">{student.name}</span>
+        <span className="text-neutral-700 font-medium">{student.name}</span>
       </div>
 
       {/* Student Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm">
+      <div className="bg-cream rounded-2xl p-6 mb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-xl font-bold text-indigo-600">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #475093, #303FAE)" }}
+            >
               {student.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{student.name}</h1>
-              <p className="text-sm text-slate-400">
+              <h1 className="text-xl font-bold text-[#303030]">{student.name}</h1>
+              <p className="text-sm text-[#ABABAB]">
                 Age {student.age} &middot; Grade {student.grade} &middot;{" "}
                 {student.language.toUpperCase()}
               </p>
+              {hasDiag && diagData && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#475093]/10 text-[#475093] font-semibold">
+                    {DYSLEXIA_TYPE_LABELS[diagData.dyslexia_type]}
+                  </span>
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
+                    diagData.severity_level === "severe"
+                      ? "bg-red-50 text-red-600"
+                      : diagData.severity_level === "moderate"
+                      ? "bg-orange-50 text-orange-600"
+                      : "bg-emerald-50 text-emerald-600"
+                  }`}>
+                    {SEVERITY_LABELS[diagData.severity_level]}
+                  </span>
+                  {diagData.has_adhd && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">ADHD</span>}
+                  {diagData.has_dyscalculia && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">Dyscalculia</span>}
+                  {diagData.has_dysgraphia && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">Dysgraphia</span>}
+                </div>
+              )}
               {student.interests.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {student.interests.map((i) => (
                     <span
                       key={i}
-                      className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[11px] rounded-full font-medium"
+                      className="px-2 py-0.5 text-[11px] rounded-full font-medium text-white"
+                      style={{ background: "linear-gradient(90deg, #FF5A39, #FF9E75)" }}
                     >
                       {i}
                     </span>
@@ -166,20 +200,53 @@ export default function StudentDetailPage() {
           </div>
           <button
             onClick={() => setShowAssessment(!showAssessment)}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+            className="btn-primary px-4 py-2 text-sm font-medium"
           >
             {student.assessment ? "Update Assessment" : "Import Assessment"}
           </button>
         </div>
       </div>
 
+      {/* Diagnostic Summary Card */}
+      {hasDiag && diagData && (
+        <div className="bg-cream rounded-2xl p-5 mb-6">
+          <h2 className="text-sm font-semibold text-[#303030] mb-3">Deficit Area Severity Ratings</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {([
+              ["phonological_severity", "Phonological"],
+              ["rapid_naming_severity", "Rapid Naming"],
+              ["working_memory_severity", "Working Memory"],
+              ["visual_processing_severity", "Visual Processing"],
+              ["reading_fluency_severity", "Reading Fluency"],
+              ["comprehension_severity", "Comprehension"],
+            ] as [keyof DiagnosticInfo, string][]).map(([key, label]) => {
+              const val = (diagData[key] as number) || 3;
+              const color = val <= 2 ? "#10b981" : val <= 3 ? "#f59e0b" : "#ef4444";
+              return (
+                <div key={key} className="text-center p-3 bg-[#F8F8F8] rounded-xl">
+                  <div className="text-2xl font-bold" style={{ color }}>{val}</div>
+                  <div className="text-[10px] text-[#999] font-medium mt-0.5">/5</div>
+                  <div className="text-[11px] text-[#555] font-medium mt-1">{label}</div>
+                </div>
+              );
+            })}
+          </div>
+          {diagData.notes && (
+            <div className="mt-3 px-3 py-2 bg-[#F8F8F8] rounded-lg">
+              <span className="text-[11px] text-[#999] font-medium">Notes: </span>
+              <span className="text-xs text-[#555]">{diagData.notes}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Assessment Import */}
       {showAssessment && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">
+        <div className="bg-cream rounded-2xl p-6 mb-6">
+          <h2 className="text-sm font-semibold text-neutral-900 mb-3">
             Import EyeRadar Assessment
           </h2>
-          <p className="text-xs text-slate-400 mb-3">
+          <p className="text-xs text-neutral-400 mb-3">
             Paste the JSON assessment data from EyeRadar:
           </p>
           <textarea
@@ -187,19 +254,19 @@ export default function StudentDetailPage() {
             onChange={(e) => setAssessmentJson(e.target.value)}
             placeholder={`{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { ... },\n  "reading_metrics": { ... }\n}`}
             rows={8}
-            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-mono bg-slate-50/50 resize-none placeholder:text-slate-300"
+            className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
           />
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleImportAssessment}
               disabled={importing || !assessmentJson.trim()}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {importing ? "Importing..." : "Import"}
             </button>
             <button
               onClick={() => setShowAssessment(false)}
-              className="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-xl hover:bg-neutral-200 transition-colors"
             >
               Cancel
             </button>
@@ -213,7 +280,7 @@ export default function StudentDetailPage() {
           title="Level"
           value={student.level}
           subtitle={gamification?.level_info.title || "Beginner"}
-          color="indigo"
+          color="blue"
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -268,13 +335,13 @@ export default function StudentDetailPage() {
 
       {/* XP Progress */}
       {gamification && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-6 shadow-sm">
+        <div className="bg-cream rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-neutral-700">
               Level {gamification.level_info.level} &mdash;{" "}
               {gamification.level_info.title}
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-neutral-400">
               {gamification.level_info.xp} / {gamification.level_info.xp_for_next_level} XP
             </span>
           </div>
@@ -287,15 +354,15 @@ export default function StudentDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-fit">
+      <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 mb-6 w-fit">
         {(["overview", "sessions", "badges"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === tab
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
+                ? "bg-white text-neutral-900 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
             {tab === "sessions"
@@ -309,12 +376,12 @@ export default function StudentDetailPage() {
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Performance by Area */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">
+          <div className="bg-cream rounded-2xl p-6">
+            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Performance by Area
             </h2>
             {Object.keys(areaStats).length === 0 ? (
-              <p className="text-sm text-slate-400 py-4">
+              <p className="text-sm text-neutral-400 py-4">
                 No sessions yet. The student needs to play some games first.
               </p>
             ) : (
@@ -340,11 +407,11 @@ export default function StudentDetailPage() {
                               className="w-2 h-2 rounded-full"
                               style={{ backgroundColor: color }}
                             />
-                            <span className="text-sm font-medium text-slate-700">
+                            <span className="text-sm font-medium text-neutral-700">
                               {label}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-400">
+                          <div className="flex items-center gap-3 text-xs text-neutral-400">
                             <span>{stats.sessions} sessions</span>
                             <span
                               className="font-semibold"
@@ -376,12 +443,12 @@ export default function StudentDetailPage() {
           </div>
 
           {/* Deficit Area Levels */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">
+          <div className="bg-cream rounded-2xl p-6">
+            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Difficulty Levels
             </h2>
             {deficitAreas.length === 0 ? (
-              <p className="text-sm text-slate-400 py-4">
+              <p className="text-sm text-neutral-400 py-4">
                 No data yet. Levels update after playing games.
               </p>
             ) : (
@@ -409,12 +476,12 @@ export default function StudentDetailPage() {
           </div>
 
           {/* Recommendations */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">
+          <div className="bg-cream rounded-2xl p-6">
+            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Recommended Next
             </h2>
             {recommendations.length === 0 ? (
-              <p className="text-sm text-slate-400">No recommendations yet.</p>
+              <p className="text-sm text-neutral-400">No recommendations yet.</p>
             ) : (
               <div className="space-y-2">
                 {recommendations.slice(0, 5).map((rec, idx) => {
@@ -423,13 +490,13 @@ export default function StudentDetailPage() {
                   return (
                     <div
                       key={`${rec.game_id}-${idx}`}
-                      className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors"
+                      className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 hover:border-neutral-200 transition-colors"
                     >
                       <div>
-                        <p className="text-sm font-medium text-slate-800">
+                        <p className="text-sm font-medium text-neutral-800">
                           {rec.game_name}
                         </p>
-                        <p className="text-xs text-slate-400">{rec.reason}</p>
+                        <p className="text-xs text-neutral-400">{rec.reason}</p>
                       </div>
                       <span
                         className="text-[11px] font-medium px-2 py-1 rounded-full"
@@ -445,12 +512,12 @@ export default function StudentDetailPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">
+          <div className="bg-cream rounded-2xl p-6">
+            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Recent Activity
             </h2>
             {completedSessions.length === 0 ? (
-              <p className="text-sm text-slate-400">No sessions yet.</p>
+              <p className="text-sm text-neutral-400">No sessions yet.</p>
             ) : (
               <div className="space-y-2">
                 {completedSessions.slice(0, 5).map((s) => {
@@ -463,15 +530,15 @@ export default function StudentDetailPage() {
                   return (
                     <div
                       key={s.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80"
+                      className="flex items-center justify-between p-3 rounded-xl bg-neutral-50/80"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{getGameIcon(s.game_id)}</span>
                         <div>
-                          <p className="text-sm font-medium text-slate-800">
+                          <p className="text-sm font-medium text-neutral-800">
                             {s.game_name}
                           </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[11px] text-neutral-400">
                             {new Date(s.started_at).toLocaleDateString()} &middot; Lvl{" "}
                             {s.difficulty_level}
                           </p>
@@ -481,7 +548,7 @@ export default function StudentDetailPage() {
                         <p className={`text-sm font-bold ${accColor}`}>
                           {Math.round(s.accuracy)}%
                         </p>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-neutral-400">
                           {s.correct_count}/{s.total_items} &middot; +{s.points_earned}pts
                         </p>
                       </div>
@@ -494,37 +561,37 @@ export default function StudentDetailPage() {
 
           {/* Assessment Summary */}
           {student.assessment && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 lg:col-span-2 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4">
+            <div className="bg-cream rounded-2xl p-6 lg:col-span-2">
+              <h2 className="text-sm font-semibold text-neutral-900 mb-4">
                 Assessment Summary
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-slate-900">
+                <div className="p-3 bg-neutral-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-neutral-900">
                     {student.assessment.overall_severity}/5
                   </p>
-                  <p className="text-[11px] text-slate-400">Overall Severity</p>
+                  <p className="text-[11px] text-neutral-400">Overall Severity</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-slate-900">
+                <div className="p-3 bg-neutral-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-neutral-900">
                     {student.assessment.reading_metrics.words_per_minute}
                   </p>
-                  <p className="text-[11px] text-slate-400">Words/Min</p>
+                  <p className="text-[11px] text-neutral-400">Words/Min</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-slate-900">
+                <div className="p-3 bg-neutral-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-neutral-900">
                     {student.assessment.reading_metrics.fixation_duration_ms}ms
                   </p>
-                  <p className="text-[11px] text-slate-400">Fixation Duration</p>
+                  <p className="text-[11px] text-neutral-400">Fixation Duration</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-slate-900">
+                <div className="p-3 bg-neutral-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-neutral-900">
                     {(
                       student.assessment.reading_metrics.regression_rate * 100
                     ).toFixed(0)}
                     %
                   </p>
-                  <p className="text-[11px] text-slate-400">Regression Rate</p>
+                  <p className="text-[11px] text-neutral-400">Regression Rate</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -537,16 +604,16 @@ export default function StudentDetailPage() {
                     return (
                       <div
                         key={area}
-                        className="p-3 border border-slate-100 rounded-xl"
+                        className="p-3 border border-neutral-100 rounded-xl"
                       >
-                        <p className="text-sm font-medium text-slate-700">
+                        <p className="text-sm font-medium text-neutral-700">
                           {label}
                         </p>
                         <div className="flex items-baseline gap-2 mt-1">
-                          <span className="text-lg font-bold text-slate-900">
+                          <span className="text-lg font-bold text-neutral-900">
                             {info.severity}/5
                           </span>
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-neutral-400">
                             {info.percentile}th percentile
                           </span>
                         </div>
@@ -564,10 +631,10 @@ export default function StudentDetailPage() {
       {activeTab === "sessions" && (
         <div>
           {sessions.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <div className="bg-cream rounded-2xl p-16 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-7 h-7 text-slate-400"
+                  className="w-7 h-7 text-neutral-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -580,10 +647,10 @@ export default function StudentDetailPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+              <h3 className="text-lg font-semibold text-neutral-900 mb-1">
                 No sessions yet
               </h3>
-              <p className="text-slate-400 text-sm">
+              <p className="text-neutral-400 text-sm">
                 This student hasn&apos;t played any games yet.
               </p>
             </div>
@@ -603,19 +670,19 @@ export default function StudentDetailPage() {
                 return (
                   <div
                     key={session.id}
-                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
+                    className="bg-cream rounded-2xl overflow-hidden"
                   >
                     <button
                       onClick={() =>
                         setExpandedSession(isExpanded ? null : session.id)
                       }
-                      className="w-full p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-left"
+                      className="w-full p-4 flex items-center justify-between hover:bg-neutral-50/50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-4">
                         <span className="text-2xl">{getGameIcon(session.game_id)}</span>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-slate-900">
+                            <p className="text-sm font-semibold text-neutral-900">
                               {session.game_name}
                             </p>
                             <span
@@ -629,12 +696,12 @@ export default function StudentDetailPage() {
                                 session.deficit_area}
                             </span>
                             {session.status !== "completed" && (
-                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500">
                                 {session.status}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[11px] text-neutral-400 mt-0.5">
                             {new Date(session.started_at).toLocaleString()} &middot;
                             Difficulty {session.difficulty_level}
                           </p>
@@ -649,15 +716,15 @@ export default function StudentDetailPage() {
                           </span>
                         </div>
                         <div className="text-right hidden sm:block">
-                          <p className="text-sm font-medium text-slate-700">
+                          <p className="text-sm font-medium text-neutral-700">
                             {session.correct_count}/{session.total_items}
                           </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[11px] text-neutral-400">
                             +{session.points_earned} pts
                           </p>
                         </div>
                         <svg
-                          className={`w-4 h-4 text-slate-400 transition-transform ${
+                          className={`w-4 h-4 text-neutral-400 transition-transform ${
                             isExpanded ? "rotate-180" : ""
                           }`}
                           fill="none"
@@ -675,8 +742,8 @@ export default function StudentDetailPage() {
                     </button>
 
                     {isExpanded && session.results.length > 0 && (
-                      <div className="border-t border-slate-100 p-4 bg-slate-50/40">
-                        <div className="flex items-center gap-4 mb-4 text-xs text-slate-400">
+                      <div className="border-t border-neutral-100 p-4 bg-neutral-50/40">
+                        <div className="flex items-center gap-4 mb-4 text-xs text-neutral-400">
                           <span>
                             Avg response:{" "}
                             {(session.avg_response_time_ms / 1000).toFixed(1)}s
@@ -688,7 +755,7 @@ export default function StudentDetailPage() {
                           )}
                         </div>
                         <div className="space-y-1.5">
-                          <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-3 mb-1">
+                          <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-wide px-3 mb-1">
                             <div className="col-span-1">#</div>
                             <div className="col-span-4">Question</div>
                             <div className="col-span-3">Their Answer</div>
@@ -706,11 +773,11 @@ export default function StudentDetailPage() {
                                     : "bg-red-50/50"
                                 }`}
                               >
-                                <div className="col-span-1 text-xs text-slate-400">
+                                <div className="col-span-1 text-xs text-neutral-400">
                                   {idx + 1}
                                 </div>
                                 <div
-                                  className="col-span-4 text-slate-700 truncate"
+                                  className="col-span-4 text-neutral-700 truncate"
                                   title={item?.question}
                                 >
                                   {item?.question || "—"}
@@ -724,7 +791,7 @@ export default function StudentDetailPage() {
                                 >
                                   {result.student_answer || "—"}
                                 </div>
-                                <div className="col-span-3 text-slate-500 truncate">
+                                <div className="col-span-3 text-neutral-500 truncate">
                                   {result.correct_answer}
                                 </div>
                                 <div className="col-span-1 text-center">

@@ -76,10 +76,10 @@ export default function Avatar({ config, seed, size = 128, className = "" }: Ava
   if (!avatarSrc) {
     return (
       <div
-        className={`rounded-full bg-slate-200 flex items-center justify-center ${className}`}
+        className={`rounded-full bg-neutral-200 flex items-center justify-center ${className}`}
         style={{ width: size, height: size }}
       >
-        <span className="text-slate-400 text-xl">?</span>
+        <span className="text-neutral-400 text-xl">?</span>
       </div>
     );
   }

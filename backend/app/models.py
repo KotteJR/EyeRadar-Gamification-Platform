@@ -57,6 +57,7 @@ class StudentCreate(BaseModel):
     grade: int = Field(ge=0, le=12)
     language: str = "en"
     interests: List[str] = []
+    diagnostic: Optional[Dict[str, Any]] = None
 
 
 class StudentUpdate(BaseModel):
@@ -65,6 +66,7 @@ class StudentUpdate(BaseModel):
     grade: Optional[int] = None
     language: Optional[str] = None
     interests: Optional[List[str]] = None
+    diagnostic: Optional[Dict[str, Any]] = None
 
 
 class Student(BaseModel):
@@ -75,6 +77,7 @@ class Student(BaseModel):
     language: str
     interests: List[str] = []
     assessment: Optional[EyeRadarAssessment] = None
+    diagnostic: Dict[str, Any] = {}
     current_levels: Dict[str, int] = {}
     total_points: int = 0
     current_streak: int = 0

@@ -2,6 +2,7 @@
 Exercise session management endpoints.
 """
 
+import logging
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 import uuid
@@ -14,7 +15,7 @@ from app.models import (
     ExerciseRecommendation,
 )
 from app import database as db
-from app.games.game_definitions import get_game, get_games_for_student
+from app.games.game_definitions import get_game, get_games_for_student, get_all_games
 from app.services.content_generator import generate_exercise_items
 from app.services.adaptive_difficulty import (
     calculate_difficulty_level,
@@ -27,13 +28,16 @@ from app.services.gamification_service import (
     update_streak,
     check_and_award_badges,
 )
+from app.services.exercise_agent import exercise_agent
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 @router.post("/start", response_model=ExerciseSession)
 async def start_session(data: ExerciseSessionCreate):
-    """Start a new exercise session."""
+    """Start a new exercise session — uses exercise agent for personalization."""
     student = await db.get_student(data.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -42,34 +46,63 @@ async def start_session(data: ExerciseSessionCreate):
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    # Calculate difficulty
-    deficit_area = game.deficit_area.value
-    current_level = student.get("current_levels", {}).get(deficit_area, 1)
-    recent_accuracies = await db.get_recent_accuracy_trend(
-        data.student_id, deficit_area, limit=5
-    )
+    # Use the exercise agent to determine difficulty & item count
+    # based on dyslexia type, severity, and age
+    diag = student.get("diagnostic") or {}
+    has_diagnostic = bool(diag.get("dyslexia_type") and diag.get("severity_level"))
 
-    severity = 3
-    assessment = student.get("assessment")
-    if assessment and isinstance(assessment, dict):
-        deficits = assessment.get("deficits", {})
-        deficit_info = deficits.get(deficit_area, {})
-        if isinstance(deficit_info, dict):
-            severity = deficit_info.get("severity", 3)
+    if has_diagnostic:
+        # Agent-based personalization
+        try:
+            history = await db.get_student_sessions(data.student_id, limit=20)
+            available = get_all_games()
+            plan = exercise_agent.select_exercise(
+                student=student,
+                available_games=available,
+                session_history=history,
+                preferred_game=data.game_id,
+            )
+            difficulty = plan.difficulty
+            item_count = plan.item_count
+            deficit_area = game.deficit_area.value
+            logger.info(
+                "Agent plan for %s: game=%s, diff=%d, items=%d, reasons=%s",
+                data.student_id, game.id, difficulty, item_count, plan.reasons,
+            )
+        except Exception as exc:
+            logger.warning("Exercise agent failed, falling back: %s", exc)
+            has_diagnostic = False
 
-    difficulty = calculate_difficulty_level(
-        age=student["age"],
-        deficit_severity=severity,
-        current_level=current_level,
-        recent_accuracies=recent_accuracies,
-    )
+    if not has_diagnostic:
+        # Classic difficulty calculation
+        deficit_area = game.deficit_area.value
+        current_level = student.get("current_levels", {}).get(deficit_area, 1)
+        recent_accuracies = await db.get_recent_accuracy_trend(
+            data.student_id, deficit_area, limit=5
+        )
+
+        severity = 3
+        assessment = student.get("assessment")
+        if assessment and isinstance(assessment, dict):
+            deficits = assessment.get("deficits", {})
+            deficit_info = deficits.get(deficit_area, {})
+            if isinstance(deficit_info, dict):
+                severity = deficit_info.get("severity", 3)
+
+        difficulty = calculate_difficulty_level(
+            age=student["age"],
+            deficit_severity=severity,
+            current_level=current_level,
+            recent_accuracies=recent_accuracies,
+        )
+        params = calculate_session_parameters(difficulty)
+        item_count = params["item_count"]
 
     # Generate exercise items (AI-enhanced with template fallback)
-    params = calculate_session_parameters(difficulty)
     items = await generate_exercise_items(
         game_id=data.game_id,
         difficulty_level=difficulty,
-        item_count=params["item_count"],
+        item_count=item_count,
         student_interests=student.get("interests"),
     )
 
@@ -221,14 +254,68 @@ async def get_student_sessions(student_id: str, deficit_area: str | None = None)
 
 @router.get("/recommendations/{student_id}", response_model=list[ExerciseRecommendation])
 async def get_recommendations(student_id: str):
-    """Get exercise recommendations for a student."""
+    """Get exercise recommendations — agent-powered when diagnostic exists."""
     student = await db.get_student(student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
+    diag = student.get("diagnostic") or {}
+    has_diagnostic = bool(diag.get("dyslexia_type") and diag.get("severity_level"))
+
+    if has_diagnostic:
+        # Agent-based recommendations: score all games and return top ones
+        try:
+            from app.services.exercise_agent import exercise_agent as agent
+            from app.models_enhanced import (
+                DyslexiaType, SeverityLevel,
+                DYSLEXIA_TYPE_PRIORITIES, SEVERITY_EXCLUSIONS,
+                DYSLEXIA_TYPE_GAME_PREFERENCES,
+            )
+
+            history = await db.get_student_sessions(student_id, limit=20)
+            all_games = get_all_games()
+            age = student.get("age", 8)
+            dtype = DyslexiaType(diag.get("dyslexia_type", "unspecified"))
+            sev = SeverityLevel(diag.get("severity_level", "moderate"))
+
+            # Score every game
+            scored = []
+            for game in all_games:
+                score, reasons = agent._score_game(game, age, dtype, sev, history)
+                if score > 0:
+                    diff = agent._calc_difficulty(student, game, sev)
+                    scored.append((game, score, reasons, diff))
+
+            scored.sort(key=lambda x: x[1], reverse=True)
+
+            recommendations = []
+            seen_ids = set()
+            for game, score, reasons, diff in scored:
+                if game.id in seen_ids:
+                    continue
+                seen_ids.add(game.id)
+                reason_str = "; ".join(reasons[:2]) if reasons else f"Suited for {dtype.value} dyslexia"
+                recommendations.append(
+                    ExerciseRecommendation(
+                        game_id=game.id,
+                        game_name=game.name,
+                        deficit_area=game.deficit_area,
+                        priority=int(score * 10),
+                        reason=reason_str,
+                        suggested_difficulty=diff,
+                    )
+                )
+                if len(recommendations) >= 10:
+                    break
+
+            if recommendations:
+                return recommendations
+        except Exception as exc:
+            logger.warning("Agent recommendations failed: %s", exc)
+
+    # Fallback: classic assessment-based or age-based
     assessment = student.get("assessment")
     if not assessment:
-        # No assessment: recommend games by age
         games = get_games_for_student(student["age"])
         return [
             ExerciseRecommendation(
@@ -242,14 +329,12 @@ async def get_recommendations(student_id: str):
             for g in games[:6]
         ]
 
-    # Get session history by area
     deficits = assessment.get("deficits", {})
     session_history = {}
     for area in deficits:
         accuracies = await db.get_recent_accuracy_trend(student_id, area, limit=10)
         session_history[area] = accuracies
 
-    # Get recommendations
     area_recs = get_recommended_deficit_areas(deficits, session_history)
 
     recommendations = []

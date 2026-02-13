@@ -50,19 +50,16 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-400">Loading dashboard...</p>
-        </div>
+        <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-400 mt-1 text-sm">
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Dashboard</h1>
+        <p className="text-neutral-400 mt-0.5 text-[13px]">
           Overview of all students and their progress.
         </p>
       </div>
@@ -73,7 +70,7 @@ export default function DashboardPage() {
           title="Students"
           value={students.length}
           subtitle="Active profiles"
-          color="indigo"
+          color="blue"
           icon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -139,28 +136,28 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Students Panel */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900">Students</h2>
+        <div className="bg-white rounded-2xl bg-cream shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+            <h2 className="text-sm font-semibold text-neutral-900">Students</h2>
             <Link
               href="/students"
-              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+              className="text-xs text-[#FF5A39] hover:text-[#FF5A39]/80 font-medium"
             >
               View All
             </Link>
           </div>
           {students.length === 0 ? (
             <div className="text-center py-10 px-6">
-              <p className="text-slate-400 text-sm mb-3">No students yet</p>
+              <p className="text-neutral-400 text-sm mb-3">No students yet</p>
               <Link
                 href="/students"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-medium"
               >
                 Add Student
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-neutral-50">
               {students.slice(0, 6).map((student) => {
                 const stuSessions = completedSessions.filter(
                   (s) => s.student_id === student.id
@@ -175,21 +172,21 @@ export default function DashboardPage() {
                     ? "text-amber-600"
                     : stuAcc > 0
                     ? "text-red-500"
-                    : "text-slate-300";
+                    : "text-neutral-300";
 
                 return (
                   <Link
                     key={student.id}
                     href={`/students/${student.id}`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-slate-50/60 transition-colors"
+                    className="flex items-center justify-between px-6 py-3 hover:bg-neutral-50/60 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs font-bold text-indigo-600">
+                      <div className="w-8 h-8 rounded-full bg-[#475093]/10 flex items-center justify-center text-xs font-bold text-[#475093]">
                         {student.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-800">{student.name}</p>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-sm font-medium text-neutral-800">{student.name}</p>
+                        <p className="text-[11px] text-neutral-400">
                           Lvl {student.level} &middot; {stuSessions.length} sessions
                         </p>
                       </div>
@@ -198,7 +195,7 @@ export default function DashboardPage() {
                       <p className={`text-sm font-bold ${accColor}`}>
                         {stuTotal > 0 ? `${stuAcc}%` : "---"}
                       </p>
-                      <p className="text-[11px] text-slate-400">{student.total_points} pts</p>
+                      <p className="text-[11px] text-neutral-400">{student.total_points} pts</p>
                     </div>
                   </Link>
                 );
@@ -208,19 +205,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Sessions Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900">Recent Sessions</h2>
+        <div className="lg:col-span-2 bg-white rounded-2xl bg-cream shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-neutral-100">
+            <h2 className="text-sm font-semibold text-neutral-900">Recent Sessions</h2>
           </div>
           {completedSessions.length === 0 ? (
             <div className="text-center py-10 px-6">
-              <p className="text-slate-400 text-sm">No sessions yet.</p>
+              <p className="text-neutral-400 text-sm">No sessions yet.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  <tr className="text-[11px] uppercase tracking-wider text-neutral-400 border-b border-neutral-100">
                     <th className="text-left px-6 py-3 font-medium">Student</th>
                     <th className="text-left px-3 py-3 font-medium">Game</th>
                     <th className="text-left px-3 py-3 font-medium">Area</th>
@@ -229,7 +226,7 @@ export default function DashboardPage() {
                     <th className="text-right px-6 py-3 font-medium">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-neutral-50">
                   {completedSessions.slice(0, 10).map((session) => {
                     const accColor =
                       session.accuracy >= 80
@@ -242,18 +239,18 @@ export default function DashboardPage() {
                     return (
                       <tr
                         key={session.id}
-                        className="hover:bg-slate-50/50 transition-colors"
+                        className="hover:bg-neutral-50/50 transition-colors"
                       >
                         <td className="px-6 py-3">
                           <Link
                             href={`/students/${session.student_id}`}
-                            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                            className="text-sm font-medium text-[#FF5A39] hover:text-[#FF5A39]/80"
                           >
                             {getStudentName(session.student_id)}
                           </Link>
                         </td>
                         <td className="px-3 py-3">
-                          <p className="text-sm text-slate-700">{session.game_name}</p>
+                          <p className="text-sm text-neutral-700">{session.game_name}</p>
                         </td>
                         <td className="px-3 py-3">
                           <span
@@ -268,7 +265,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <span className="text-sm text-slate-600">
+                          <span className="text-sm text-neutral-600">
                             {session.correct_count}/{session.total_items}
                           </span>
                         </td>
@@ -280,7 +277,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="px-6 py-3 text-right">
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-neutral-400">
                             {new Date(session.started_at).toLocaleDateString()}
                           </span>
                         </td>
@@ -295,8 +292,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Deficit Areas Overview */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <h2 className="text-sm font-semibold text-slate-900 mb-5">
+      <div className="bg-white rounded-2xl bg-cream shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-neutral-900 mb-5">
           Performance by Deficit Area
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -325,7 +322,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={area}
-                className="p-4 rounded-xl border border-slate-100 text-center hover:border-slate-200 transition-colors"
+                className="p-4 rounded-xl border border-neutral-100 text-center hover:border-neutral-200 transition-colors"
               >
                 <div
                   className="w-9 h-9 rounded-lg mx-auto mb-2.5 flex items-center justify-center text-white text-xs font-bold"
@@ -333,7 +330,7 @@ export default function DashboardPage() {
                 >
                   {areaSessions.length}
                 </div>
-                <p className="text-xs font-semibold text-slate-700 mb-1">
+                <p className="text-xs font-semibold text-neutral-700 mb-1">
                   {shortLabel}
                 </p>
                 <p
@@ -351,7 +348,7 @@ export default function DashboardPage() {
                 >
                   {areaAcc > 0 ? `${areaAcc}%` : "---"}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <p className="text-[10px] text-neutral-400 mt-0.5">
                   {areaSessions.length} sessions
                 </p>
               </div>

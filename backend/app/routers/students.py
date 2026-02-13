@@ -22,6 +22,7 @@ async def create_student(data: StudentCreate):
         "grade": data.grade,
         "language": data.language,
         "interests": data.interests,
+        "diagnostic": data.diagnostic or {},
         "current_levels": {},
         "created_at": datetime.utcnow().isoformat(),
     }
@@ -72,6 +73,7 @@ async def upsert_student(student_id: str, data: StudentCreate):
         "grade": data.grade,
         "language": data.language,
         "interests": data.interests,
+        "diagnostic": data.diagnostic or {},
         "current_levels": {},
         "created_at": datetime.utcnow().isoformat(),
     }

@@ -49,6 +49,66 @@ export interface EyeRadarAssessment {
   reading_metrics: ReadingMetrics;
 }
 
+// ─── Dyslexia Diagnostic ────────────────────────────────────────────────────
+
+export type DyslexiaType =
+  | "phonological"
+  | "surface"
+  | "rapid_naming"
+  | "visual"
+  | "double_deficit"
+  | "mixed"
+  | "unspecified";
+
+export type SeverityLevel = "mild" | "moderate" | "severe";
+
+export const DYSLEXIA_TYPE_LABELS: Record<DyslexiaType, string> = {
+  phonological: "Phonological",
+  surface: "Surface",
+  rapid_naming: "Rapid Naming",
+  visual: "Visual",
+  double_deficit: "Double Deficit",
+  mixed: "Mixed",
+  unspecified: "Unspecified",
+};
+
+export const DYSLEXIA_TYPE_DESCRIPTIONS: Record<DyslexiaType, string> = {
+  phonological: "Difficulty with sound-symbol mapping (~75% of cases)",
+  surface: "Difficulty with whole-word recognition",
+  rapid_naming: "Slow retrieval of verbal labels",
+  visual: "Visual-spatial processing issues",
+  double_deficit: "Both phonological + rapid naming deficits",
+  mixed: "Multiple deficit types present",
+  unspecified: "Not yet determined",
+};
+
+export const SEVERITY_LABELS: Record<SeverityLevel, string> = {
+  mild: "Mild",
+  moderate: "Moderate",
+  severe: "Severe",
+};
+
+export const SEVERITY_DESCRIPTIONS: Record<SeverityLevel, string> = {
+  mild: "Can manage with extra help, some accommodation needed",
+  moderate: "Requires specialized instruction and accommodations",
+  severe: "Requires ongoing intensive specialized teaching",
+};
+
+export interface DiagnosticInfo {
+  dyslexia_type: DyslexiaType;
+  severity_level: SeverityLevel;
+  phonological_severity: number;
+  rapid_naming_severity: number;
+  working_memory_severity: number;
+  visual_processing_severity: number;
+  reading_fluency_severity: number;
+  comprehension_severity: number;
+  has_adhd: boolean;
+  has_dyscalculia: boolean;
+  has_dysgraphia: boolean;
+  notes?: string;
+}
+
 // ─── Student ─────────────────────────────────────────────────────────────────
 
 export interface Student {
@@ -59,6 +119,7 @@ export interface Student {
   language: string;
   interests: string[];
   assessment: EyeRadarAssessment | null;
+  diagnostic: DiagnosticInfo | Record<string, never>;
   current_levels: Record<string, number>;
   total_points: number;
   current_streak: number;
@@ -75,6 +136,7 @@ export interface StudentCreate {
   grade: number;
   language?: string;
   interests?: string[];
+  diagnostic?: DiagnosticInfo;
 }
 
 // ─── Games ───────────────────────────────────────────────────────────────────

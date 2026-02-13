@@ -21,6 +21,15 @@ export interface User {
   avatarConfig: AvatarConfig; // current avatar look (DiceBear options)
 }
 
+/** Dynamic student account created by teacher (stored in localStorage) */
+export interface DynamicAccount {
+  username: string;
+  password: string | null;  // null = no password required
+  displayName: string;
+  age: number;
+  studentId: string;
+}
+
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => boolean;
@@ -29,12 +38,13 @@ interface AuthContextType {
   completeWizard: () => void;
   purchaseItem: (itemId: string) => void;
   updateAvatar: (config: AvatarConfig) => void;
+  setPassword: (newPassword: string) => void;
   isLoggedIn: boolean;
 }
 
-// ─── Hardcoded Users ────────────────────────────────────────────────────────
+// ─── Hardcoded Demo Users ────────────────────────────────────────────────────
 
-const USERS: Record<string, { password: string; user: User }> = {
+const DEMO_USERS: Record<string, { password: string; user: User }> = {
   teacher: {
     password: "teacher",
     user: {
@@ -93,6 +103,45 @@ const USERS: Record<string, { password: string; user: User }> = {
   },
 };
 
+// ─── Dynamic Accounts Helpers ────────────────────────────────────────────────
+
+const ACCOUNTS_KEY = "eyeradar_accounts";
+
+export function getDynamicAccounts(): DynamicAccount[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveDynamicAccounts(accounts: DynamicAccount[]) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+/** Called by the teacher create-student form */
+export function registerStudentAccount(account: DynamicAccount) {
+  const accounts = getDynamicAccounts();
+  const idx = accounts.findIndex((a) => a.username === account.username);
+  if (idx >= 0) {
+    accounts[idx] = account;
+  } else {
+    accounts.push(account);
+  }
+  saveDynamicAccounts(accounts);
+}
+
+/** Update the password for a dynamic account */
+function updateDynamicPassword(username: string, password: string) {
+  const accounts = getDynamicAccounts();
+  const acc = accounts.find((a) => a.username === username);
+  if (acc) {
+    acc.password = password;
+    saveDynamicAccounts(accounts);
+  }
+}
+
 // ─── Context ────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -107,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migrate old format: if they have old avatarItems/equippedItems, reset to new format
         if (parsed && !parsed.avatarConfig) {
           parsed.avatarConfig = DEFAULT_AVATAR;
           parsed.ownedItems = parsed.ownedItems || [];
@@ -156,32 +204,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (username: string, password: string): boolean => {
-    const entry = USERS[username];
-    if (!entry || entry.password !== password) return false;
-
-    let userToSet: User;
-    const saved = localStorage.getItem(`eyeradar_user_${username}`);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Migrate old format
-        if (!parsed.avatarConfig) {
-          parsed.avatarConfig = DEFAULT_AVATAR;
-          parsed.ownedItems = parsed.ownedItems || [];
-          delete parsed.avatarItems;
-          delete parsed.equippedItems;
+    // 1. Check hardcoded demo users
+    const demoEntry = DEMO_USERS[username];
+    if (demoEntry && demoEntry.password === password) {
+      let userToSet: User;
+      const saved = localStorage.getItem(`eyeradar_user_${username}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!parsed.avatarConfig) {
+            parsed.avatarConfig = DEFAULT_AVATAR;
+            parsed.ownedItems = parsed.ownedItems || [];
+          }
+          userToSet = parsed;
+        } catch {
+          userToSet = { ...demoEntry.user };
         }
-        userToSet = parsed;
-      } catch {
-        userToSet = { ...entry.user };
+      } else {
+        userToSet = { ...demoEntry.user };
       }
-    } else {
-      userToSet = { ...entry.user };
+      setUser(userToSet);
+      provisionStudent(userToSet);
+      return true;
     }
 
-    setUser(userToSet);
-    provisionStudent(userToSet);
-    return true;
+    // 2. Check dynamic student accounts (created by teacher)
+    const accounts = getDynamicAccounts();
+    const dynAccount = accounts.find((a) => a.username === username);
+    if (dynAccount) {
+      // If no password set, accept any password (including empty)
+      if (dynAccount.password !== null && dynAccount.password !== password) {
+        return false;
+      }
+
+      let userToSet: User;
+      const saved = localStorage.getItem(`eyeradar_user_${username}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (!parsed.avatarConfig) {
+            parsed.avatarConfig = DEFAULT_AVATAR;
+            parsed.ownedItems = parsed.ownedItems || [];
+          }
+          userToSet = parsed;
+        } catch {
+          userToSet = buildUserFromAccount(dynAccount);
+        }
+      } else {
+        userToSet = buildUserFromAccount(dynAccount);
+      }
+      setUser(userToSet);
+      provisionStudent(userToSet);
+      return true;
+    }
+
+    return false;
   };
 
   const logout = () => {
@@ -218,10 +295,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const setPassword = (newPassword: string) => {
+    if (!user) return;
+    // Update dynamic accounts storage
+    updateDynamicPassword(user.username, newPassword);
+  };
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#FF5A39] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -236,6 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeWizard,
         purchaseItem,
         updateAvatar,
+        setPassword,
         isLoggedIn: !!user,
       }}
     >
@@ -248,4 +332,20 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function buildUserFromAccount(acc: DynamicAccount): User {
+  return {
+    username: acc.username,
+    role: "student",
+    displayName: acc.displayName,
+    age: acc.age,
+    studentId: acc.studentId,
+    interests: [],
+    wizardCompleted: false,
+    ownedItems: [],
+    avatarConfig: { ...DEFAULT_AVATAR },
+  };
 }
