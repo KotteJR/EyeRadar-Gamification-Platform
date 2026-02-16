@@ -294,3 +294,62 @@ export interface AIStatus {
   all_models?: string[];
   error?: string;
 }
+
+// ─── Adventure Map ──────────────────────────────────────────────────────────
+
+export interface AdventureWorld {
+  deficit_area: string;
+  world_number: number;
+  world_name: string;
+  color: string;
+  game_ids: string[];
+}
+
+export interface AdventureThemeConfig {
+  primary_interest: string;
+  color_palette: string;
+  decoration_style: string;
+}
+
+export interface AdventureMap {
+  id: string;
+  student_id: string;
+  created_by: string | null;
+  title: string;
+  worlds: AdventureWorld[];
+  theme_config: AdventureThemeConfig;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdventureMapCreate {
+  student_id: string;
+  created_by?: string;
+  title?: string;
+  worlds: AdventureWorld[];
+  theme_config?: AdventureThemeConfig;
+}
+
+export interface AdventureSuggestRequest {
+  student_id: string;
+  dyslexia_type?: string;
+  severity_level?: string;
+  age?: number;
+}
+
+export interface AdventureSuggestResponse {
+  suggested_worlds: AdventureWorld[];
+  reasoning: string[];
+  theme_config: AdventureThemeConfig;
+}
+
+export interface AvailableGameForArea {
+  id: string;
+  name: string;
+  description: string;
+  game_type: string;
+  age_range_min: number;
+  age_range_max: number;
+  icon: string;
+}

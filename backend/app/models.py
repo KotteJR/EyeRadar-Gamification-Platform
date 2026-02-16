@@ -238,3 +238,67 @@ class ExerciseRecommendation(BaseModel):
     priority: int
     reason: str
     suggested_difficulty: int
+
+
+# ─── Adventure Map Models ────────────────────────────────────────────────────
+
+
+class AdventureWorld(BaseModel):
+    """A single world within a student's adventure map."""
+    deficit_area: str
+    world_number: int
+    world_name: str
+    color: str
+    game_ids: List[str] = []
+
+
+class AdventureThemeConfig(BaseModel):
+    """Interest-based visual theming for the adventure map."""
+    primary_interest: str = ""
+    color_palette: str = "default"
+    decoration_style: str = "nature"
+
+
+class AdventureMapCreate(BaseModel):
+    """Request body to create an adventure map for a student."""
+    student_id: str
+    created_by: Optional[str] = None
+    title: str = "My Adventure"
+    worlds: List[AdventureWorld]
+    theme_config: AdventureThemeConfig = AdventureThemeConfig()
+
+
+class AdventureMapUpdate(BaseModel):
+    """Request body to update an adventure map."""
+    title: Optional[str] = None
+    worlds: Optional[List[AdventureWorld]] = None
+    theme_config: Optional[AdventureThemeConfig] = None
+    status: Optional[str] = None
+
+
+class AdventureMap(BaseModel):
+    """Full adventure map response."""
+    id: str
+    student_id: str
+    created_by: Optional[str] = None
+    title: str
+    worlds: List[AdventureWorld]
+    theme_config: AdventureThemeConfig = AdventureThemeConfig()
+    status: str = "active"
+    created_at: str
+    updated_at: str
+
+
+class AdventureSuggestRequest(BaseModel):
+    """Request body for AI-assisted adventure suggestion."""
+    student_id: str
+    dyslexia_type: Optional[str] = None
+    severity_level: Optional[str] = None
+    age: Optional[int] = None
+
+
+class AdventureSuggestResponse(BaseModel):
+    """AI-generated adventure suggestion."""
+    suggested_worlds: List[AdventureWorld]
+    reasoning: List[str]
+    theme_config: AdventureThemeConfig

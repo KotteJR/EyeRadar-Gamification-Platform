@@ -13,6 +13,7 @@ import {
   LogOut,
   Star,
   ChevronDown,
+  Map,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -31,7 +32,8 @@ const teacherNav: NavItem[] = [
 
 const studentNav: NavItem[] = [
   { href: "/student", label: "Home", icon: Home },
-  { href: "/student/games", label: "My Games", icon: Gamepad2 },
+  { href: "/student/map", label: "Adventure Map", icon: Map },
+  { href: "/student/games", label: "Games", icon: Gamepad2 },
   { href: "/student/shop", label: "Avatar Shop", icon: ShoppingBag },
 ];
 

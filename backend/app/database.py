@@ -88,6 +88,24 @@ async def init_db():
             ON exercise_sessions(status);
         CREATE INDEX IF NOT EXISTS idx_sessions_deficit
             ON exercise_sessions(deficit_area);
+
+        CREATE TABLE IF NOT EXISTS adventure_maps (
+            id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            created_by TEXT,
+            title TEXT DEFAULT 'My Adventure',
+            worlds TEXT DEFAULT '[]',
+            theme_config TEXT DEFAULT '{}',
+            status TEXT DEFAULT 'active',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (student_id) REFERENCES students(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_adventure_student
+            ON adventure_maps(student_id);
+        CREATE INDEX IF NOT EXISTS idx_adventure_status
+            ON adventure_maps(status);
     """
     )
     await db.commit()
@@ -312,3 +330,118 @@ async def get_recent_accuracy_trend(
     )
     rows = await cursor.fetchall()
     return [row["accuracy"] for row in reversed(rows)]
+
+
+# ─── Adventure Map CRUD ──────────────────────────────────────────────────────
+
+
+async def create_adventure_map(data: Dict[str, Any]) -> Dict[str, Any]:
+    db = await get_db()
+    await db.execute(
+        """INSERT INTO adventure_maps
+           (id, student_id, created_by, title, worlds, theme_config, status, created_at, updated_at)
+           VALUES (:id, :student_id, :created_by, :title, :worlds, :theme_config, :status, :created_at, :updated_at)""",
+        {
+            **data,
+            "worlds": json.dumps(data.get("worlds", [])),
+            "theme_config": json.dumps(data.get("theme_config", {})),
+        },
+    )
+    await db.commit()
+    return await get_adventure_map(data["id"])
+
+
+async def get_adventure_map(adventure_id: str) -> Optional[Dict[str, Any]]:
+    db = await get_db()
+    cursor = await db.execute("SELECT * FROM adventure_maps WHERE id = ?", (adventure_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    return _parse_adventure_row(dict(row))
+
+
+async def get_student_adventure(student_id: str) -> Optional[Dict[str, Any]]:
+    """Get the active adventure map for a student."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM adventure_maps WHERE student_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1",
+        (student_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    return _parse_adventure_row(dict(row))
+
+
+async def get_all_adventure_statuses() -> Dict[str, Any]:
+    """Get adventure status for all students with an active adventure."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT student_id, id, title, worlds, status FROM adventure_maps WHERE status = 'active'"
+    )
+    rows = await cursor.fetchall()
+    result = {}
+    for row in rows:
+        row_dict = dict(row)
+        worlds = json.loads(row_dict["worlds"]) if isinstance(row_dict["worlds"], str) else row_dict["worlds"]
+        total_games = sum(len(w.get("game_ids", [])) for w in worlds)
+        result[row_dict["student_id"]] = {
+            "has_adventure": True,
+            "adventure_id": row_dict["id"],
+            "title": row_dict["title"],
+            "world_count": len(worlds),
+            "total_games": total_games,
+        }
+    return result
+
+
+async def get_student_adventures(student_id: str) -> List[Dict[str, Any]]:
+    """Get all adventure maps for a student."""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT * FROM adventure_maps WHERE student_id = ? ORDER BY updated_at DESC",
+        (student_id,),
+    )
+    rows = await cursor.fetchall()
+    return [_parse_adventure_row(dict(row)) for row in rows]
+
+
+async def update_adventure_map(adventure_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    db = await get_db()
+    set_clauses = []
+    params = {}
+    for key, value in data.items():
+        if value is not None:
+            if key in ("worlds", "theme_config"):
+                params[key] = json.dumps(value) if isinstance(value, (list, dict)) else value
+            else:
+                params[key] = value
+            set_clauses.append(f"{key} = :{key}")
+
+    if not set_clauses:
+        return await get_adventure_map(adventure_id)
+
+    params["id"] = adventure_id
+    query = f"UPDATE adventure_maps SET {', '.join(set_clauses)} WHERE id = :id"
+    await db.execute(query, params)
+    await db.commit()
+    return await get_adventure_map(adventure_id)
+
+
+async def delete_adventure_map(adventure_id: str) -> bool:
+    db = await get_db()
+    cursor = await db.execute("DELETE FROM adventure_maps WHERE id = ?", (adventure_id,))
+    await db.commit()
+    return cursor.rowcount > 0
+
+
+def _parse_adventure_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    for field in ("worlds",):
+        if isinstance(row.get(field), str):
+            row[field] = json.loads(row[field])
+    if isinstance(row.get("theme_config"), str):
+        try:
+            row["theme_config"] = json.loads(row["theme_config"])
+        except (json.JSONDecodeError, TypeError):
+            row["theme_config"] = {}
+    return row

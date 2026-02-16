@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type {
@@ -12,6 +12,10 @@ import type {
   GamificationSummary,
   EyeRadarAssessment,
   DiagnosticInfo,
+  AdventureMap,
+  AdventureWorld,
+  AdventureSuggestResponse,
+  AvailableGameForArea,
 } from "@/types";
 import {
   DEFICIT_AREA_LABELS,
@@ -22,11 +26,26 @@ import {
 import StatsCard from "@/components/StatsCard";
 import ProgressBar from "@/components/ProgressBar";
 import BadgeCard from "@/components/BadgeCard";
+import {
+  Map,
+  Sparkles,
+  Plus,
+  Trash2,
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Wand2,
+  GripVertical,
+  Gamepad2,
+} from "lucide-react";
 
 export default function StudentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const studentId = params.id as string;
+  const initialTab = searchParams.get("tab") as "overview" | "sessions" | "badges" | "adventure" | null;
 
   const [student, setStudent] = useState<Student | null>(null);
   const [games, setGames] = useState<GameDefinition[]>([]);
@@ -37,8 +56,18 @@ export default function StudentDetailPage() {
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentJson, setAssessmentJson] = useState("");
   const [importing, setImporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "badges">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "badges" | "adventure">(initialTab || "overview");
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+
+  // Adventure builder state
+  const [adventure, setAdventure] = useState<AdventureMap | null>(null);
+  const [adventureWorlds, setAdventureWorlds] = useState<AdventureWorld[]>([]);
+  const [suggestion, setSuggestion] = useState<AdventureSuggestResponse | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [savingAdventure, setSavingAdventure] = useState(false);
+  const [expandedWorld, setExpandedWorld] = useState<number | null>(null);
+  const [availableGamesCache, setAvailableGamesCache] = useState<Record<string, AvailableGameForArea[]>>({});
+  const [adventureReasoning, setAdventureReasoning] = useState<string[]>([]);
 
   useEffect(() => {
     if (!studentId) return;
@@ -50,17 +79,22 @@ export default function StudentDetailPage() {
         if (cancelled) return;
         setStudent(s);
 
-        const [g, sess, r, gm] = await Promise.all([
+        const [g, sess, r, gm, adv] = await Promise.all([
           api.getGames().catch(() => []),
           api.getStudentSessions(studentId).catch(() => []),
           api.getRecommendations(studentId).catch(() => []),
           api.getGamificationSummary(studentId).catch(() => null),
+          api.getStudentAdventure(studentId).catch(() => null),
         ]);
         if (cancelled) return;
         setGames(g);
         setSessions(sess);
         setRecommendations(r);
         setGamification(gm);
+        if (adv) {
+          setAdventure(adv);
+          setAdventureWorlds(adv.worlds);
+        }
       } catch {
         if (!cancelled) router.push("/students");
       } finally {
@@ -93,6 +127,148 @@ export default function StudentDetailPage() {
       setImporting(false);
     }
   };
+
+  // ─── Adventure Builder Handlers ─────────────────────────────────────
+
+  const handleSuggestAdventure = async () => {
+    if (!student) return;
+    setSuggesting(true);
+    try {
+      const result = await api.suggestAdventure({ student_id: studentId });
+      setSuggestion(result);
+      setAdventureWorlds(result.suggested_worlds);
+      setAdventureReasoning(result.reasoning);
+    } catch (err) {
+      console.error("Failed to get suggestion:", err);
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const handleSaveAdventure = async () => {
+    if (!student || adventureWorlds.length === 0) return;
+    setSavingAdventure(true);
+    try {
+      const themeConfig = suggestion?.theme_config || {
+        primary_interest: student.interests[0] || "",
+        color_palette: "default",
+        decoration_style: "nature",
+      };
+
+      if (adventure) {
+        const updated = await api.updateAdventure(adventure.id, {
+          worlds: adventureWorlds,
+          theme_config: themeConfig,
+        });
+        setAdventure(updated);
+      } else {
+        const created = await api.createAdventure({
+          student_id: studentId,
+          created_by: "teacher",
+          title: `${student.name}'s Adventure`,
+          worlds: adventureWorlds,
+          theme_config: themeConfig,
+        });
+        setAdventure(created);
+      }
+    } catch (err) {
+      console.error("Failed to save adventure:", err);
+    } finally {
+      setSavingAdventure(false);
+    }
+  };
+
+  const handleDeleteAdventure = async () => {
+    if (!adventure) return;
+    if (!confirm("Are you sure you want to delete this adventure map?")) return;
+    try {
+      await api.deleteAdventure(adventure.id);
+      setAdventure(null);
+      setAdventureWorlds([]);
+      setSuggestion(null);
+      setAdventureReasoning([]);
+    } catch (err) {
+      console.error("Failed to delete adventure:", err);
+    }
+  };
+
+  const loadGamesForArea = async (area: string) => {
+    if (availableGamesCache[area] || !student) return;
+    try {
+      const diag = student.diagnostic as DiagnosticInfo | null;
+      const severity = diag?.severity_level;
+      const result = await api.getGamesForArea(area, student.age, severity);
+      setAvailableGamesCache((prev) => ({ ...prev, [area]: result }));
+    } catch {
+      // fallback
+    }
+  };
+
+  const toggleGameInWorld = (worldIdx: number, gameId: string) => {
+    setAdventureWorlds((prev) => {
+      const updated = [...prev];
+      const world = { ...updated[worldIdx] };
+      if (world.game_ids.includes(gameId)) {
+        world.game_ids = world.game_ids.filter((id) => id !== gameId);
+      } else {
+        world.game_ids = [...world.game_ids, gameId];
+      }
+      updated[worldIdx] = world;
+      return updated;
+    });
+  };
+
+  const removeWorld = (idx: number) => {
+    setAdventureWorlds((prev) => {
+      const updated = prev.filter((_, i) => i !== idx);
+      return updated.map((w, i) => ({ ...w, world_number: i + 1 }));
+    });
+  };
+
+  const addWorld = (area: string) => {
+    const WORLD_NAMES: Record<string, string> = {
+      phonological_awareness: "Sound Kingdom",
+      rapid_naming: "Speed Valley",
+      working_memory: "Memory Mountains",
+      visual_processing: "Vision Forest",
+      reading_fluency: "Fluency River",
+      comprehension: "Story Castle",
+    };
+    const WORLD_COLORS: Record<string, string> = {
+      phonological_awareness: "#6366f1",
+      rapid_naming: "#f59e0b",
+      working_memory: "#8b5cf6",
+      visual_processing: "#10b981",
+      reading_fluency: "#3b82f6",
+      comprehension: "#ef4444",
+    };
+
+    if (adventureWorlds.some((w) => w.deficit_area === area)) return;
+
+    setAdventureWorlds((prev) => [
+      ...prev,
+      {
+        deficit_area: area,
+        world_number: prev.length + 1,
+        world_name: WORLD_NAMES[area] || area,
+        color: WORLD_COLORS[area] || "#6366f1",
+        game_ids: [],
+      },
+    ]);
+  };
+
+  const ALL_DEFICIT_AREAS = [
+    "phonological_awareness",
+    "rapid_naming",
+    "working_memory",
+    "visual_processing",
+    "reading_fluency",
+    "comprehension",
+  ];
+
+  const unusedAreas = ALL_DEFICIT_AREAS.filter(
+    (a) => !adventureWorlds.some((w) => w.deficit_area === a)
+  );
 
   if (loading || !student) {
     return (
@@ -198,12 +374,27 @@ export default function StudentDetailPage() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => setShowAssessment(!showAssessment)}
-            className="btn-primary px-4 py-2 text-sm font-medium"
-          >
-            {student.assessment ? "Update Assessment" : "Import Assessment"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("adventure")}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                adventure
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                  : "bg-gradient-to-r from-[#475093] to-[#303FAE] text-white hover:opacity-90"
+              }`}
+            >
+              <Map size={15} />
+              {adventure
+                ? `Adventure (${adventure.worlds.length} worlds)`
+                : "Set Up Adventure"}
+            </button>
+            <button
+              onClick={() => setShowAssessment(!showAssessment)}
+              className="btn-primary px-4 py-2 text-sm font-medium"
+            >
+              {student.assessment ? "Update Assessment" : "Import Assessment"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -355,18 +546,21 @@ export default function StudentDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 mb-6 w-fit">
-        {(["overview", "sessions", "badges"] as const).map((tab) => (
+        {(["overview", "adventure", "sessions", "badges"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === tab
                 ? "bg-white text-neutral-900 shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700"
             }`}
           >
+            {tab === "adventure" && <Map size={14} />}
             {tab === "sessions"
               ? `Sessions (${completedSessions.length})`
+              : tab === "adventure"
+              ? `Adventure ${adventure ? "" : "(New)"}`
               : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
@@ -622,6 +816,263 @@ export default function StudentDetailPage() {
                   }
                 )}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Adventure Tab ─────────────────────────────────────── */}
+      {activeTab === "adventure" && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-cream rounded-2xl p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-[#303030] flex items-center gap-2">
+                  <Map size={18} className="text-[#475093]" />
+                  Adventure Map Builder
+                </h2>
+                <p className="text-xs text-[#ABABAB] mt-1">
+                  {adventure
+                    ? `Active adventure with ${adventure.worlds.length} worlds — last updated ${new Date(adventure.updated_at).toLocaleDateString()}`
+                    : "Create a personalized adventure map for this student with AI-assisted exercise selection."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {adventure && (
+                  <button
+                    onClick={handleDeleteAdventure}
+                    className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Delete adventure"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* AI Suggestion */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSuggestAdventure}
+                disabled={suggesting}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#475093] to-[#303FAE] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <Wand2 size={15} />
+                {suggesting ? "Analyzing profile..." : adventure ? "Re-generate with AI" : "Generate with AI"}
+              </button>
+              <span className="text-[11px] text-[#ABABAB]">
+                AI analyzes dyslexia type, severity, age, and interests to recommend worlds &amp; exercises
+              </span>
+            </div>
+          </div>
+
+          {/* AI Reasoning */}
+          {adventureReasoning.length > 0 && (
+            <div className="bg-[#475093]/5 border border-[#475093]/10 rounded-2xl p-5">
+              <h3 className="text-xs font-semibold text-[#475093] mb-2 flex items-center gap-1.5">
+                <Sparkles size={13} />
+                AI Reasoning
+              </h3>
+              <ul className="space-y-1">
+                {adventureReasoning.map((r, i) => (
+                  <li key={i} className="text-xs text-[#555] flex items-start gap-2">
+                    <span className="text-[#475093] mt-0.5">-</span>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Worlds Editor */}
+          {adventureWorlds.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#303030]">
+                  Worlds ({adventureWorlds.length})
+                </h3>
+                <span className="text-[11px] text-[#ABABAB]">
+                  {adventureWorlds.reduce((s, w) => s + w.game_ids.length, 0)} total exercises
+                </span>
+              </div>
+
+              {adventureWorlds.map((world, wIdx) => {
+                const isExpanded = expandedWorld === wIdx;
+                const areaGames = availableGamesCache[world.deficit_area] || [];
+                const areaLabel = DEFICIT_AREA_LABELS[world.deficit_area as keyof typeof DEFICIT_AREA_LABELS] || world.deficit_area;
+
+                return (
+                  <div key={`${world.deficit_area}-${wIdx}`} className="bg-cream rounded-2xl overflow-hidden border border-[#E3E3E3]">
+                    {/* World Header */}
+                    <div className="flex items-center gap-3 p-4">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <GripVertical size={14} className="text-[#CDCDCD] flex-shrink-0" />
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                          style={{ backgroundColor: world.color }}
+                        >
+                          {world.world_number}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-semibold text-[#303030] truncate">
+                            {world.world_name}
+                          </h4>
+                          <p className="text-[11px] text-[#ABABAB]">
+                            {areaLabel} - {world.game_ids.length} exercises
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            if (!isExpanded) loadGamesForArea(world.deficit_area);
+                            setExpandedWorld(isExpanded ? null : wIdx);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp size={16} className="text-[#777]" /> : <ChevronDown size={16} className="text-[#777]" />}
+                        </button>
+                        <button
+                          onClick={() => removeWorld(wIdx)}
+                          className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded: Game Selection */}
+                    {isExpanded && (
+                      <div className="border-t border-[#E3E3E3] p-4 bg-white/50">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs font-medium text-[#555]">
+                            Select exercises for this world (3-6 recommended):
+                          </p>
+                          <span className="text-[10px] text-[#ABABAB] px-2 py-0.5 bg-neutral-100 rounded-full">
+                            {world.game_ids.length} selected
+                          </span>
+                        </div>
+
+                        {areaGames.length === 0 ? (
+                          <div className="flex items-center justify-center py-6">
+                            <div className="w-5 h-5 border-2 border-[#CDCDCD] border-t-[#475093] rounded-full animate-spin" />
+                            <span className="text-xs text-[#ABABAB] ml-2">Loading games...</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {areaGames.map((game) => {
+                              const isSelected = world.game_ids.includes(game.id);
+                              return (
+                                <button
+                                  key={game.id}
+                                  onClick={() => toggleGameInWorld(wIdx, game.id)}
+                                  className={`flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                                    isSelected
+                                      ? "border-[#475093] bg-[#475093]/5"
+                                      : "border-[#E3E3E3] hover:border-[#CDCDCD]"
+                                  }`}
+                                >
+                                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center mt-0.5 flex-shrink-0 transition-all ${
+                                    isSelected ? "border-[#475093] bg-[#475093]" : "border-[#CDCDCD]"
+                                  }`}>
+                                    {isSelected && <Check size={12} className="text-white" />}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <Gamepad2 size={13} className={isSelected ? "text-[#475093]" : "text-[#ABABAB]"} />
+                                      <span className={`text-sm font-medium ${isSelected ? "text-[#303030]" : "text-[#555]"}`}>
+                                        {game.name}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-[#999] mt-0.5 line-clamp-2">{game.description}</p>
+                                    <div className="flex gap-2 mt-1.5">
+                                      <span className="text-[10px] text-[#ABABAB] px-1.5 py-0.5 bg-neutral-100 rounded">
+                                        Ages {game.age_range_min}-{game.age_range_max}
+                                      </span>
+                                      <span className="text-[10px] text-[#ABABAB] px-1.5 py-0.5 bg-neutral-100 rounded">
+                                        {game.game_type.replace(/_/g, " ")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Add World */}
+              {unusedAreas.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-[#ABABAB]">Add world:</span>
+                  {unusedAreas.map((area) => (
+                    <button
+                      key={area}
+                      onClick={() => addWorld(area)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors"
+                    >
+                      <Plus size={12} />
+                      {DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] || area}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {adventureWorlds.length === 0 && !suggesting && (
+            <div className="bg-cream rounded-2xl p-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#475093]/10 flex items-center justify-center mx-auto mb-4">
+                <Map size={24} className="text-[#475093]" />
+              </div>
+              <h3 className="text-base font-semibold text-[#303030] mb-1">No Adventure Map Yet</h3>
+              <p className="text-sm text-[#ABABAB] mb-4 max-w-sm mx-auto">
+                Click &quot;Generate with AI&quot; to create a personalized adventure based on this student&apos;s profile, or manually add worlds below.
+              </p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {ALL_DEFICIT_AREAS.map((area) => (
+                  <button
+                    key={area}
+                    onClick={() => addWorld(area)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors"
+                  >
+                    <Plus size={12} />
+                    {DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Save Button */}
+          {adventureWorlds.length > 0 && (
+            <div className="flex items-center justify-between bg-cream rounded-2xl p-5">
+              <div>
+                <p className="text-sm font-medium text-[#303030]">
+                  {adventure ? "Update Adventure Map" : "Save Adventure Map"}
+                </p>
+                <p className="text-[11px] text-[#ABABAB] mt-0.5">
+                  {adventureWorlds.length} worlds with{" "}
+                  {adventureWorlds.reduce((s, w) => s + w.game_ids.length, 0)} exercises total.
+                  {adventureWorlds.some((w) => w.game_ids.length === 0) && (
+                    <span className="text-amber-500 ml-1">Some worlds have no exercises selected.</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={handleSaveAdventure}
+                disabled={savingAdventure || adventureWorlds.every((w) => w.game_ids.length === 0)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#FF5A39] to-[#FF9E75] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <Check size={15} />
+                {savingAdventure ? "Saving..." : adventure ? "Update" : "Save & Activate"}
+              </button>
             </div>
           )}
         </div>

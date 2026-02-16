@@ -7,37 +7,37 @@ import { api } from "@/lib/api";
 import type {
   Student,
   GameDefinition,
-  ExerciseRecommendation,
   GamificationSummary,
+  ExerciseSession,
+  AdventureMap,
 } from "@/types";
-import { DEFICIT_AREA_LABELS, DEFICIT_AREA_COLORS } from "@/types";
+import { DEFICIT_AREA_LABELS } from "@/types";
 import Avatar from "@/components/Avatar";
-import ProgressBar from "@/components/ProgressBar";
-import GameIcon from "@/components/GameIcon";
-import { getGameAsset, CATEGORY_ASSETS } from "@/lib/game-assets";
+import { CATEGORY_ASSETS } from "@/lib/game-assets";
 import type { DeficitArea } from "@/types";
 import {
   Star,
   Trophy,
   Flame,
-  ChevronRight,
-  Sparkles,
   ShoppingBag,
-  Play,
   ArrowRight,
-  Award,
   Lock,
   Check,
   Gamepad2,
+  Map,
+  Sparkles,
+  Target,
   Zap,
+  TrendingUp,
 } from "lucide-react";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const [student, setStudent] = useState<Student | null>(null);
-  const [recommendations, setRecommendations] = useState<ExerciseRecommendation[]>([]);
   const [gamification, setGamification] = useState<GamificationSummary | null>(null);
   const [games, setGames] = useState<GameDefinition[]>([]);
+  const [sessions, setSessions] = useState<ExerciseSession[]>([]);
+  const [adventure, setAdventure] = useState<AdventureMap | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,16 +55,18 @@ export default function StudentDashboard() {
         /* backend may be down */
       }
 
-      const [s, r, g, allGames] = await Promise.all([
+      const [s, g, allGames, adv, sess] = await Promise.all([
         api.getStudent(user!.studentId).catch(() => null),
-        api.getRecommendations(user!.studentId).catch(() => []),
         api.getGamificationSummary(user!.studentId).catch(() => null),
         api.getGames().catch(() => []),
+        api.getStudentAdventure(user!.studentId).catch(() => null),
+        api.getStudentSessions(user!.studentId).catch(() => []),
       ]);
       setStudent(s);
-      setRecommendations(r);
       setGamification(g);
       setGames(allGames);
+      setSessions(sess);
+      if (adv) setAdventure(adv);
       setLoading(false);
     }
     load();
@@ -154,7 +156,7 @@ export default function StudentDashboard() {
       {/* ─── XP Progress ────────────────────────────────────── */}
       {gamification && (
         <div className="bg-cream rounded-2xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2.5">
             <span className="text-[13px] font-semibold text-neutral-700">
               Level {gamification.level_info.level} &mdash; {gamification.level_info.title}
             </span>
@@ -162,16 +164,69 @@ export default function StudentDashboard() {
               {gamification.level_info.xp} / {gamification.level_info.xp_for_next_level} XP
             </span>
           </div>
-          <ProgressBar
-            value={gamification.level_info.progress_percent}
-            showPercentage={false}
-            size="lg"
-          />
+          <div className="w-full h-3 bg-white rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.max(2, gamification.level_info.progress_percent)}%`,
+                background: "linear-gradient(90deg, #FF5A39, #FF9E75)",
+              }}
+            />
+          </div>
         </div>
       )}
 
+      {/* ─── Adventure Map Card ────────────────────────────── */}
+      <Link
+        href="/student/map"
+        className="block mb-6 group"
+      >
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#475093] to-[#303FAE] p-6 transition-all hover:shadow-lg">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
+          <div className="absolute bottom-0 left-1/3 w-32 h-32 bg-white/5 rounded-full translate-y-12" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
+                <Map size={24} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-semibold text-white">
+                  {adventure ? "Continue Your Adventure" : "Adventure Map"}
+                </h2>
+                <p className="text-[13px] text-white/60 mt-0.5">
+                  {adventure
+                    ? `${adventure.worlds.length} worlds with ${adventure.worlds.reduce((s, w) => s + w.game_ids.length, 0)} exercises to explore`
+                    : "Explore worlds and complete levels to earn stars!"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {adventure && (
+                <div className="hidden sm:flex items-center gap-3 mr-4">
+                  {adventure.worlds.slice(0, 3).map((w) => (
+                    <div
+                      key={w.deficit_area}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold border border-white/20"
+                      style={{ backgroundColor: w.color + "80" }}
+                    >
+                      {w.world_number}
+                    </div>
+                  ))}
+                  {adventure.worlds.length > 3 && (
+                    <span className="text-white/50 text-xs font-medium">+{adventure.worlds.length - 3}</span>
+                  )}
+                </div>
+              )}
+              <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-colors">
+                <ArrowRight size={18} className="text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+
       {/* ─── Quick Play Categories ────────────────────────── */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[15px] font-semibold text-neutral-900 tracking-tight">Quick Play</h2>
           <Link href="/student/games" className="text-[12px] text-neutral-400 hover:text-neutral-900 font-medium flex items-center gap-1 transition-colors">
@@ -201,172 +256,92 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ─── Recommended Games ────────────────────────────── */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-[15px] font-semibold text-neutral-900 tracking-tight">
-                Recommended For You
-              </h2>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                {interests.length > 0
-                  ? `Based on your love of ${interests.slice(0, 3).join(", ")}`
-                  : "Games picked for your skill level"}
-              </p>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-cream text-neutral-500">
-              <Sparkles size={11} />
-              AI Picks
-            </span>
-          </div>
+      {/* ─── Bottom cards ────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* My Stats Card */}
+        <StatsCard
+          sessions={sessions}
+          totalStars={gamification?.badges.filter((b) => b.earned).length ?? 0}
+          points={points}
+          gamesPlayed={sessions.length}
+          streak={student?.current_streak ?? 0}
+        />
 
-          {recommendations.length > 0 ? (
-            <div className="bg-cream rounded-2xl divide-y divide-neutral-200/60">
-              {recommendations.slice(0, 6).map((rec, idx) => {
-                const color = DEFICIT_AREA_COLORS[rec.deficit_area] || "#6366f1";
-                const areaLabel = DEFICIT_AREA_LABELS[rec.deficit_area] || rec.deficit_area;
-                const game = games.find((g) => g.id === rec.game_id);
-                const asset = game ? getGameAsset(game.id) : null;
+        {/* Password Card */}
+        <PasswordCard username={user.username} />
+      </div>
+    </div>
+  );
+}
 
-                return (
-                  <Link
-                    key={`${rec.game_id}-${idx}`}
-                    href={`/exercises/play?studentId=${user.studentId}&gameId=${rec.game_id}`}
-                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-neutral-200/30 transition-all group first:rounded-t-2xl last:rounded-b-2xl"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        backgroundColor: asset ? `${asset.accent}12` : `${color}12`,
-                        color: asset?.accent || color,
-                      }}
-                    >
-                      {asset ? (
-                        <GameIcon name={asset.icon} size={20} strokeWidth={1.5} />
-                      ) : (
-                        <Play size={18} />
-                      )}
-                    </div>
+// ─── Stats Card Component ────────────────────────────────────
+function StatsCard({
+  sessions,
+  totalStars,
+  points,
+  gamesPlayed,
+  streak,
+}: {
+  sessions: ExerciseSession[];
+  totalStars: number;
+  points: number;
+  gamesPlayed: number;
+  streak: number;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const todaySessions = sessions.filter((s) => s.started_at?.slice(0, 10) === today);
+  const todayCount = todaySessions.length;
+  const dailyGoal = 5;
+  const goalPercent = Math.min(100, Math.round((todayCount / dailyGoal) * 100));
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-neutral-900 group-hover:text-neutral-600 transition-colors">
-                        {rec.game_name}
-                      </p>
-                      <p className="text-xs text-neutral-400 truncate">
-                        {rec.reason}
-                      </p>
-                    </div>
+  const stats = [
+    { icon: Target, label: "Today", value: `${todayCount}/${dailyGoal}`, color: "#475093" },
+    { icon: Zap, label: "Total Games", value: gamesPlayed.toString(), color: "#f59e0b" },
+    { icon: Star, label: "Points", value: points.toLocaleString(), color: "#eab308" },
+    { icon: TrendingUp, label: "Streak", value: streak > 0 ? `${streak}d` : "0d", color: "#ef4444" },
+  ];
 
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: `${color}10`, color }}
-                      >
-                        {areaLabel}
-                      </span>
-                      <ChevronRight size={14} className="text-neutral-300" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="bg-cream rounded-2xl p-10 text-center">
-              <Sparkles size={28} className="text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-500 mb-4 text-[13px] font-medium">
-                No specific recommendations yet. Try some games!
-              </p>
-              <Link href="/student/games" className="btn-primary">
-                <Play size={16} />
-                Browse All Games
-              </Link>
-            </div>
-          )}
+  return (
+    <div className="bg-cream rounded-2xl p-5">
+      <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-3">
+        My Progress
+      </p>
+
+      {/* Daily goal mini bar */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[12px] font-medium text-neutral-600">Daily Goal</span>
+          <span className="text-[11px] font-semibold text-[#475093]">{goalPercent}%</span>
         </div>
-
-        {/* ─── Sidebar ──────────────────────────────────────── */}
-        <div className="space-y-4">
-          {/* Points Card */}
-          <div className="bg-cream rounded-2xl p-5">
-            <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-3">
-              Your Points
-            </p>
-            <div className="flex items-center gap-2 mb-3">
-              <Star size={22} className="text-amber-400" fill="currentColor" />
-              <p className="text-3xl font-semibold text-neutral-900">
-                {points.toLocaleString()}
-              </p>
-            </div>
-            <Link href="/student/shop" className="btn-primary w-full justify-center text-[13px]">
-              <ShoppingBag size={15} />
-              Visit Shop
-            </Link>
-          </div>
-
-          {/* Badges */}
-          {gamification && gamification.badges.length > 0 && (
-            <div className="bg-cream rounded-2xl p-5">
-              <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-3">
-                Recent Badges
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {gamification.badges
-                  .filter((b) => b.earned)
-                  .slice(0, 6)
-                  .map((badge) => (
-                    <div
-                      key={badge.id}
-                      className="w-10 h-10 rounded-xl bg-white flex items-center justify-center"
-                      title={badge.name}
-                    >
-                      <Award size={18} className="text-amber-500" />
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quick Play List */}
-          <div className="bg-cream rounded-2xl p-5">
-            <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-3">
-              Quick Play
-            </p>
-            <div className="space-y-0.5">
-              {ageGames.slice(0, 4).map((game) => {
-                const asset = getGameAsset(game.id);
-                return (
-                  <Link
-                    key={game.id}
-                    href={`/exercises/play?studentId=${user.studentId}&gameId=${game.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/60 transition-colors group"
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${asset.accent}10`, color: asset.accent }}
-                    >
-                      <GameIcon name={asset.icon} size={15} strokeWidth={1.5} />
-                    </div>
-                    <span className="text-[13px] font-medium text-neutral-700 truncate group-hover:text-neutral-900 transition-colors">
-                      {game.name}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-            <Link
-              href="/student/games"
-              className="flex items-center justify-center gap-1 text-xs text-neutral-500 font-medium mt-3 hover:text-neutral-900 transition-colors"
-            >
-              See all games
-              <ArrowRight size={12} />
-            </Link>
-          </div>
-
-          {/* Password Card */}
-          <PasswordCard username={user.username} />
+        <div className="w-full h-2 bg-white rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.max(2, goalPercent)}%`,
+              background: goalPercent >= 100
+                ? "linear-gradient(90deg, #10b981, #34d399)"
+                : "linear-gradient(90deg, #475093, #6366f1)",
+            }}
+          />
         </div>
       </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {stats.map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl px-3 py-2.5 text-center">
+            <stat.icon size={16} className="mx-auto mb-1" style={{ color: stat.color }} fill={stat.label === "Points" ? "currentColor" : "none"} />
+            <p className="text-[15px] font-semibold text-neutral-900">{stat.value}</p>
+            <p className="text-[10px] text-neutral-400 font-medium">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <Link href="/student/shop" className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 font-medium mt-3 hover:text-[#475093] transition-colors">
+        <ShoppingBag size={12} />
+        Spend points in shop
+        <ArrowRight size={11} />
+      </Link>
     </div>
   );
 }

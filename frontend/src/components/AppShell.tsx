@@ -8,7 +8,7 @@ import Sidebar from "@/components/Sidebar";
 // Pages that don't need auth or sidebar
 const PUBLIC_PATHS = ["/login"];
 // Pages that are full-screen (no sidebar)
-const FULLSCREEN_PATHS = ["/login", "/wizard"];
+const FULLSCREEN_PATHS = ["/login", "/wizard", "/student/map"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn } = useAuth();

@@ -26,6 +26,11 @@ import type {
   AnalyticsOverview,
   ExerciseRecommendation,
   AIStatus,
+  AdventureMap,
+  AdventureMapCreate,
+  AdventureSuggestRequest,
+  AdventureSuggestResponse,
+  AvailableGameForArea,
 } from "@/types";
 
 export const api = {
@@ -104,6 +109,37 @@ export const api = {
     fetchAPI<AnalyticsOverview>(`/analytics/${studentId}/overview`),
   getReport: (studentId: string) =>
     fetchAPI<Record<string, unknown>>(`/analytics/${studentId}/report`),
+
+  // Adventures
+  getAdventureStatusAll: () =>
+    fetchAPI<Record<string, { has_adventure: boolean; adventure_id: string; title: string; world_count: number; total_games: number }>>(
+      "/adventures/status/all"
+    ),
+  getStudentAdventure: (studentId: string) =>
+    fetchAPI<AdventureMap | null>(`/adventures/student/${studentId}`),
+  getStudentAdventures: (studentId: string) =>
+    fetchAPI<AdventureMap[]>(`/adventures/student/${studentId}/all`),
+  createAdventure: (data: AdventureMapCreate) =>
+    fetchAPI<AdventureMap>("/adventures", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateAdventure: (id: string, data: Partial<AdventureMapCreate>) =>
+    fetchAPI<AdventureMap>(`/adventures/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteAdventure: (id: string) =>
+    fetchAPI<{ message: string }>(`/adventures/${id}`, { method: "DELETE" }),
+  suggestAdventure: (data: AdventureSuggestRequest) =>
+    fetchAPI<AdventureSuggestResponse>("/adventures/suggest", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getGamesForArea: (area: string, age: number, severity?: string) =>
+    fetchAPI<AvailableGameForArea[]>(
+      `/adventures/games-for-area/${area}?age=${age}${severity ? `&severity=${severity}` : ""}`
+    ),
 
   // AI Status
   getAIStatus: async (): Promise<AIStatus> => {

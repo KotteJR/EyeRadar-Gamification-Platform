@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { registerStudentAccount } from "@/lib/auth";
 import type { Student, StudentCreate, DiagnosticInfo, DyslexiaType, SeverityLevel } from "@/types";
@@ -12,6 +13,7 @@ import {
   SEVERITY_DESCRIPTIONS,
   DEFICIT_AREA_LABELS,
 } from "@/types";
+import { Map, Sparkles } from "lucide-react";
 
 const DEFAULT_DIAGNOSTIC: DiagnosticInfo = {
   dyslexia_type: "unspecified",
@@ -31,10 +33,14 @@ const DEFAULT_DIAGNOSTIC: DiagnosticInfo = {
 const SEV_COLORS = ["", "bg-emerald-400", "bg-yellow-400", "bg-orange-400", "bg-red-400", "bg-red-600"];
 const SEV_LABELS_SHORT = ["", "Mild", "Low-Mod", "Moderate", "High-Mod", "Severe"];
 
+type AdventureStatus = { has_adventure: boolean; adventure_id: string; title: string; world_count: number; total_games: number };
+
 export default function StudentsPage() {
+  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [adventureStatuses, setAdventureStatuses] = useState<Record<string, AdventureStatus>>({});
   const [formData, setFormData] = useState<StudentCreate>({
     name: "",
     age: 8,
@@ -58,9 +64,14 @@ export default function StudentsPage() {
   };
 
   const fetchStudents = () => {
-    api
-      .getStudents()
-      .then(setStudents)
+    Promise.all([
+      api.getStudents(),
+      api.getAdventureStatusAll().catch(() => ({})),
+    ])
+      .then(([s, statuses]) => {
+        setStudents(s);
+        setAdventureStatuses(statuses);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -461,58 +472,91 @@ export default function StudentsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {students.map((student) => {
             const diagLabel = getDiagLabel(student);
+            const advStatus = adventureStatuses[student.id];
             return (
-              <Link
+              <div
                 key={student.id}
-                href={`/students/${student.id}`}
-                className="bg-white rounded-2xl border border-[#E3E3E3] p-5 card-hover block shadow-sm"
+                className="bg-white rounded-2xl border border-[#E3E3E3] p-5 shadow-sm"
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold text-white"
-                    style={{ background: "linear-gradient(135deg, #475093, #303FAE)" }}
-                  >
-                    {student.name.charAt(0).toUpperCase()}
+                <Link
+                  href={`/students/${student.id}`}
+                  className="block card-hover"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold text-white"
+                      style={{ background: "linear-gradient(135deg, #475093, #303FAE)" }}
+                    >
+                      {student.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-[#303030]">{student.name}</h3>
+                      <p className="text-xs text-[#ABABAB]">
+                        Age {student.age} &middot; Grade {student.grade}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-[#303030]">{student.name}</h3>
-                    <p className="text-xs text-[#ABABAB]">
-                      Age {student.age} &middot; Grade {student.grade}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Diagnostic badge */}
-                {diagLabel && (
-                  <div className="mb-3">
-                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#475093]/10 text-[#475093] font-medium">
-                      {diagLabel}
+                  {/* Diagnostic badge */}
+                  {diagLabel && (
+                    <div className="mb-3">
+                      <span className="text-[11px] px-2.5 py-1 rounded-full bg-[#475093]/10 text-[#475093] font-medium">
+                        {diagLabel}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
+                      <p className="text-lg font-bold text-[#303030]">{student.level}</p>
+                      <p className="text-[10px] text-[#ABABAB] font-medium">Level</p>
+                    </div>
+                    <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
+                      <p className="text-lg font-bold text-[#303030]">{student.total_points}</p>
+                      <p className="text-[10px] text-[#ABABAB] font-medium">Points</p>
+                    </div>
+                    <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
+                      <p className="text-lg font-bold text-[#303030]">{student.current_streak}</p>
+                      <p className="text-[10px] text-[#ABABAB] font-medium">Streak</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${diagLabel ? "bg-emerald-400" : student.assessment ? "bg-emerald-400" : "bg-amber-400"}`} />
+                    <span className="text-[11px] text-[#ABABAB]">
+                      {diagLabel ? "Diagnostic set" : student.assessment ? "Assessment imported" : "No diagnostic yet"}
                     </span>
                   </div>
-                )}
+                </Link>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
-                    <p className="text-lg font-bold text-[#303030]">{student.level}</p>
-                    <p className="text-[10px] text-[#ABABAB] font-medium">Level</p>
-                  </div>
-                  <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
-                    <p className="text-lg font-bold text-[#303030]">{student.total_points}</p>
-                    <p className="text-[10px] text-[#ABABAB] font-medium">Points</p>
-                  </div>
-                  <div className="text-center p-2.5 bg-[#F8F8F8] rounded-xl">
-                    <p className="text-lg font-bold text-[#303030]">{student.current_streak}</p>
-                    <p className="text-[10px] text-[#ABABAB] font-medium">Streak</p>
-                  </div>
+                {/* Adventure Status + Action */}
+                <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
+                  {advStatus ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Map size={13} className="text-emerald-500" />
+                        <span className="text-[11px] text-[#555] font-medium">
+                          Adventure active - {advStatus.world_count} worlds, {advStatus.total_games} exercises
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => { e.preventDefault(); router.push(`/students/${student.id}?tab=adventure`); }}
+                        className="text-[11px] font-semibold text-[#475093] hover:text-[#303FAE] transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.preventDefault(); router.push(`/students/${student.id}?tab=adventure`); }}
+                      className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] hover:bg-[#475093]/5 transition-all text-xs font-medium"
+                    >
+                      <Sparkles size={13} />
+                      Set Up Adventure Map
+                    </button>
+                  )}
                 </div>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full ${diagLabel ? "bg-emerald-400" : student.assessment ? "bg-emerald-400" : "bg-amber-400"}`} />
-                  <span className="text-[11px] text-[#ABABAB]">
-                    {diagLabel ? "Diagnostic set" : student.assessment ? "Assessment imported" : "No diagnostic yet"}
-                  </span>
-                </div>
-              </Link>
+              </div>
             );
           })}
         </div>
