@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ExerciseItem, ExerciseItemResult } from "@/types";
 import { X, BookOpen, Clock, Zap, Trophy } from "lucide-react";
+import { UISounds } from "@/lib/ui-sounds";
+import MuteButton from "@/components/MuteButton";
 
 interface MemoryMatchGameProps {
   item: ExerciseItem;
@@ -140,6 +142,7 @@ export default function MemoryMatchGame({
 
     if (cardA.iconId === cardB.iconId) {
       // Match found
+      UISounds.match();
       checkTimeoutRef.current = setTimeout(() => {
         setCards((prev) =>
           prev.map((c) =>
@@ -189,6 +192,7 @@ export default function MemoryMatchGame({
       if (flipped.length >= 2) return;
       if (flipped.includes(cardId)) return;
 
+      UISounds.flip();
       setCards((prev) =>
         prev.map((c) => (c.id === cardId ? { ...c, flipped: true } : c))
       );
@@ -205,31 +209,31 @@ export default function MemoryMatchGame({
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col">
-      {/* Background — grass meadow with wooden table */}
+      {/* Background — wooden table on grass */}
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: "url(/game-assets/memory/backgrounds/grass-meadow.png)",
+          backgroundImage: "url(/game-assets/backgrounds/download-1.png)",
           backgroundSize: "cover",
           backgroundPosition: "center",
           imageRendering: "pixelated",
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-400/20 via-transparent to-black/40" />
 
-      {/* Top HUD */}
-      <div className="relative z-10 flex items-center justify-between px-4 py-3">
-        <div className="flex gap-1.5">
-          <button onClick={onExit} className="hud-ctrl-btn hud-ctrl-exit pointer-events-auto">
+      {/* Top HUD — absolute, never affects card layout */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 pointer-events-none">
+        <div className="flex gap-1.5 pointer-events-auto">
+          <MuteButton className="!w-7 !h-7 !rounded-lg bg-black/30 hover:bg-black/50 !text-white/70" />
+          <button onClick={onExit} className="hud-ctrl-btn hud-ctrl-exit">
             <X size={11} strokeWidth={3} className="relative z-[1]" />
             <span className="relative z-[1]">Exit</span>
           </button>
-          <button onClick={onSwitchMode} className="hud-ctrl-btn hud-ctrl-mode pointer-events-auto" title="Switch to classic mode">
+          <button onClick={onSwitchMode} className="hud-ctrl-btn hud-ctrl-mode" title="Switch to classic mode">
             <BookOpen size={11} strokeWidth={2.5} className="relative z-[1]" />
             <span className="relative z-[1]">Classic</span>
           </button>
         </div>
-        <div className="flex items-center gap-4 text-white font-bold" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+        <div className="flex items-center gap-4 text-white font-bold pointer-events-auto" style={{ fontFamily: "'Fredoka', sans-serif" }}>
           <span className="flex items-center gap-1 text-white/80 text-sm">
             <Clock size={14} /> {formatTime(elapsed)}
           </span>
@@ -242,8 +246,8 @@ export default function MemoryMatchGame({
         </div>
       </div>
 
-      {/* Title */}
-      <div className="relative z-10 text-center mb-2">
+      {/* Title — absolute, never affects card layout */}
+      <div className="absolute top-12 left-0 right-0 z-20 text-center pointer-events-none">
         <h2
           className="text-xl font-bold text-white drop-shadow-lg"
           style={{ fontFamily: "'Fredoka', sans-serif", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
@@ -252,8 +256,8 @@ export default function MemoryMatchGame({
         </h2>
       </div>
 
-      {/* Card grid on wooden table surface */}
-      <div className="relative z-10 flex-1 flex items-center justify-center px-4 pb-4">
+      {/* Card grid on wooden table surface — always centered, position never changes */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center px-4">
         <div className="relative p-4 sm:p-6 rounded-xl" style={{
           background: "linear-gradient(180deg, #5a3e28 0%, #4a3220 50%, #3d2a1a 100%)",
           boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.3)",

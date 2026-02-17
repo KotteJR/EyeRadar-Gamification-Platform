@@ -8,6 +8,7 @@ import {
   type AnswerResultPayload,
 } from "@/lib/phaser/EventBus";
 import type { ExerciseItem, ExerciseItemResult } from "@/types";
+import { UISounds } from "@/lib/ui-sounds";
 
 interface AnswerOverlayProps {
   item: ExerciseItem;
@@ -88,7 +89,7 @@ function InteractiveGridAnswer({
             return (
               <button
                 key={i}
-                onClick={() => toggleCell(i)}
+                onClick={() => { UISounds.tile(); toggleCell(i); }}
                 disabled={disabled}
                 className={`qa-grid-cell qa-grid-cell-btn ${
                   tapped
@@ -111,7 +112,7 @@ function InteractiveGridAnswer({
       </div>
       <div className="mt-3 flex justify-center">
         <button
-          onClick={handleDone}
+          onClick={() => { UISounds.submit(); handleDone(); }}
           disabled={disabled || selectedCount === 0}
           className="qa-btn-submit disabled:opacity-40"
         >
@@ -127,7 +128,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
   const ed = item.extra_data || {};
   const type = item.item_type;
 
-  // ── timed_reading: show the passage ──
   if (type === "timed_reading" && typeof ed.passage === "string") {
     return (
       <div className="qa-problem-block">
@@ -136,7 +136,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── word_building (sound_swap): show the original word prominently ──
   if (type === "word_building" && typeof ed.original_word === "string") {
     return (
       <div className="qa-problem-block">
@@ -151,7 +150,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── word_building (word_ladder): show start word → target ──
   if (type === "word_building" && typeof ed.start_word === "string") {
     return (
       <div className="qa-problem-block">
@@ -165,7 +163,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── word_building (phoneme_blender): show sounds to blend ──
   if (type === "word_building" && Array.isArray(ed.sounds)) {
     return (
       <div className="qa-problem-block">
@@ -179,7 +176,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── fill_blank (visual_closure): show partial word ──
   if (type === "fill_blank" && typeof ed.partial_display === "string") {
     return (
       <div className="qa-problem-block">
@@ -191,7 +187,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── fill_blank (vocabulary_builder): show sentence with highlighted word ──
   if (type === "fill_blank" && typeof ed.sentence === "string") {
     const sentence = ed.sentence as string;
     const target = typeof ed.target_word === "string" ? (ed.target_word as string) : null;
@@ -216,7 +211,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── text_input (backward_spell): show the word to spell backwards ──
   if (type === "text_input" && typeof ed.original_word === "string") {
     return (
       <div className="qa-problem-block">
@@ -226,7 +220,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── speed_round: show display_item, target_word, or display_emoji ──
   if (type === "speed_round") {
     const display = ed.display_item || ed.target_word || ed.display_emoji;
     if (typeof display === "string") {
@@ -241,9 +234,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     }
   }
 
-  // spot_target with grid is handled by InteractiveGridAnswer in the main overlay
-
-  // ── sorting: show the events to sort ──
   if (type === "sorting" && Array.isArray(ed.events)) {
     return (
       <div className="qa-problem-block">
@@ -257,7 +247,6 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     );
   }
 
-  // ── Fallback: show any common extra_data fields ──
   const word = ed.word ?? ed.display_item ?? ed.target_word ?? ed.original_word;
   const target = ed.target;
   const passage = ed.passage ?? ed.sentence;
@@ -352,8 +341,8 @@ export default function AnswerOverlay({
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
       {showQuestion && (
         <div className="pointer-events-auto max-w-lg w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Question panel */}
-          <div className="qa-question-panel">
+          {/* ══ Question panel — uses dialog-question.png as CSS background ══ */}
+          <div className="qa-dialog">
             <p className="qa-question">{item.question}</p>
 
             {isGridType ? (
@@ -363,50 +352,66 @@ export default function AnswerOverlay({
                 disabled={submitting}
               />
             ) : (
-              <>
-                {/* Problem content — adapted per game type */}
-                <ProblemDisplay item={item} />
-              </>
+              <ProblemDisplay item={item} />
             )}
           </div>
 
-          {/* Answer buttons (not shown for grid types — grid has its own submit) */}
+          {/* ══ Answer buttons — each uses answer-btn-normal.png as background ══ */}
           {!isGridType && (
             <div className="mt-3">
               {needsTextInput ? (
-                <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
+                <TextInputAnswer
+                  onSubmit={handleAnswer}
+                  disabled={submitting}
+                />
               ) : hasOptions ? (
-                <div className={`grid gap-2.5 ${options.length <= 2 ? "grid-cols-2" : options.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                <div
+                  className={`grid gap-2.5 ${
+                    options.length <= 2
+                      ? "grid-cols-2"
+                      : options.length === 3
+                      ? "grid-cols-3"
+                      : "grid-cols-2"
+                  }`}
+                >
                   {options.map((opt, i) => (
                     <button
                       key={i}
-                      onClick={() => handleAnswer(opt)}
+                      onClick={() => { UISounds.select(); handleAnswer(opt); }}
                       disabled={submitting}
-                      className={`qa-answer-btn ${submitting ? "opacity-50" : ""}`}
+                      className={`qa-answer-btn-px ${
+                        submitting ? "opacity-50 pointer-events-none" : ""
+                      }`}
                     >
-                      <span className="qa-answer-letter">{String.fromCharCode(65 + i)}</span>
-                      <span className="qa-answer-text">{opt}</span>
+                      <span className="qa-answer-btn-text">{opt}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
+                <TextInputAnswer
+                  onSubmit={handleAnswer}
+                  disabled={submitting}
+                />
               )}
             </div>
           )}
         </div>
       )}
 
-      {/* Result feedback */}
+      {/* ══ Result feedback — dedicated correct/wrong panel images ══ */}
       {showResult && lastResult && (
         <div className="pointer-events-auto animate-in zoom-in duration-150 mt-4">
-          <div className={`qa-result ${lastResult.is_correct ? "qa-result-correct" : "qa-result-wrong"}`}>
+          <div className={`qa-result-panel ${lastResult.is_correct ? "qa-result-correct" : "qa-result-wrong"}`}>
             {lastResult.is_correct ? (
-              <span className="qa-result-text">Correct! +{lastResult.points_earned}</span>
+              <span className="qa-result-text">
+                Correct! +{lastResult.points_earned}
+              </span>
             ) : (
               <div className="text-center">
                 <p className="qa-result-text">Wrong</p>
-                <p className="qa-result-sub">Answer: {lastResult.correct_answer}</p>
+                <p className="qa-result-sub">
+                  Answer: {lastResult.correct_answer}
+                </p>
               </div>
             )}
           </div>
@@ -440,7 +445,7 @@ function TextInputAnswer({
         autoFocus
       />
       <button
-        onClick={() => value.trim() && onSubmit(value.trim())}
+        onClick={() => { if (value.trim()) { UISounds.submit(); onSubmit(value.trim()); } }}
         disabled={disabled || !value.trim()}
         className="qa-btn-submit disabled:opacity-40"
       >

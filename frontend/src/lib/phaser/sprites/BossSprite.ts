@@ -117,22 +117,33 @@ export class BossSprite extends Phaser.GameObjects.Container {
   }
 
   private playAttack(): void {
-    const origX = this.x;
+    // Try PixelLab attack animation first
+    const animKey = `boss-${this.bossType}-attack`;
+    if (this.scene.anims.exists(animKey)) {
+      this.sprite.play(animKey);
+      this.sprite.once("animationcomplete", () => {
+        if (!this.alive) return;
+        this.sprite.setTexture(`boss-${this.bossType}`);
+        this.sprite.setScale(3);
+        if (this.onAttackComplete) this.onAttackComplete();
+      });
+      return;
+    }
+
+    // Fallback: tint red + scale pulse for casting visual
     this.sprite.setTint(0xff4444);
 
     this.scene.tweens.add({
-      targets: this,
-      x: this.x - 40,
-      duration: 200,
-      ease: "Power2",
+      targets: this.sprite,
+      scaleX: 3.3,
+      scaleY: 2.8,
+      duration: 150,
       yoyo: true,
+      ease: "Sine.easeOut",
       onComplete: () => {
         if (!this.alive) return;
-        this.x = origX;
         this.sprite.clearTint();
-        // Return to idle after attack
-        this.currentBossState = "idle";
-        this.addIdleFloat();
+        this.sprite.setScale(3);
         if (this.onAttackComplete) this.onAttackComplete();
       },
     });

@@ -7,7 +7,8 @@ export type PlayerState =
   | "casting"
   | "celebrating"
   | "hurt"
-  | "jumping";
+  | "jumping"
+  | "dead";
 
 export class PlayerSprite extends Phaser.GameObjects.Container {
   private sprite: Phaser.GameObjects.Sprite;
@@ -82,6 +83,9 @@ export class PlayerSprite extends Phaser.GameObjects.Container {
         break;
       case "jumping":
         this.startJumpAnimation();
+        break;
+      case "dead":
+        this.startDeathAnimation();
         break;
     }
   }
@@ -341,6 +345,29 @@ export class PlayerSprite extends Phaser.GameObjects.Container {
 
   private playHurtFlash(): void {
     this.scene.tweens.killTweensOf(this.sprite);
+
+    // Try PixelLab hit animation
+    const hasHitFrames = this.scene.textures.exists("player-hit-0");
+    if (hasHitFrames && this.scene.anims.exists("player-hit")) {
+      this.sprite.setFlipX(true); // west frames flipped to face east
+      this.sprite.play("player-hit");
+      this.sprite.once("animationcomplete", () => {
+        if (!this.alive) return;
+        this.sprite.setFlipX(!this._facingRight);
+        this.setPlayerState("idle");
+      });
+      // Knockback
+      this.scene.tweens.add({
+        targets: this,
+        x: this.x + 12,
+        duration: 150,
+        yoyo: true,
+        ease: "Power2",
+      });
+      return;
+    }
+
+    // Fallback procedural hurt
     this.sprite.setTint(0xff0000);
     this.scene.tweens.add({
       targets: this.sprite,
@@ -361,6 +388,50 @@ export class PlayerSprite extends Phaser.GameObjects.Container {
       duration: 50,
       yoyo: true,
       repeat: 3,
+    });
+  }
+
+  // ── DEATH ────────────────────────────────────────
+
+  private startDeathAnimation(): void {
+    this.scene.tweens.killTweensOf(this.sprite);
+
+    // Try to play sprite-based death animation if frames exist
+    const hasDeathFrames = this.scene.textures.exists("player-death-0");
+    if (hasDeathFrames && this.scene.anims.exists("player-death")) {
+      this.sprite.setFlipX(true); // west frames flipped to face east
+      this.sprite.play("player-death");
+      // Slight knockback during death
+      this.scene.tweens.add({
+        targets: this,
+        x: this.x + 20,
+        duration: 600,
+        ease: "Power2",
+      });
+      return;
+    }
+
+    // Fallback — procedural faceplant
+    this.sprite.setTexture("player-idle");
+    this.sprite.setTint(0xff4444);
+
+    // Stagger backward
+    this.scene.tweens.add({
+      targets: this,
+      x: this.x + 15,
+      duration: 200,
+      ease: "Power2",
+    });
+
+    // Fall forward rotation + drop
+    this.scene.tweens.add({
+      targets: this.sprite,
+      rotation: Math.PI / 2,
+      y: 20,
+      alpha: 0.7,
+      duration: 600,
+      delay: 200,
+      ease: "Bounce.easeOut",
     });
   }
 

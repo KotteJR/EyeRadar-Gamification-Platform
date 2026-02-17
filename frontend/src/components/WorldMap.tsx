@@ -20,6 +20,8 @@ import {
 import { DEFICIT_AREA_THEME, WORLD_THEMES } from "@/lib/level-config";
 import { BOSSES, GAME_MODE_BOSS } from "@/lib/boss-config";
 import { Star, Lock, Play, ChevronLeft, Coins } from "lucide-react";
+import { UISounds } from "@/lib/ui-sounds";
+import MuteButton from "@/components/MuteButton";
 
 // ─── Props ─────────────────────────────────────────────────────────────
 interface WorldMapProps {
@@ -367,6 +369,7 @@ function GameLevelNode({
     <Link
       href={`/exercises/play?studentId=${studentId}&gameId=${node.game.id}`}
       className="cursor-pointer"
+      onClick={() => UISounds.start()}
     >
       {content}
     </Link>
@@ -638,47 +641,40 @@ export default function WorldMap({
         </div>
       )}
 
-      {/* ─── HUD Header ──────────────────────────────────────── */}
+      {/* ─── Header — clean classic UI ──────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-50 px-4 py-2.5">
-        <div
-          className="max-w-5xl mx-auto flex items-center justify-between rounded-lg px-4 py-2 shadow-lg border-2 border-[#8B6914] relative overflow-hidden"
-          style={{ background: "linear-gradient(180deg, #3E2723 0%, #2C1D17 100%)", boxShadow: "inset 0 1px 0 rgba(255,215,0,0.15), 0 4px 12px rgba(0,0,0,0.4)" }}
-        >
-          <img src="/game-assets/ui/healthbar-frame.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none" style={{ opacity: 0.2, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-
-          <div className="flex items-center gap-3 relative z-[1]">
-            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center shadow-sm border border-[#8B6914] rounded-sm" style={{ background: "linear-gradient(180deg, #5A3A1A, #3E2723)" }}>
-              <ChevronLeft size={16} className="text-[#FFD700]" />
+        <div className="max-w-5xl mx-auto flex items-center justify-between rounded-2xl px-4 py-2.5 bg-white/90 backdrop-blur-sm shadow-md border border-gray-200">
+          <div className="flex items-center gap-3">
+            <button onClick={() => { UISounds.click(); onBack(); }} className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+              <ChevronLeft size={16} className="text-gray-600" />
             </button>
             <div className="flex items-center gap-2">
-              <span className="w-7 h-7 flex items-center justify-center text-[12px] font-bold shadow-sm" style={{ background: "linear-gradient(180deg, #FFD700, #B8860B)", color: "#3E2723", border: "1px solid #6B5014", borderRadius: "2px", fontFamily: "'Fredoka', sans-serif" }}>
+              <span
+                className="w-7 h-7 flex items-center justify-center text-[12px] font-bold rounded-lg text-white"
+                style={{ background: color, fontFamily: "'Fredoka', sans-serif" }}
+              >
                 {worldNum}
               </span>
               <div>
-                <h1 className="text-[14px] font-semibold leading-tight text-[#FFD700]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)", fontFamily: "'Fredoka', sans-serif" }}>{worldName}</h1>
-                <p className="text-[10px] font-medium text-[#C4A35A]">{DEFICIT_AREA_LABELS[area]} — {worldThemeConfig.subtitle}</p>
+                <h1 className="text-[14px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "'Fredoka', sans-serif" }}>{worldName}</h1>
+                <p className="text-[10px] text-gray-400 font-medium">{DEFICIT_AREA_LABELS[area]} — {worldThemeConfig.subtitle}</p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 relative z-[1]">
-            <div className="flex items-center gap-1.5 relative px-2 py-0.5">
-              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <Star size={14} className="text-amber-400 relative z-[1]" fill="currentColor" />
-              <span className="text-[13px] font-bold text-[#FFD700] relative z-[1]">{totalStars}</span>
-              <span className="text-[11px] text-[#8B6914] relative z-[1]">/{maxStars}</span>
+          <div className="flex items-center gap-3">
+            <MuteButton />
+            <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-xl">
+              <Star size={13} className="text-amber-500" fill="currentColor" />
+              <span className="text-[12px] font-bold text-amber-700">{totalStars}<span className="text-amber-400 font-medium">/{maxStars}</span></span>
             </div>
-            <div className="w-px h-5 bg-[#8B6914]/40" />
-            <div className="flex items-center gap-1.5 relative px-2 py-0.5">
-              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <Coins size={14} className="text-amber-400 relative z-[1]" />
-              <span className="text-[13px] font-bold text-[#FFD700] relative z-[1]">{totalPoints}</span>
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-xl">
+              <Coins size={13} className="text-emerald-500" />
+              <span className="text-[12px] font-bold text-emerald-700">{totalPoints}</span>
             </div>
-            <div className="w-px h-5 bg-[#8B6914]/40" />
-            <div className="text-right relative px-2 py-0.5">
-              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <p className="text-[11px] text-[#8B6914] relative z-[1]">Progress</p>
-              <p className="text-[13px] font-bold leading-tight text-[#FFD700] relative z-[1]" style={{ fontFamily: "'Fredoka', sans-serif" }}>{completedCount}/{totalGameLevels}</p>
+            <div className="bg-gray-50 px-2.5 py-1 rounded-xl text-center">
+              <p className="text-[9px] text-gray-400 font-medium leading-tight">Progress</p>
+              <p className="text-[12px] font-bold text-gray-700 leading-tight" style={{ fontFamily: "'Fredoka', sans-serif" }}>{completedCount}/{totalGameLevels}</p>
             </div>
           </div>
         </div>
@@ -744,46 +740,44 @@ export default function WorldMap({
         <div className="max-w-2xl mx-auto px-4 pb-3 pointer-events-auto">
           <details className="group">
             <summary className="flex items-center justify-center gap-2 py-2 cursor-pointer select-none">
-              <div className="w-10 h-1 rounded-full bg-neutral-400/30 group-open:bg-neutral-400/50 transition-colors" />
+              <div className="w-10 h-1 rounded-full bg-gray-300/50 group-open:bg-gray-400/60 transition-colors" />
             </summary>
-            <div className="rounded-lg shadow-xl border-2 border-[#8B6914] max-h-56 overflow-y-auto p-2 space-y-0.5" style={{ background: "linear-gradient(180deg, rgba(62,39,35,0.95), rgba(44,29,23,0.95))" }}>
+            <div className="rounded-2xl shadow-xl border border-gray-200 max-h-56 overflow-y-auto p-2 space-y-0.5 bg-white/95 backdrop-blur-sm">
               {mapNodes.map((node) => {
-                const asset = node.game ? getGameAsset(node.game.id) : null;
                 const isCastle = node.type === "castle";
                 return (
                   <div
                     key={node.id}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                      node.state === "current" ? "bg-[#FFD700]/10" : node.state === "locked" ? "opacity-40" : "hover:bg-white/5"
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
+                      node.state === "current" ? "bg-blue-50" : node.state === "locked" ? "opacity-40" : "hover:bg-gray-50"
                     }`}
                   >
                     <div
-                      className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
                       style={{
-                        background: node.state === "locked" ? "#555" : isCastle ? color : "linear-gradient(180deg, #FFD700, #B8860B)",
-                        color: node.state === "locked" ? "#999" : "#3E2723",
-                        border: "1px solid #5a3e1e",
+                        background: node.state === "locked" ? "#d1d5db" : isCastle ? color : color,
                         fontFamily: "'Fredoka', sans-serif",
                       }}
                     >
                       {isCastle ? "C" : node.levelNumber}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold text-[#FFD700] truncate" style={{ fontFamily: "'Fredoka', sans-serif" }}>{node.label}</p>
-                      {node.game && <p className="text-[10px] text-[#C4A35A] truncate">{node.game.description}</p>}
-                      {isCastle && <p className="text-[10px] text-[#C4A35A]">Test your skills!</p>}
+                      <p className="text-[12px] font-semibold text-gray-900 truncate" style={{ fontFamily: "'Fredoka', sans-serif" }}>{node.label}</p>
+                      {node.game && <p className="text-[10px] text-gray-400 truncate">{node.game.description}</p>}
+                      {isCastle && <p className="text-[10px] text-gray-400">Test your skills!</p>}
                     </div>
                     {node.state === "completed" && <StarDisplay count={node.stars} size={10} />}
                     {node.state === "current" && node.game && (
                       <Link
                         href={`/exercises/play?studentId=${studentId}&gameId=${node.game.id}`}
-                        className="text-[10px] px-2.5 py-1 font-bold rounded"
-                        style={{ background: "linear-gradient(180deg, #FFD700, #F9A825)", color: "#5D3A00", fontFamily: "'Fredoka', sans-serif" }}
+                        className="text-[10px] px-3 py-1 font-bold rounded-lg text-white"
+                        style={{ background: color, fontFamily: "'Fredoka', sans-serif" }}
+                        onClick={() => UISounds.start()}
                       >
                         Play
                       </Link>
                     )}
-                    {node.state === "locked" && <Lock size={12} className="text-[#8B6914]/50 flex-shrink-0" />}
+                    {node.state === "locked" && <Lock size={12} className="text-gray-300 flex-shrink-0" />}
                   </div>
                 );
               })}

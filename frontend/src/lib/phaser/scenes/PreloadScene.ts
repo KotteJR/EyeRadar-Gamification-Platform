@@ -65,6 +65,22 @@ export class PreloadScene extends Phaser.Scene {
       );
     }
 
+    // Player death animation frames (7 frames)
+    for (let i = 0; i < 7; i++) {
+      this.load.image(
+        `player-death-${i}`,
+        `/game-assets/player/death/frame_00${i}.png`
+      );
+    }
+
+    // Player hit/take-damage animation frames (6 frames)
+    for (let i = 0; i < 6; i++) {
+      this.load.image(
+        `player-hit-${i}`,
+        `/game-assets/player/hit/frame_00${i}.png`
+      );
+    }
+
     // ── Boss sprites ───────────────────────────────────
     const bosses = [
       "dark_sorcerer",
@@ -91,11 +107,55 @@ export class PreloadScene extends Phaser.Scene {
       }
     }
 
-    // ── UI elements ─────────────────────────────────────
+    // ── Boss attack animation frames ──────────────────
+    const bossAttacks: Array<{ boss: string; frameCount: number }> = [
+      { boss: "dark_sorcerer", frameCount: 6 },
+      { boss: "shadow_beast", frameCount: 6 },
+      { boss: "giant_golem", frameCount: 6 },
+      { boss: "corrupted_knight", frameCount: 6 },
+    ];
+    for (const { boss, frameCount } of bossAttacks) {
+      for (let i = 0; i < frameCount; i++) {
+        this.load.image(
+          `boss-${boss}-attack-${i}`,
+          `/game-assets/bosses/${boss}_attack/frame_00${i}.png`
+        );
+      }
+    }
+
+    // ── UI elements (legacy + PixelLab HUD) ────────────
     this.load.image("ui-panel", "/game-assets/ui/panel-frame.png");
     this.load.image("ui-healthbar", "/game-assets/ui/health-bar.png");
     this.load.image("ui-button", "/game-assets/ui/button.png");
     this.load.image("ui-banner", "/game-assets/ui/banner.png");
+
+    // PixelLab generated HUD assets
+    const hud = "/game-assets/ui/hud";
+    this.load.image("hud-dialog", `${hud}/dialog-question.png`);
+    this.load.image("hud-notification", `${hud}/dialog-notification.png`);
+    this.load.image("hud-btn-normal", `${hud}/answer-btn-normal.png`);
+    this.load.image("hud-btn-hover", `${hud}/answer-btn-hover.png`);
+    this.load.image("hud-btn-correct", `${hud}/answer-btn-correct.png`);
+    this.load.image("hud-btn-wrong", `${hud}/answer-btn-wrong.png`);
+    this.load.image("hud-hp-frame", `${hud}/healthbar-frame-player.png`);
+    this.load.image("hud-hp-fill", `${hud}/healthbar-fill-red.png`);
+    this.load.image("hud-boss-frame", `${hud}/boss-healthbar-frame.png`);
+    this.load.image("hud-boss-fill", `${hud}/boss-healthbar-fill.png`);
+    this.load.image("hud-heart-full", `${hud}/heart-full.png`);
+    this.load.image("hud-heart-empty", `${hud}/heart-empty.png`);
+    this.load.image("hud-coin", `${hud}/coin-icon.png`);
+    this.load.image("hud-star", `${hud}/star-icon.png`);
+    this.load.image("hud-stone-normal", `${hud}/answer-stone-normal.png`);
+    this.load.image("hud-stone-hover", `${hud}/answer-stone-hover.png`);
+    this.load.image("hud-stone-large", `${hud}/projectile-stone-large.png`);
+    this.load.image("hud-progress-frame", `${hud}/progress-bar-frame.png`);
+    this.load.image("hud-progress-fill", `${hud}/progress-bar-fill.png`);
+    this.load.image("hud-speech", `${hud}/speech-bubble-normal.png`);
+    this.load.image("hud-speech-evil", `${hud}/speech-bubble-evil.png`);
+    this.load.image("hud-timer", `${hud}/timer-frame.png`);
+
+    // Boss attack effects are now fully procedural (Phaser graphics + tweens)
+    // No external sprite frames needed for tornado, fireball, poison, ice, etc.
 
     // ── Background images ──────────────────────────────
     const themes = [
@@ -166,6 +226,30 @@ export class PreloadScene extends Phaser.Scene {
         repeat: 0,
       });
     }
+
+    // Death animation (7 frames, plays once)
+    if (!this.anims.exists("player-death") && this.textures.exists("player-death-0")) {
+      this.anims.create({
+        key: "player-death",
+        frames: Array.from({ length: 7 }, (_, i) => ({
+          key: `player-death-${i}`,
+        })),
+        frameRate: 8,
+        repeat: 0,
+      });
+    }
+
+    // Hit/take-damage animation (6 frames, plays once)
+    if (!this.anims.exists("player-hit") && this.textures.exists("player-hit-0")) {
+      this.anims.create({
+        key: "player-hit",
+        frames: Array.from({ length: 6 }, (_, i) => ({
+          key: `player-hit-${i}`,
+        })),
+        frameRate: 10,
+        repeat: 0,
+      });
+    }
   }
 
   private createBossAnimations(): void {
@@ -184,6 +268,30 @@ export class PreloadScene extends Phaser.Scene {
           key: animKey,
           frames: Array.from({ length: 7 }, (_, i) => ({
             key: `boss-${boss}-death-${i}`,
+          })),
+          frameRate: 10,
+          repeat: 0,
+        });
+      }
+    }
+
+    // Boss attack animations
+    const bossesWithAttackAnim = [
+      "dark_sorcerer",
+      "shadow_beast",
+      "giant_golem",
+      "corrupted_knight",
+    ];
+    for (const boss of bossesWithAttackAnim) {
+      const animKey = `boss-${boss}-attack`;
+      if (
+        !this.anims.exists(animKey) &&
+        this.textures.exists(`boss-${boss}-attack-0`)
+      ) {
+        this.anims.create({
+          key: animKey,
+          frames: Array.from({ length: 6 }, (_, i) => ({
+            key: `boss-${boss}-attack-${i}`,
           })),
           frameRate: 10,
           repeat: 0,

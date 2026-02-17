@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth, getDynamicAccounts } from "@/lib/auth";
+import { UISounds } from "@/lib/ui-sounds";
 import { api } from "@/lib/api";
 import type {
   Student,
@@ -180,6 +181,7 @@ export default function StudentDashboard() {
       <Link
         href="/student/map"
         className="block mb-6 group"
+        onClick={() => UISounds.navigate()}
       >
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#475093] to-[#303FAE] p-6 transition-all hover:shadow-lg">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10" />

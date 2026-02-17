@@ -3,6 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { UISounds } from "@/lib/ui-sounds";
+import { MusicManager } from "@/lib/music-manager";
+import MuteButton from "@/components/MuteButton";
 import type { GameDefinition, ExerciseSession, DeficitArea, AdventureMap as AdventureMapType } from "@/types";
 import {
   computeAllWorldsSummary,
@@ -301,6 +304,12 @@ export default function AdventureMapPage() {
   const [totalPoints, setTotalPoints] = useState(0);
   const [adventure, setAdventure] = useState<AdventureMapType | null>(null);
 
+  // Start worldmap music when entering map, stop on unmount
+  useEffect(() => {
+    MusicManager.play("worldmap");
+    return () => { MusicManager.stop(); };
+  }, []);
+
   useEffect(() => {
     if (!user?.studentId) return;
     async function load() {
@@ -459,60 +468,51 @@ export default function AdventureMapPage() {
 
   // ─── Overworld — Top-down 3D perspective ──────────────────────────
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: "#1a3a5c" }}>
-      {/* PixelLab overworld map background — full 3D top-down */}
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: "#87CEEB" }}>
+      {/* Heavenly cloud sky background */}
       <img
         src="/game-assets/ui/overworld-map-3d.png"
         alt=""
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none pixelated"
-        style={{ opacity: 0.5 }}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ imageRendering: "pixelated", opacity: 0.85 }}
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
-      {/* Ocean tile overlay for depth */}
+      {/* Soft vignette for depth */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 30%, rgba(10,30,60,0.5) 100%)",
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(100,150,200,0.3) 100%)",
         }}
       />
 
-      {/* Header — medieval RPG style with PixelLab stat badge images */}
+      {/* Header — clean classic UI */}
       <header className="relative z-[50] flex-shrink-0 px-4 py-2.5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between rounded-lg px-4 py-2 shadow-lg border-2 border-[#8B6914] relative overflow-hidden" style={{ background: "linear-gradient(180deg, #3E2723 0%, #2C1D17 100%)", boxShadow: "inset 0 1px 0 rgba(255,215,0,0.15), 0 4px 12px rgba(0,0,0,0.4)" }}>
-          <img
-            src="/game-assets/ui/healthbar-frame.png"
-            alt=""
-            className="absolute inset-0 w-full h-full pixelated pointer-events-none"
-            style={{ opacity: 0.25, objectFit: "fill" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="flex items-center gap-3 relative z-[1]">
+        <div className="max-w-5xl mx-auto flex items-center justify-between rounded-2xl px-4 py-2.5 bg-white/90 backdrop-blur-sm shadow-md border border-gray-200">
+          <div className="flex items-center gap-3">
             <Link
               href="/student"
-              className="w-8 h-8 flex items-center justify-center transition-colors shadow-sm border border-[#8B6914] rounded-sm"
-              style={{ background: "linear-gradient(180deg, #5A3A1A, #3E2723)" }}
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
             >
-              <ArrowLeft size={16} className="text-[#FFD700]" />
+              <ArrowLeft size={16} className="text-gray-600" />
             </Link>
             <div>
-              <h1 className="text-[14px] font-semibold text-[#FFD700] leading-tight" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)", fontFamily: "'Fredoka', sans-serif" }}>Adventure Map</h1>
-              <p className="text-[10px] text-[#C4A35A] font-medium">Choose a world to explore</p>
+              <h1 className="text-[14px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "'Fredoka', sans-serif" }}>Adventure Map</h1>
+              <p className="text-[10px] text-gray-400 font-medium">Choose a world to explore</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 relative z-[1]">
-            <div className="flex items-center gap-1.5">
-              <Star size={14} className="text-amber-400" fill="currentColor" />
-              <span className="text-[12px] font-bold text-[#FFD700]">{totalStars}<span className="text-[#8B6914] font-medium">/{maxStars}</span></span>
+          <div className="flex items-center gap-3">
+            <MuteButton />
+            <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-xl">
+              <Star size={13} className="text-amber-500" fill="currentColor" />
+              <span className="text-[12px] font-bold text-amber-700">{totalStars}<span className="text-amber-400 font-medium">/{maxStars}</span></span>
             </div>
-            <div className="w-px h-5 bg-[#8B6914]/40" />
-            <div className="flex items-center gap-1.5">
-              <Trophy size={14} className="text-purple-300" />
-              <span className="text-[12px] font-bold text-[#FFD700]">{totalCompleted}<span className="text-[#8B6914] font-medium">/{totalLevels}</span></span>
+            <div className="flex items-center gap-1.5 bg-purple-50 px-2.5 py-1 rounded-xl">
+              <Trophy size={13} className="text-purple-500" />
+              <span className="text-[12px] font-bold text-purple-700">{totalCompleted}<span className="text-purple-400 font-medium">/{totalLevels}</span></span>
             </div>
-            <div className="w-px h-5 bg-[#8B6914]/40" />
-            <div className="flex items-center gap-1.5">
-              <Coins size={14} className="text-amber-400" />
-              <span className="text-[12px] font-bold text-[#FFD700]">{totalPoints}</span>
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-xl">
+              <Coins size={13} className="text-emerald-500" />
+              <span className="text-[12px] font-bold text-emerald-700">{totalPoints}</span>
             </div>
           </div>
         </div>
@@ -545,7 +545,7 @@ export default function AdventureMapPage() {
               key={world.area}
               world={world}
               pct={positions[i]}
-              onClick={() => setSelectedWorld(world.area)}
+              onClick={() => { UISounds.navigate(); setSelectedWorld(world.area); }}
             />
           ))}
         </div>
@@ -553,10 +553,12 @@ export default function AdventureMapPage() {
 
       {worlds.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-[50]">
-          <div className="rounded-lg p-12 text-center border-2 border-[#8B6914] max-w-md" style={{ background: "linear-gradient(180deg, rgba(62,39,35,0.95), rgba(44,29,23,0.95))" }}>
-            <img src="/game-assets/ui/boss-emblem.png" alt="" className="w-14 h-14 pixelated mx-auto mb-4" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <h3 className="text-[#FFD700] text-[16px] font-semibold mb-2" style={{ fontFamily: "'Fredoka', sans-serif" }}>Your Adventure Awaits!</h3>
-            <p className="text-[#C4A35A] text-[14px] font-medium">
+          <div className="rounded-2xl p-12 text-center bg-white/90 backdrop-blur-sm shadow-xl border border-gray-200 max-w-md">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+              <Star size={28} className="text-amber-500" />
+            </div>
+            <h3 className="text-gray-900 text-[16px] font-bold mb-2" style={{ fontFamily: "'Fredoka', sans-serif" }}>Your Adventure Awaits!</h3>
+            <p className="text-gray-500 text-[14px] font-medium">
               {adventure
                 ? "Your teacher is setting up your personalized adventure. Check back soon!"
                 : "Your teacher hasn't created your adventure map yet. Ask them to set one up for you!"}

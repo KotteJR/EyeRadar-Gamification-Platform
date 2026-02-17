@@ -44,6 +44,7 @@ export class BattleScene extends Phaser.Scene {
   // Boss HP = total number of questions
   private bossHp = 1;
   private maxBossHp = 1;
+  private lives = 3;
   private bossType: BossType = "dark_sorcerer";
   private worldTheme: WorldTheme = "grassland";
 
@@ -71,6 +72,7 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     this.phase = "ready";
+    this.lives = 3;
 
     // Background
     this.background = new ParallaxBackground(this);
@@ -299,7 +301,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════════════════
-  // WRONG: boss attacks → flash → back to ready
+  // WRONG: boss attack — different per boss type
   // ═══════════════════════════════════════════════════════
 
   private onWrong(): void {
@@ -313,27 +315,256 @@ export class BattleScene extends Phaser.Scene {
       maxBossHp: this.maxBossHp,
     });
 
-    this.player.setPlayerState("hurt");
+    // Boss wind-up lunge — moves forward, then snaps back
     this.boss.setBossState("attacking");
-
-    this.flashOverlay.setAlpha(0.3);
+    const origBossX = this.boss.x;
     this.tweens.add({
-      targets: this.flashOverlay,
-      alpha: 0,
-      duration: 400,
+      targets: this.boss,
+      x: origBossX - 30,
+      duration: 200,
+      ease: "Back.easeOut",
+      yoyo: true,
+      hold: 100,
+      onYoyo: () => {
+        if (!this.alive) return;
+        // Launch the attack projectile at the peak of the lunge
+        switch (this.bossType) {
+          case "dark_sorcerer":
+            this.attackTornado();
+            break;
+          case "shadow_beast":
+            this.attackPoisonCloud();
+            break;
+          case "corrupted_knight":
+            this.attackIceCrystal();
+            break;
+          case "giant_golem":
+            this.attackEarthquake();
+            break;
+          default:
+            this.attackFireball();
+            break;
+        }
+      },
+      onComplete: () => {
+        if (!this.alive) return;
+        this.boss.x = origBossX;
+        this.boss.setBossState("idle");
+      },
     });
   }
 
   private onBossAttackDone(): void {
-    if (!this.alive || this.phase !== "wrong") return;
-    this.time.delayedCall(300, () => {
+    // Phase transition handled inside each attack method
+  }
+
+  /** Common impact handler — deducts life, checks game over, returns to ready */
+  private onAttackImpact(): void {
+    if (!this.alive) return;
+    this.player.setPlayerState("hurt");
+    this.cameras.main.shake(350, 0.02);
+    this.flashOverlay.setAlpha(0.35);
+    this.tweens.add({ targets: this.flashOverlay, alpha: 0, duration: 500 });
+
+    this.lives = Math.max(0, this.lives - 1);
+    eventBus.emit("battle:lives", { lives: this.lives });
+    this.floatingText(PLAYER_X + 30, GROUND_Y - 80, "-1 ❤️", "#ff4444");
+
+    if (this.lives <= 0) {
+      // Play death animation then emit game over
+      this.time.delayedCall(600, () => {
+        if (!this.alive) return;
+        this.player.setPlayerState("dead");
+        this.sound_?.playBossDeath();
+      });
+      this.time.delayedCall(2000, () => eventBus.emit("battle:gameover", {}));
+      return;
+    }
+
+    this.time.delayedCall(1200, () => {
+      if (!this.alive || this.phase !== "wrong") return;
       this.player.setPlayerState("idle");
       this.phase = "ready";
-      eventBus.emit(GameEvents.PHASE_CHANGE, {
-        phase: "ready",
-        bossHp: this.bossHp,
-        maxBossHp: this.maxBossHp,
-      });
+      eventBus.emit(GameEvents.PHASE_CHANGE, { phase: "ready", bossHp: this.bossHp, maxBossHp: this.maxBossHp });
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Universal boss projectile launcher
+  // All bosses: animation → projectile flies → hits wizard
+  // ═══════════════════════════════════════════════════════
+
+  private launchProjectile(config: {
+    coreColor: number;
+    outerColor: number;
+    glowColor: number;
+    trailColors: number[];
+    impactColors: number[];
+    arcHeight?: number;
+    speed?: number;
+  }): void {
+    const startX = BOSS_X - 50;
+    const startY = GROUND_Y - 50;
+    const flightDuration = config.speed ?? 600;
+    const arcH = config.arcHeight ?? 40;
+
+    // Projectile core
+    const core = this.add.circle(startX, startY, 8, config.coreColor, 1);
+    core.setDepth(26);
+
+    // Outer layer
+    const outer = this.add.circle(startX, startY, 13, config.outerColor, 0.7);
+    outer.setDepth(25);
+
+    // Soft glow
+    const glow = this.add.circle(startX, startY, 22, config.glowColor, 0.2);
+    glow.setDepth(24);
+
+    // Pulsing animation
+    this.tweens.add({ targets: core, scaleX: 1.15, scaleY: 0.9, duration: 180, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: outer, scaleX: 1.2, scaleY: 0.85, duration: 220, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+
+    // Trail particles
+    const trailTimer = this.time.addEvent({
+      delay: 20,
+      callback: () => {
+        if (!core.active) return;
+        const c = config.trailColors[Math.floor(Math.random() * config.trailColors.length)];
+        const p = this.add.circle(
+          core.x + (Math.random() - 0.5) * 10,
+          core.y + (Math.random() - 0.5) * 8,
+          2 + Math.random() * 3, c, 0.7
+        );
+        p.setDepth(23);
+        this.tweens.add({
+          targets: p,
+          x: p.x + 8 + Math.random() * 12,
+          y: p.y - 4 - Math.random() * 12,
+          alpha: 0, scaleX: 0.2, scaleY: 0.2,
+          duration: 250 + Math.random() * 150,
+          ease: "Quad.easeOut",
+          onComplete: () => p.destroy(),
+        });
+      },
+      repeat: -1,
+    });
+
+    // Fly along arc from boss to player
+    let elapsed = 0;
+    const flight = this.time.addEvent({
+      delay: 16,
+      callback: () => {
+        elapsed += 16;
+        const t = Math.min(elapsed / flightDuration, 1);
+        const eased = t * t;
+        const nx = startX + (PLAYER_X - startX) * eased;
+        const ny = startY + (GROUND_Y - 30 - startY) * eased - Math.sin(Math.PI * t) * arcH;
+        core.setPosition(nx, ny);
+        outer.setPosition(nx, ny);
+        glow.setPosition(nx, ny);
+
+        if (t >= 1) {
+          flight.destroy();
+          trailTimer.destroy();
+          core.destroy();
+          outer.destroy();
+          glow.destroy();
+          if (!this.alive) return;
+
+          // Impact burst
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+            const dist = 25 + Math.random() * 25;
+            const sc = config.impactColors[Math.floor(Math.random() * config.impactColors.length)];
+            const spark = this.add.circle(PLAYER_X, GROUND_Y - 30, 2 + Math.random() * 2, sc, 0.9);
+            spark.setDepth(27);
+            this.tweens.add({
+              targets: spark,
+              x: PLAYER_X + Math.cos(a) * dist,
+              y: GROUND_Y - 30 + Math.sin(a) * dist,
+              alpha: 0,
+              duration: 300 + Math.random() * 150,
+              ease: "Quad.easeOut",
+              onComplete: () => spark.destroy(),
+            });
+          }
+
+          // Impact ring
+          const ring = this.add.circle(PLAYER_X, GROUND_Y - 30, 6, config.coreColor, 0.5);
+          ring.setDepth(26);
+          this.tweens.add({
+            targets: ring, scaleX: 5, scaleY: 5, alpha: 0, duration: 300,
+            ease: "Quad.easeOut", onComplete: () => ring.destroy(),
+          });
+
+          this.cameras.main.shake(400, 0.03);
+          this.onAttackImpact();
+        }
+      },
+      repeat: -1,
+    });
+  }
+
+  // ── Dark Sorcerer: dark magic bolt ──
+  private attackTornado(): void {
+    this.launchProjectile({
+      coreColor: 0xcc88ff,
+      outerColor: 0x8844dd,
+      glowColor: 0xaa55ff,
+      trailColors: [0xaa55ff, 0xcc77ff, 0x8844dd, 0xddaaff],
+      impactColors: [0xaa55ff, 0xcc77ff, 0xddaaff],
+      arcHeight: 50,
+    });
+  }
+
+  // ── Shadow Beast: dark shadow projectile ──
+  private attackPoisonCloud(): void {
+    this.launchProjectile({
+      coreColor: 0x444444,
+      outerColor: 0x222222,
+      glowColor: 0x660066,
+      trailColors: [0x553355, 0x442244, 0x663366, 0x331133],
+      impactColors: [0x553355, 0x442244, 0x663366],
+      speed: 550,
+      arcHeight: 30,
+    });
+  }
+
+  // ── Corrupted Knight: dark energy lance ──
+  private attackIceCrystal(): void {
+    this.launchProjectile({
+      coreColor: 0xaaddff,
+      outerColor: 0x4488cc,
+      glowColor: 0x3366aa,
+      trailColors: [0x88ccff, 0xaaddff, 0x4488cc, 0x66aadd],
+      impactColors: [0x88ccff, 0xaaddff, 0x4488cc],
+      speed: 500,
+      arcHeight: 35,
+    });
+  }
+
+  // ── Giant Golem: boulder toss ──
+  private attackEarthquake(): void {
+    this.launchProjectile({
+      coreColor: 0x8B7355,
+      outerColor: 0x5a3a1a,
+      glowColor: 0xaa8855,
+      trailColors: [0x8B7355, 0xaa8855, 0xccbb99, 0x5a3a1a],
+      impactColors: [0x8B7355, 0xaa8855, 0xccbb99],
+      speed: 700,
+      arcHeight: 60,
+    });
+  }
+
+  // ── Default / Dragon: fireball with comet trail ──
+  private attackFireball(): void {
+    this.launchProjectile({
+      coreColor: 0xffee44,
+      outerColor: 0xff6600,
+      glowColor: 0xff4400,
+      trailColors: [0xff6600, 0xffaa00, 0xffcc00, 0xff3300],
+      impactColors: [0xff6600, 0xffaa00, 0xffcc00, 0xff3300],
+      arcHeight: 40,
     });
   }
 

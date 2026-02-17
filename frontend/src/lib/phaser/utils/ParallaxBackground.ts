@@ -29,17 +29,16 @@ export class ParallaxBackground {
     const hasTexture = this.scene.textures.exists(textureKey);
 
     if (hasTexture) {
-      // Use the PixelLab background image as a tiling background
+      // Use the background image — cover entire canvas, no black bars
       this.bgImage = this.scene.add.image(
         GAME_WIDTH / 2,
-        GAME_HEIGHT / 2 - 40,
+        GAME_HEIGHT / 2,
         textureKey
       );
-      // Scale to fill width while maintaining aspect ratio
       const tex = this.scene.textures.get(textureKey);
       const frame = tex.getSourceImage();
       const scaleX = GAME_WIDTH / frame.width;
-      const scaleY = (GAME_HEIGHT - 80) / frame.height;
+      const scaleY = GAME_HEIGHT / frame.height;
       const scale = Math.max(scaleX, scaleY);
       this.bgImage.setScale(scale);
       this.bgImage.setDepth(0);

@@ -8,6 +8,7 @@ import {
 } from "@/lib/phaser/EventBus";
 import type { ExerciseItem, ExerciseItemResult } from "@/types";
 import { RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
+import { UISounds } from "@/lib/ui-sounds";
 
 interface MemoryOverlayProps {
   item: ExerciseItem;
@@ -47,20 +48,34 @@ export default function MemoryOverlay({
     eventBus.emit(GameEvents.ANSWER_RESULT, payload);
   }, [lastResult]);
 
+  let content: React.ReactNode = null;
   switch (item.item_type) {
     case "grid_memory":
-      return <GridMemory item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} />;
+      content = <GridMemory item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} />;
+      break;
     case "sequence_tap":
-      return <SequenceTap item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} />;
+      content = <SequenceTap item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} />;
+      break;
     case "tracking":
-      return <Tracking item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
+      content = <Tracking item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
+      break;
     case "pattern_match":
-      return <PatternMatch item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
+      content = <PatternMatch item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
+      break;
     case "dual_task":
-      return <DualTask item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
-    default:
-      return null;
+      content = <DualTask item={item} lastResult={lastResult} submitting={submitting} onSubmit={onSubmit} onSelectAnswer={onSelectAnswer} />;
+      break;
   }
+
+  if (!content) return null;
+
+  return (
+    <>
+      {/* Full-screen table-on-grass background — covers the Phaser canvas */}
+      <div className="mem-bg" />
+      {content}
+    </>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -96,6 +111,7 @@ function GridMemory({ item, lastResult, submitting, onSubmit }: {
 
   const toggleCell = (idx: number) => {
     if (phase !== "play" || submitting || lastResult) return;
+    UISounds.tile();
     setSelected(prev => {
       const next = new Set(prev);
       next.has(idx) ? next.delete(idx) : next.add(idx);
@@ -105,24 +121,25 @@ function GridMemory({ item, lastResult, submitting, onSubmit }: {
 
   const totalCells = gridSize * gridSize;
 
-  return (
-    <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
-      <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-        {/* Phase label */}
-        <div className="qa-question-panel mb-3">
-          <p className="qa-question">
-            {phase === "show" ? "⚡ Memorize the pattern!" : phase === "play" ? "Tap to recreate it!" : lastResult?.is_correct ? "✓ Correct!" : "✗ Not quite!"}
-          </p>
-          {phase === "show" && (
-            <div className="mt-2 h-1.5 bg-black/20 rounded-full overflow-hidden">
-              <div className="h-full bg-amber-400 rounded-full transition-all duration-75" style={{ width: `${timeProgress}%` }} />
-            </div>
-          )}
-        </div>
+  const showSubmit = phase === "play" && !lastResult && selected.size > 0;
 
-        {/* Grid */}
-        <div className="flex justify-center">
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
+  return (
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none">
+        <div className="pointer-events-auto flex flex-col items-center px-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Phase label */}
+          <div className="mem-phase-label mb-3">
+            <p className="mem-phase-text">
+              {phase === "show" ? "Memorize the pattern!" : phase === "play" ? "Now tap to recreate it!" : lastResult?.is_correct ? "Correct!" : "Not quite!"}
+            </p>
+            {phase === "show" && (
+              <div className="mt-2 h-1.5 bg-black/30 rounded-full overflow-hidden mx-4">
+                <div className="h-full bg-amber-400 rounded-full transition-all duration-75" style={{ width: `${timeProgress}%` }} />
+              </div>
+            )}
+          </div>
+
+          {/* Cards directly on the table */}
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
             {Array.from({ length: totalCells }, (_, idx) => {
               const isPattern = pattern.includes(idx);
               const isSel = selected.has(idx);
@@ -131,37 +148,38 @@ function GridMemory({ item, lastResult, submitting, onSubmit }: {
               const showMissed = phase === "result" && isPattern && !isSel;
               const showWrong = phase === "result" && !isPattern && isSel;
 
-              let bg = "mem-cell-idle";
-              if (showActive) bg = "mem-cell-active";
-              else if (showCorrect) bg = "mem-cell-correct";
-              else if (showMissed) bg = "mem-cell-missed";
-              else if (showWrong) bg = "mem-cell-wrong";
-              else if (isSel) bg = "mem-cell-selected";
+              let cardClass = "mem-card";
+              if (showActive) cardClass += " mem-card-active";
+              else if (showCorrect) cardClass += " mem-card-correct";
+              else if (showMissed) cardClass += " mem-card-missed";
+              else if (showWrong) cardClass += " mem-card-wrong";
+              else if (isSel) cardClass += " mem-card-selected";
 
               return (
                 <button
                   key={idx}
                   onClick={() => toggleCell(idx)}
                   disabled={phase !== "play" || !!lastResult || submitting}
-                  className={`mem-cell ${bg}`}
+                  className={cardClass}
                 />
               );
             })}
           </div>
-        </div>
 
-        {/* Submit */}
-        {phase === "play" && !lastResult && selected.size > 0 && (
-          <button
-            onClick={() => onSubmit(Array.from(selected).sort((a, b) => a - b).join(","))}
-            disabled={submitting}
-            className="mem-submit-btn mt-3"
-          >
-            {submitting ? "Checking..." : `⚔ Attack! (${selected.size} selected)`}
-          </button>
-        )}
+          {/* Submit — fixed height so it doesn't shift cards */}
+          <div className="h-[52px] flex items-center justify-center mt-3">
+            {showSubmit && (
+              <button
+                onClick={() => { UISounds.submit(); onSubmit(Array.from(selected).sort((a, b) => a - b).join(",")); }}
+                disabled={submitting}
+                className="mem-submit-btn"
+              >
+                {submitting ? "Checking..." : `Submit (${selected.size} selected)`}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
   );
 }
 
@@ -189,8 +207,8 @@ function TapCount({ item, lastResult, submitting, onSubmit }: {
   return (
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
       <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="qa-question-panel mb-3">
-          <p className="qa-question">{item.question}</p>
+        <div className="mem-question-panel mb-3">
+          <p className="mem-question-text">{item.question}</p>
           <p className="text-2xl font-bold text-amber-300 mt-2" style={{ fontFamily: "'Fredoka', sans-serif", textShadow: "0 0 8px rgba(255,215,0,0.4)" }}>{word}</p>
         </div>
 
@@ -207,14 +225,14 @@ function TapCount({ item, lastResult, submitting, onSubmit }: {
 
         <div className="flex gap-2 justify-center mb-3">
           <button
-            onClick={() => !lastResult && !submitting && setCount(p => Math.min(p + 1, maxTaps))}
+            onClick={() => { if (!lastResult && !submitting) { UISounds.click(); setCount(p => Math.min(p + 1, maxTaps)); } }}
             disabled={!!lastResult || submitting}
             className="mem-submit-btn px-8"
           >
             🥁 TAP!
           </button>
           <button
-            onClick={() => !lastResult && !submitting && setCount(p => Math.max(0, p - 1))}
+            onClick={() => { if (!lastResult && !submitting) { UISounds.click(); setCount(p => Math.max(0, p - 1)); } }}
             disabled={!!lastResult || submitting || count === 0}
             className="mem-undo-btn"
           >
@@ -223,7 +241,7 @@ function TapCount({ item, lastResult, submitting, onSubmit }: {
         </div>
 
         {!lastResult && count > 0 && (
-          <button onClick={() => onSubmit(String(count))} disabled={submitting} className="mem-submit-btn w-full">
+          <button onClick={() => { UISounds.submit(); onSubmit(String(count)); }} disabled={submitting} className="mem-submit-btn w-full">
             {submitting ? "Checking..." : "Submit Count"}
           </button>
         )}
@@ -261,8 +279,8 @@ function TapRepeat({ item, lastResult, submitting, onSubmit }: {
   return (
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
       <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="qa-question-panel mb-3">
-          <p className="qa-question">
+        <div className="mem-question-panel mb-3">
+          <p className="mem-question-text">
             {phase === "show" ? "⚡ Watch the sequence!" : "Now tap the numbers in order!"}
           </p>
         </div>
@@ -297,7 +315,7 @@ function TapRepeat({ item, lastResult, submitting, onSubmit }: {
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                 <button
                   key={num}
-                  onClick={() => !lastResult && !submitting && setTapped(p => [...p, num])}
+                  onClick={() => { if (!lastResult && !submitting) { UISounds.tile(); setTapped(p => [...p, num]); } }}
                   disabled={!!lastResult || submitting}
                   className="mem-numpad-btn"
                 >
@@ -314,7 +332,7 @@ function TapRepeat({ item, lastResult, submitting, onSubmit }: {
             </div>
 
             {!lastResult && tapped.length === sequence.length && (
-              <button onClick={() => onSubmit(tapped.join(","))} disabled={submitting} className="mem-submit-btn w-full">
+              <button onClick={() => { UISounds.submit(); onSubmit(tapped.join(",")); }} disabled={submitting} className="mem-submit-btn w-full">
                 {submitting ? "Checking..." : "⚔ Submit Sequence"}
               </button>
             )}
@@ -347,64 +365,84 @@ function Tracking({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
 }) {
   const directions = (item.extra_data?.directions as string[]) || [];
   const [revealedSteps, setRevealedSteps] = useState(0);
+  const [phase, setPhase] = useState<"showing" | "answering">("showing");
   const [selectedDir, setSelectedDir] = useState("");
 
   useEffect(() => {
     setRevealedSteps(0);
+    setPhase("showing");
     setSelectedDir("");
     directions.forEach((_, idx) => {
       setTimeout(() => setRevealedSteps(idx + 1), (idx + 1) * 600);
     });
+    // After all arrows shown, wait 1.2s then hide them
+    const hideDelay = directions.length * 600 + 1200;
+    const hideTimer = setTimeout(() => setPhase("answering"), hideDelay);
+    return () => clearTimeout(hideTimer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.index]);
-
-  const allRevealed = revealedSteps >= directions.length;
 
   return (
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
       <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="qa-question-panel mb-3">
-          <p className="qa-question">{item.question}</p>
-        </div>
 
-        {/* Direction arrows */}
-        <div className="flex justify-center gap-2 flex-wrap mb-4">
-          {directions.map((dir, idx) => (
-            <div
-              key={idx}
-              className={`mem-arrow-cell transition-all duration-300 ${idx < revealedSteps ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
-            >
-              {DIR_ICONS[dir] || dir}
+        {phase === "showing" ? (
+          <>
+            <div className="mem-question-panel mb-3">
+              <p className="mem-question-text">Follow the trail!</p>
             </div>
-          ))}
-        </div>
 
-        {/* Answer selection */}
-        {allRevealed && !lastResult && (
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {["up", "down", "left", "right"].map(dir => (
-              <button
-                key={dir}
-                onClick={() => { setSelectedDir(dir); onSelectAnswer(dir); }}
-                disabled={submitting || !!lastResult}
-                className={`mem-dir-btn ${selectedDir === dir ? "mem-dir-selected" : ""}`}
-              >
-                {DIR_ICONS[dir]}
-                <span className="text-xs capitalize font-bold">{dir}</span>
+            {/* Direction arrows — visible during show phase */}
+            <div className="flex justify-center gap-2 flex-wrap mb-4">
+              {directions.map((dir, idx) => (
+                <div
+                  key={idx}
+                  className={`mem-arrow-cell transition-all duration-300 ${idx < revealedSteps ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
+                >
+                  {DIR_ICONS[dir] || dir}
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-white/50 text-sm font-semibold" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+              Remember the last direction...
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="mem-question-panel mb-3">
+              <p className="mem-question-text">What was the LAST direction?</p>
+            </div>
+
+            {/* Answer selection — arrows are now hidden */}
+            {!lastResult && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {["up", "down", "left", "right"].map(dir => (
+                  <button
+                    key={dir}
+                    onClick={() => { UISounds.select(); setSelectedDir(dir); onSelectAnswer(dir); }}
+                    disabled={submitting || !!lastResult}
+                    className={`mem-dir-btn ${selectedDir === dir ? "mem-dir-selected" : ""}`}
+                  >
+                    {DIR_ICONS[dir]}
+                    <span className="text-xs capitalize font-bold">{dir}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!lastResult && selectedDir && (
+              <button onClick={() => { UISounds.submit(); onSubmit(selectedDir); }} disabled={submitting} className="mem-submit-btn w-full">
+                {submitting ? "Checking..." : "Submit Direction"}
               </button>
-            ))}
-          </div>
-        )}
+            )}
 
-        {allRevealed && !lastResult && selectedDir && (
-          <button onClick={() => onSubmit(selectedDir)} disabled={submitting} className="mem-submit-btn w-full">
-            {submitting ? "Checking..." : "Submit Direction"}
-          </button>
-        )}
-
-        {lastResult && (
-          <div className={`mem-result ${lastResult.is_correct ? "mem-result-correct" : "mem-result-wrong"}`}>
-            {lastResult.is_correct ? `✓ Correct! +${lastResult.points_earned}` : `✗ Answer: ${lastResult.correct_answer}`}
-          </div>
+            {lastResult && (
+              <div className={`mem-result ${lastResult.is_correct ? "mem-result-correct" : "mem-result-wrong"}`}>
+                {lastResult.is_correct ? `✓ Correct! +${lastResult.points_earned}` : `✗ Answer: ${lastResult.correct_answer}`}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -443,8 +481,8 @@ function PatternMatch({ item, lastResult, submitting, onSubmit, onSelectAnswer }
       <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
         {phase === "study" ? (
           <>
-            <div className="qa-question-panel mb-3">
-              <p className="qa-question">⚡ Study this pattern!</p>
+            <div className="mem-question-panel mb-3">
+              <p className="mem-question-text">⚡ Study this pattern!</p>
               <div className="mt-2 h-1.5 bg-black/20 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-400 rounded-full transition-all duration-75" style={{ width: `${timeProgress}%` }} />
               </div>
@@ -458,8 +496,8 @@ function PatternMatch({ item, lastResult, submitting, onSubmit, onSelectAnswer }
           </>
         ) : (
           <>
-            <div className="qa-question-panel mb-3">
-              <p className="qa-question">Which pattern matches?</p>
+            <div className="mem-question-panel mb-3">
+              <p className="mem-question-text">Which pattern matches?</p>
             </div>
             <div className="space-y-2">
               {(item.options || []).map((opt, i) => {
@@ -476,18 +514,18 @@ function PatternMatch({ item, lastResult, submitting, onSubmit, onSelectAnswer }
                 return (
                   <button
                     key={i}
-                    onClick={() => { if (!submitting && !lastResult) { setSelectedOpt(opt); onSelectAnswer(opt); } }}
+                    onClick={() => { if (!submitting && !lastResult) { UISounds.select(); setSelectedOpt(opt); onSelectAnswer(opt); } }}
                     disabled={submitting || !!lastResult}
                     className={cls}
                   >
-                    <span className="qa-answer-letter mr-3">{String.fromCharCode(65 + i)}</span>
+                    <span className="mem-answer-letter mr-3">{String.fromCharCode(65 + i)}</span>
                     <span className="text-lg tracking-wider">{opt}</span>
                   </button>
                 );
               })}
             </div>
             {!lastResult && selectedOpt && (
-              <button onClick={() => onSubmit(selectedOpt)} disabled={submitting} className="mem-submit-btn w-full mt-3">
+              <button onClick={() => { UISounds.submit(); onSubmit(selectedOpt); }} disabled={submitting} className="mem-submit-btn w-full mt-3">
                 {submitting ? "Checking..." : "Submit Answer"}
               </button>
             )}
@@ -540,8 +578,8 @@ function DualTask({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
     return (
       <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
         <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="qa-question-panel">
-            <p className="qa-question">🧠 Remember this word!</p>
+          <div className="mem-question-panel">
+            <p className="mem-question-text">🧠 Remember this word!</p>
             <p className="text-3xl font-bold text-amber-300 mt-3 animate-pulse" style={{ fontFamily: "'Fredoka', sans-serif", textShadow: "0 0 12px rgba(255,215,0,0.5)" }}>
               {extra.remember_word}
             </p>
@@ -558,9 +596,9 @@ function DualTask({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
     return (
       <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
         <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="qa-question-panel mb-3">
+          <div className="mem-question-panel mb-3">
             <p className="text-xs text-amber-300/70 font-bold mb-1" style={{ fontFamily: "'Fredoka', sans-serif" }}>💡 Don&apos;t forget the word!</p>
-            <p className="qa-question">Solve this:</p>
+            <p className="mem-question-text">Solve this:</p>
             <p className="text-2xl font-bold text-amber-300 mt-2" style={{ fontFamily: "'Fredoka', sans-serif" }}>
               {extra.math_problem} = ?
             </p>
@@ -569,11 +607,10 @@ function DualTask({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
             {(item.options || []).map((opt, i) => (
               <button
                 key={i}
-                onClick={() => setMathSelected(opt)}
-                className={`qa-answer-btn ${mathSelected === opt ? "ring-2 ring-amber-400" : ""}`}
+                onClick={() => { UISounds.select(); setMathSelected(opt); }}
+                className={`mem-option-btn ${mathSelected === opt ? "mem-option-selected" : ""}`}
               >
-                <span className="qa-answer-letter">{String.fromCharCode(65 + i)}</span>
-                <span className="qa-answer-text">{opt}</span>
+                {opt}
               </button>
             ))}
           </div>
@@ -591,8 +628,8 @@ function DualTask({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
   return (
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
       <div className="pointer-events-auto max-w-md w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="qa-question-panel mb-3">
-          <p className="qa-question">🧠 What was the word?</p>
+        <div className="mem-question-panel mb-3">
+          <p className="mem-question-text">🧠 What was the word?</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {(extra.word_options || []).map((word, i) => {
@@ -603,11 +640,11 @@ function DualTask({ item, lastResult, submitting, onSubmit, onSelectAnswer }: {
             return (
               <button
                 key={i}
-                onClick={() => { if (!submitting && !lastResult) onSubmit(extra.math_answer || ""); }}
+                onClick={() => { if (!submitting && !lastResult) { UISounds.submit(); onSubmit(extra.math_answer || ""); } }}
                 disabled={submitting || !!lastResult}
-                className={`qa-answer-btn ${isCorrect ? "ring-2 ring-emerald-400" : ""} ${isWrong && lastResult ? "opacity-50" : ""}`}
+                className={`mem-option-btn ${isCorrect ? "mem-option-correct" : ""} ${isWrong && lastResult ? "opacity-50" : ""}`}
               >
-                <span className="qa-answer-text">{word}</span>
+                {word}
               </button>
             );
           })}

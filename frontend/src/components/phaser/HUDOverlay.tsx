@@ -1,139 +1,128 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { eventBus, GameEvents, type ScoreUpdatePayload, type PhaseChangePayload } from "@/lib/phaser/EventBus";
+import { X, BookOpen } from "lucide-react";
+import { UISounds } from "@/lib/ui-sounds";
+import MuteButton from "@/components/MuteButton";
+import {
+  eventBus,
+  GameEvents,
+  type ScoreUpdatePayload,
+  type PhaseChangePayload,
+} from "@/lib/phaser/EventBus";
+
+const HUD = "/game-assets/ui/hud";
 
 interface HUDOverlayProps {
   initialPoints: number;
   initialStreak: number;
   initialLives: number;
-  progress: number;
-  maxProgress: number;
   bossName: string;
+  maxBossHp: number;
+  onExit?: () => void;
+  onSwitchMode?: () => void;
 }
 
 export default function HUDOverlay({
   initialPoints,
   initialStreak,
   initialLives,
-  progress,
-  maxProgress,
   bossName,
+  maxBossHp: maxBossHpProp,
+  onExit,
+  onSwitchMode,
 }: HUDOverlayProps) {
   const [points, setPoints] = useState(initialPoints);
   const [streak, setStreak] = useState(initialStreak);
-  const [bossHp, setBossHp] = useState(maxProgress);
-  const [maxBossHp, setMaxBossHp] = useState(maxProgress);
-  const [currentProgress, setCurrentProgress] = useState(progress);
+  const [lives, setLives] = useState(initialLives);
+  const [bossHp, setBossHp] = useState(maxBossHpProp);
+  const [maxBossHp, setMaxBossHp] = useState(maxBossHpProp);
 
   useEffect(() => {
     const unsub1 = eventBus.on(GameEvents.SCORE_UPDATE, (detail) => {
       const data = detail as ScoreUpdatePayload;
       setPoints(data.points);
       setStreak(data.streak);
-      setCurrentProgress(data.progress);
     });
     const unsub2 = eventBus.on(GameEvents.PHASE_CHANGE, (detail) => {
       const data = detail as PhaseChangePayload;
       if (data.bossHp !== undefined) setBossHp(data.bossHp);
       if (data.maxBossHp !== undefined) setMaxBossHp(data.maxBossHp);
     });
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = eventBus.on("battle:lives", (detail) => {
+      const data = detail as { lives: number };
+      setLives(data.lives);
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   useEffect(() => {
     setPoints(initialPoints);
     setStreak(initialStreak);
-    setCurrentProgress(progress);
-  }, [initialPoints, initialStreak, progress]);
+  }, [initialPoints, initialStreak]);
 
   const hpPercent = maxBossHp > 0 ? (bossHp / maxBossHp) * 100 : 0;
+  const totalHearts = initialLives;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10">
-      {/* Boss HP bar — top center, PixelLab health bar frame */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[min(440px,82vw)]">
-        <div className="hud-hp-frame">
-          {/* PixelLab ornate frame image overlay */}
-          <img
-            src="/game-assets/ui/healthbar-frame.png"
-            alt=""
-            className="absolute inset-0 w-full h-full pixelated pointer-events-none"
-            style={{ opacity: 0.7, objectFit: "fill" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+
+      {/* ═══ Boss HP — top center ═══════════════════════════ */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-[min(300px,72vw)]">
+        <div className="text-center mb-1">
+          <span className="hud-boss-label">{bossName}</span>
+        </div>
+        <div className="hud-bar-track">
+          <div
+            className="hud-bar-fill hud-bar-fill-red"
+            style={{ width: `${hpPercent}%` }}
           />
-
-          {/* Boss emblem + name row */}
-          <div className="hud-boss-name">
-            <img
-              src="/game-assets/ui/boss-emblem.png"
-              alt=""
-              className="inline-block w-5 h-5 pixelated mr-1 align-middle"
-              style={{ verticalAlign: "middle" }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-            <span>{bossName}</span>
-          </div>
-
-          {/* HP track */}
-          <div className="hud-hp-track">
+          {maxBossHp <= 20 && Array.from({ length: maxBossHp - 1 }, (_, i) => (
             <div
-              className="hud-hp-fill"
-              style={{ width: `${hpPercent}%` }}
+              key={i}
+              className="hud-bar-seg"
+              style={{ left: `${((i + 1) / maxBossHp) * 100}%` }}
             />
-            {maxBossHp <= 20 && Array.from({ length: maxBossHp - 1 }, (_, i) => (
-              <div
-                key={i}
-                className="hud-hp-seg"
-                style={{ left: `${((i + 1) / maxBossHp) * 100}%` }}
-              />
-            ))}
-            <span className="hud-hp-count">{bossHp} / {maxBossHp}</span>
-          </div>
+          ))}
+          <span className="hud-bar-text">{bossHp} / {maxBossHp}</span>
         </div>
       </div>
 
-      {/* Points + Streak — top right, PixelLab stat badges */}
-      <div className="absolute top-3.5 right-4 flex items-center gap-2">
-        <div className="hud-stat">
+      {/* ═══ Hearts — top left ══════════════════════════════ */}
+      <div className="absolute top-3 left-3 flex items-center gap-[2px]">
+        {Array.from({ length: totalHearts }, (_, i) => (
           <img
-            src="/game-assets/ui/stat-badge.png"
+            key={i}
+            src={`${HUD}/${i < lives ? "heart-full" : "heart-empty"}.png`}
             alt=""
-            className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded"
-            style={{ opacity: 0.5, objectFit: "fill" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            className="hud-icon-sm pixelated select-none pointer-events-none"
+            draggable={false}
           />
-          <span className="hud-stat-label relative z-[1]">PTS</span>
-          <span className="hud-stat-value relative z-[1]">{points}</span>
-        </div>
-        {streak >= 2 && (
-          <div className="hud-stat hud-stat-hot">
-            <img
-              src="/game-assets/ui/stat-badge.png"
-              alt=""
-              className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded"
-              style={{ opacity: 0.4, objectFit: "fill" }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-            <span className="hud-stat-label relative z-[1]">STREAK</span>
-            <span className="hud-stat-value relative z-[1]">x{streak}</span>
-          </div>
+        ))}
+      </div>
+
+      {/* ═══ Mute + Exit + Classic — top right ═════════════════════ */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 pointer-events-auto">
+        <MuteButton className="!w-7 !h-7 !rounded-lg bg-black/30 hover:bg-black/50 !text-white/70" />
+        {onSwitchMode && (
+          <button
+            onClick={() => { UISounds.click(); onSwitchMode(); }}
+            className="hud-ctrl-btn hud-ctrl-mode"
+            title="Switch to classic mode"
+          >
+            <BookOpen size={11} strokeWidth={2.5} className="relative z-[1]" />
+            <span className="relative z-[1]">Classic</span>
+          </button>
         )}
-      </div>
-
-      {/* Progress — bottom right */}
-      <div className="absolute bottom-3 right-4">
-        <div className="hud-stat">
-          <img
-            src="/game-assets/ui/stat-badge.png"
-            alt=""
-            className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded"
-            style={{ opacity: 0.5, objectFit: "fill" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <span className="hud-stat-label relative z-[1]">Q</span>
-          <span className="hud-stat-value relative z-[1]">{currentProgress + 1}/{maxProgress}</span>
-        </div>
+        {onExit && (
+          <button
+            onClick={() => { UISounds.click(); onExit(); }}
+            className="hud-ctrl-btn hud-ctrl-exit"
+          >
+            <X size={11} strokeWidth={3} className="relative z-[1]" />
+            <span className="relative z-[1]">Exit</span>
+          </button>
+        )}
       </div>
     </div>
   );
