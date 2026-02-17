@@ -12,12 +12,12 @@ export const WORLD_ORDER: DeficitArea[] = [
 ];
 
 export const WORLD_NAMES: Record<DeficitArea, string> = {
-  phonological_awareness: "Sound Kingdom",
-  rapid_naming: "Speed Valley",
-  working_memory: "Memory Mountains",
-  visual_processing: "Vision Forest",
-  reading_fluency: "Fluency River",
-  comprehension: "Story Castle",
+  phonological_awareness: "Emerald Meadows",
+  rapid_naming: "Whispering Woods",
+  working_memory: "Crystal Peaks",
+  visual_processing: "Amber Vale",
+  reading_fluency: "Starlight Domain",
+  comprehension: "Cloud Kingdom",
 };
 
 export const WORLD_NUMBERS: Record<DeficitArea, number> = {
@@ -29,14 +29,14 @@ export const WORLD_NUMBERS: Record<DeficitArea, number> = {
   comprehension: 6,
 };
 
-/** Background gradient per world [from, to] */
+/** Background gradient per world [from, to] — themed for pixel art */
 export const WORLD_GRADIENTS: Record<DeficitArea, [string, string]> = {
-  phonological_awareness: ["#FEF7F0", "#FCE4C8"],
-  rapid_naming: ["#FEFCE8", "#FEF08A"],
-  working_memory: ["#F5F3FF", "#DDD6FE"],
-  visual_processing: ["#ECFDF5", "#A7F3D0"],
-  reading_fluency: ["#EFF6FF", "#BFDBFE"],
-  comprehension: ["#FEF2F2", "#FECACA"],
+  phonological_awareness: ["#E8F5E9", "#C8E6C9"],  // Grassland greens
+  rapid_naming: ["#E8F5E9", "#1B4D1B"],             // Forest greens
+  working_memory: ["#E3F2FD", "#B3C7D6"],           // Mountain blues
+  visual_processing: ["#FFF3E0", "#FFCCBC"],         // Sunset oranges
+  reading_fluency: ["#1A237E", "#283593"],           // Night blues
+  comprehension: ["#F3E5F5", "#E1BEE7"],             // Cloud pastels
 };
 
 // ─── Map dimensions ────────────────────────────────────────────────────
@@ -343,7 +343,7 @@ export function computeCustomWorldsSummary(
       return {
         area,
         worldNumber: aw.world_number,
-        worldName: aw.world_name,
+        worldName: WORLD_NAMES[area] || aw.world_name,
         label: DEFICIT_AREA_LABELS[area] || aw.deficit_area,
         color: aw.color || DEFICIT_AREA_COLORS[area] || "#6366f1",
         totalLevels: worldGames.length,
@@ -354,7 +354,12 @@ export function computeCustomWorldsSummary(
     });
 }
 
-// ─── SVG path generation (cubic bezier through node positions) ─────────
+// ─── SVG path generation — organic curves with deterministic randomness ──
+
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
 
 export function generateSVGPath(positions: NodePosition[]): string {
   if (positions.length < 2) return "";
@@ -366,19 +371,28 @@ export function generateSVGPath(positions: NodePosition[]): string {
     const curr = positions[i];
     const dx = curr.x - prev.x;
     const dy = curr.y - prev.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Create smooth S-curves with control points
-    const cpx1 = prev.x + dx * 0.4;
-    const cpy1 = prev.y;
-    const cpx2 = curr.x - dx * 0.4;
-    const cpy2 = curr.y;
+    const perpX = -dy / (dist || 1);
+    const perpY = dx / (dist || 1);
 
-    // For mostly-horizontal segments, use gentle vertical offset
-    if (Math.abs(dx) > Math.abs(dy) * 1.5) {
-      d += ` C ${cpx1} ${prev.y + dy * 0.1}, ${cpx2} ${curr.y - dy * 0.1}, ${curr.x} ${curr.y}`;
-    } else {
-      d += ` C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${curr.x} ${curr.y}`;
-    }
+    // Stronger wobble for more organic curves
+    const wobble = dist * 0.28;
+    const r1 = seededRandom(i * 7 + 3);
+    const r2 = seededRandom(i * 13 + 5);
+    const r3 = seededRandom(i * 19 + 11);
+
+    // Vary control point positions along the segment for asymmetry
+    const t1 = 0.25 + r3 * 0.15;
+    const t2 = 0.6 + r3 * 0.2;
+    const offset1 = (r1 - 0.5) * wobble;
+    const offset2 = (r2 - 0.5) * wobble * -1;
+    const cpx1 = prev.x + dx * t1 + perpX * offset1;
+    const cpy1 = prev.y + dy * t1 + perpY * offset1;
+    const cpx2 = prev.x + dx * t2 + perpX * offset2;
+    const cpy2 = prev.y + dy * t2 + perpY * offset2;
+
+    d += ` C ${Math.round(cpx1)} ${Math.round(cpy1)}, ${Math.round(cpx2)} ${Math.round(cpy2)}, ${curr.x} ${curr.y}`;
   }
 
   return d;

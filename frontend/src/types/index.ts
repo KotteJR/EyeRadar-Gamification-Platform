@@ -154,7 +154,11 @@ export type GameType =
   | "fill_blank"
   | "tracking"
   | "pattern_match"
-  | "dual_task";
+  | "dual_task"
+  | "yes_no"
+  | "voice_input"
+  | "image_match"
+  | "grid_naming";
 
 export interface GameDefinition {
   id: string;

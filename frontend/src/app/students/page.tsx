@@ -180,7 +180,7 @@ export default function StudentsPage() {
 
       {/* Create Form */}
       {showForm && (
-        <div className="bg-white rounded-2xl border border-[#E3E3E3] shadow-sm p-6 mb-8">
+        <div className="bg-cream rounded-2xl border border-[#E3E3E3] shadow-sm p-6 mb-8">
           <h2 className="text-sm font-semibold text-[#303030] mb-4">New Student</h2>
           <form onSubmit={handleCreate} className="space-y-5">
             {/* Basic Info */}
@@ -454,7 +454,7 @@ export default function StudentsPage() {
 
       {/* Student List */}
       {students.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E3E3E3] p-16 text-center shadow-sm">
+        <div className="bg-cream rounded-2xl border border-[#E3E3E3] p-16 text-center shadow-sm">
           <div className="w-14 h-14 rounded-2xl bg-[#F0F0F0] flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-[#ABABAB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -476,7 +476,7 @@ export default function StudentsPage() {
             return (
               <div
                 key={student.id}
-                className="bg-white rounded-2xl border border-[#E3E3E3] p-5 shadow-sm"
+                className="bg-cream rounded-2xl border border-[#E3E3E3] p-5 shadow-sm"
               >
                 <Link
                   href={`/students/${student.id}`}

@@ -4,32 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { GameDefinition, ExerciseSession, DeficitArea } from "@/types";
 import { DEFICIT_AREA_COLORS, DEFICIT_AREA_LABELS } from "@/types";
-import Avatar, { type AvatarConfig } from "@/components/Avatar";
 import { getGameAsset } from "@/lib/game-assets";
-import {
-  PineTree,
-  RoundTree,
-  Hill,
-  Rock,
-  Bush,
-  Flowers,
-  Mushroom,
-  Signpost,
-  Fence,
-  Pond,
-  GrassTuft,
-  Bird,
-  Rabbit,
-  Butterfly,
-  Sheep,
-  CastleSVG,
-  CloudBorder,
-} from "@/components/MapDecorations";
+import type { AvatarConfig } from "@/components/Avatar";
 import {
   buildMapNodes,
   generateSVGPath,
   generatePartialPath,
-  getWorldDecorations,
   WORLD_NAMES,
   WORLD_NUMBERS,
   WORLD_GRADIENTS,
@@ -37,6 +17,8 @@ import {
   MAP_HEIGHT,
   type MapNode,
 } from "@/lib/map-utils";
+import { DEFICIT_AREA_THEME, WORLD_THEMES } from "@/lib/level-config";
+import { BOSSES, GAME_MODE_BOSS } from "@/lib/boss-config";
 import { Star, Lock, Play, ChevronLeft, Coins } from "lucide-react";
 
 // ─── Props ─────────────────────────────────────────────────────────────
@@ -52,9 +34,55 @@ interface WorldMapProps {
   themeConfig?: { primary_interest: string; color_palette: string; decoration_style: string } | null;
 }
 
+// ─── Per-world unique top-down 3D backgrounds ──────────────────────
+interface WorldBgConfig {
+  worldImage: string;
+  fallbackBg: string;
+  overlay: string;
+  roadColor: string;
+}
+
+const WORLD_BG_CONFIG: Record<string, WorldBgConfig> = {
+  grassland: {
+    worldImage: "/game-assets/worlds/grassland-world.png",
+    fallbackBg: "#1e4a10",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.45) 100%)",
+    roadColor: "rgba(255,230,140,0.75)",
+  },
+  forest: {
+    worldImage: "/game-assets/worlds/forest-world.png",
+    fallbackBg: "#0d260d",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.5) 100%)",
+    roadColor: "rgba(220,200,120,0.7)",
+  },
+  mountain: {
+    worldImage: "/game-assets/worlds/mountain-world.png",
+    fallbackBg: "#1a2830",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.45) 100%)",
+    roadColor: "rgba(200,220,255,0.7)",
+  },
+  sunset: {
+    worldImage: "/game-assets/worlds/sunset-world.png",
+    fallbackBg: "#3a1a08",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.4) 100%)",
+    roadColor: "rgba(255,210,100,0.7)",
+  },
+  night: {
+    worldImage: "/game-assets/worlds/night-world.png",
+    fallbackBg: "#040418",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%)",
+    roadColor: "rgba(170,150,240,0.7)",
+  },
+  cloud_kingdom: {
+    worldImage: "/game-assets/worlds/cloud-kingdom-world.png",
+    fallbackBg: "#141e40",
+    overlay: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.4) 100%)",
+    roadColor: "rgba(220,200,255,0.7)",
+  },
+};
+
 // ─── Constants ─────────────────────────────────────────────────────────
-const NODE_SIZE = 60;
-const CASTLE_SIZE = 56;
+const NODE_SIZE = 80;
 
 // ─── Star Display ──────────────────────────────────────────────────────
 function StarDisplay({ count, size = 11 }: { count: number; size?: number }) {
@@ -73,19 +101,32 @@ function StarDisplay({ count, size = 11 }: { count: number; size?: number }) {
   );
 }
 
-// ─── Game Level Node ───────────────────────────────────────────────────
+// ─── Per-world biome tile for level nodes ──────────────────────────────
+const WORLD_NODE_TILE: Record<string, string> = {
+  grassland: "/game-assets/iso/forest-tile.png",
+  forest: "/game-assets/iso/forest-tile.png",
+  mountain: "/game-assets/iso/mountain-tile.png",
+  sunset: "/game-assets/iso/desert-tile.png",
+  night: "/game-assets/iso/crystal-tile.png",
+  cloud_kingdom: "/game-assets/iso/castle-tile.png",
+};
+
+// ─── Game Level Node — top-down 3D isometric style, STATIC ─────────────
 function GameLevelNode({
   node,
   studentId,
+  worldThemeKey,
 }: {
   node: MapNode;
   studentId: string;
+  worldThemeKey: string;
 }) {
   const [hovered, setHovered] = useState(false);
-  const asset = node.game ? getGameAsset(node.game.id) : null;
   const isCurrent = node.state === "current";
   const isCompleted = node.state === "completed";
   const isLocked = node.state === "locked";
+
+  const nodeTile = WORLD_NODE_TILE[worldThemeKey] || WORLD_NODE_TILE.grassland;
 
   const content = (
     <div
@@ -101,97 +142,208 @@ function GameLevelNode({
     >
       {/* Tooltip */}
       {hovered && (
-        <div className="absolute bottom-full mb-2 px-3 py-1.5 bg-neutral-900/90 backdrop-blur text-white text-[11px] font-medium rounded-lg whitespace-nowrap z-30 shadow-xl">
+        <div className="absolute bottom-full mb-3 px-3 py-1.5 bg-[#3E2723]/95 text-[#FFD700] text-[11px] font-bold rounded-sm whitespace-nowrap z-30 shadow-xl border border-[#8B6914]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)" }}>
           {node.label}
           {isLocked && " (Locked)"}
           {isCompleted && ` — ${Math.round(node.bestAccuracy)}%`}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-900/90 rotate-45 -mt-1" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-[#3E2723]/95 rotate-45 -mt-1 border-r border-b border-[#8B6914]" />
         </div>
       )}
 
-      {/* Glow ring for current */}
+      {/* Static glow ring for current */}
       {isCurrent && (
         <div
-          className="absolute rounded-full map-node-pulse"
+          className="absolute"
           style={{
             width: NODE_SIZE + 20,
             height: NODE_SIZE + 20,
             left: "50%",
             top: "50%",
             transform: "translate(-50%, -50%)",
-            background: `radial-gradient(circle, ${asset?.accent || "#f59e0b"}33 0%, transparent 70%)`,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, #FFD70044 0%, transparent 70%)",
+            border: "2px solid #FFD70040",
           }}
         />
       )}
 
-      {/* Circle node */}
+      {/* Level node — floating isometric tile with real cloud sprites */}
       <div
-        className={`relative rounded-full overflow-hidden transition-all duration-300 ${
-          isLocked ? "grayscale opacity-50" : ""
-        }`}
-        style={{
-          width: isCurrent ? NODE_SIZE + 6 : NODE_SIZE,
-          height: isCurrent ? NODE_SIZE + 6 : NODE_SIZE,
-          border: `3px solid ${
-            isLocked ? "#d4d4d4" : asset?.accent || "#888"
-          }`,
-          boxShadow: isCurrent
-            ? `0 0 20px ${asset?.accent || "#f59e0b"}44, 0 4px 12px rgba(0,0,0,0.15)`
-            : isCompleted
-            ? "0 2px 8px rgba(0,0,0,0.12)"
-            : "none",
-        }}
+        className={`relative flex items-center justify-center ${
+          isLocked ? "opacity-40 grayscale" : ""
+        } ${!isLocked ? "hover:scale-105" : ""} transition-transform duration-200`}
+        style={{ width: NODE_SIZE + 36, height: NODE_SIZE + 40 }}
       >
-        {/* Game image */}
+        {/* Shadow below the floating tile */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute z-[0]"
           style={{
-            backgroundImage: asset ? `url(${asset.image})` : undefined,
-            backgroundColor: asset?.bgLight || "#f5f5f5",
+            width: NODE_SIZE - 4,
+            height: 14,
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%)",
+            borderRadius: "50%",
+            filter: "blur(4px)",
           }}
         />
 
-        {/* Lock overlay */}
-        {isLocked && (
-          <div className="absolute inset-0 bg-neutral-900/40 flex items-center justify-center">
-            <Lock size={18} className="text-white/80" />
+        {/* Bottom cloud — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-md.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 100,
+            height: 58,
+            bottom: -10,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.85,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Left cloud puff — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 42,
+            height: 28,
+            left: -12,
+            top: "48%",
+            transform: "translateY(-30%)",
+            opacity: 0.7,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Right cloud puff — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 40,
+            height: 26,
+            right: -12,
+            top: "44%",
+            transform: "translateY(-30%) scaleX(-1)",
+            opacity: 0.65,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Isometric biome tile as node background */}
+        <img
+          src={nodeTile}
+          alt=""
+          className="pixelated relative z-[2]"
+          style={{
+            width: NODE_SIZE + 8,
+            height: NODE_SIZE + 8,
+            borderRadius: "6px",
+            filter: isLocked ? "saturate(0) brightness(0.6)" : isCurrent ? "brightness(1.15)" : "none",
+            boxShadow: isCurrent
+              ? "0 0 14px rgba(255,215,0,0.5), 0 6px 18px rgba(0,0,0,0.5)"
+              : "0 6px 14px rgba(0,0,0,0.45)",
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Top cloud wisp — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-xs.png"
+          alt=""
+          className="absolute z-[3] pixelated pointer-events-none"
+          style={{
+            width: 32,
+            height: 24,
+            top: -6,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.5,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Level number centered */}
+        <div
+          className="absolute z-[4] flex items-center justify-center rounded-full"
+          style={{
+            width: 32,
+            height: 32,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: isCompleted
+              ? "linear-gradient(180deg, #4CAF50, #2E7D32)"
+              : isCurrent
+              ? "linear-gradient(180deg, #FFD700, #F9A825)"
+              : isLocked
+              ? "rgba(60,60,60,0.8)"
+              : "rgba(0,0,0,0.6)",
+            border: `2px solid ${isCompleted ? "#27AE60" : isCurrent ? "#8B6914" : "#555"}`,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+          }}
+        >
+          <span
+            className="font-extrabold"
+            style={{
+              fontSize: 14,
+              color: isLocked ? "#999" : isCurrent ? "#5D3A00" : "#fff",
+              fontFamily: "'Fredoka', sans-serif",
+              textShadow: isLocked ? "none" : "0 1px 2px rgba(0,0,0,0.4)",
+            }}
+          >
+            {isLocked ? <Lock size={14} className="text-[#888]" /> : node.levelNumber}
+          </span>
+        </div>
+
+        {/* Checkmark for completed */}
+        {isCompleted && (
+          <div
+            className="absolute z-[5]"
+            style={{
+              top: 4,
+              right: 6,
+              width: 22,
+              height: 22,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "linear-gradient(180deg, #FFD700, #F9A825)",
+              border: "2px solid #8B6508",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            }}
+          >
+            <span className="text-[#5D3A00] text-[9px] font-extrabold">✓</span>
           </div>
         )}
-
-        {/* Play button for current */}
-        {isCurrent && (
-          <div className="absolute inset-0 bg-black/15 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full bg-white/95 flex items-center justify-center shadow-md">
-              <Play size={15} className="text-neutral-800 ml-0.5" fill="currentColor" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Level number badge */}
-      <div
-        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white z-[2] shadow-sm"
-        style={{
-          backgroundColor: isLocked ? "#a3a3a3" : asset?.accent || "#888",
-        }}
-      >
-        {node.levelNumber}
       </div>
 
       {/* Stars below completed nodes */}
       {isCompleted && (
-        <div className="mt-1">
-          <StarDisplay count={node.stars} />
+        <div className="mt-1.5">
+          <StarDisplay count={node.stars} size={12} />
         </div>
       )}
 
-      {/* "PLAY" label for current */}
+      {/* Static "PLAY" label for current */}
       {isCurrent && (
         <div
-          className="mt-1 text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full"
+          className="mt-1.5 text-[10px] font-bold uppercase tracking-widest px-4 py-1"
           style={{
-            backgroundColor: `${asset?.accent || "#f59e0b"}20`,
-            color: asset?.accent || "#f59e0b",
+            background: "linear-gradient(180deg, #FFD700, #F9A825)",
+            color: "#5D3A00",
+            borderRadius: "12px",
+            border: "1px solid #8B6508",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            fontFamily: "'Fredoka', sans-serif",
           }}
         >
           Play
@@ -211,8 +363,8 @@ function GameLevelNode({
   );
 }
 
-// ─── Castle Checkpoint Node ────────────────────────────────────────────
-function CastleNode({ node, color }: { node: MapNode; color: string }) {
+// ─── Castle Checkpoint Node — isometric castle tile ─────────────────────
+function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: string; worldThemeKey: string }) {
   const [hovered, setHovered] = useState(false);
   const isCurrent = node.state === "current";
   const isCompleted = node.state === "completed";
@@ -230,112 +382,132 @@ function CastleNode({ node, color }: { node: MapNode; color: string }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Tooltip */}
       {hovered && (
-        <div className="absolute bottom-full mb-2 px-3 py-1.5 bg-neutral-900/90 backdrop-blur text-white text-[11px] font-medium rounded-lg whitespace-nowrap z-30 shadow-xl">
+        <div className="absolute bottom-full mb-2 px-3 py-1.5 bg-[#3E2723]/95 text-[#FFD700] text-[11px] font-bold rounded-sm whitespace-nowrap z-30 shadow-xl border border-[#8B6914]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)" }}>
           {node.label}
           {isLocked && " — Complete preceding levels!"}
           {isCurrent && " — Ready to challenge!"}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-900/90 rotate-45 -mt-1" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-[#3E2723]/95 rotate-45 -mt-1 border-r border-b border-[#8B6914]" />
         </div>
       )}
 
-      {/* Castle glow for current */}
-      {isCurrent && (
+      {/* Floating castle tile with real cloud sprites */}
+      <div className={`relative ${isLocked ? "opacity-40 grayscale" : ""} ${!isLocked ? "hover:scale-105" : ""} transition-transform duration-200`} style={{ width: 130, height: 136 }}>
+        {/* Shadow below floating tile */}
         <div
-          className="absolute map-node-pulse"
+          className="absolute z-[0]"
           style={{
-            width: CASTLE_SIZE + 24,
-            height: CASTLE_SIZE + 24,
+            width: 86,
+            height: 16,
+            bottom: 2,
             left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            background: `radial-gradient(circle, ${color}33 0%, transparent 70%)`,
+            transform: "translateX(-50%)",
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%)",
             borderRadius: "50%",
+            filter: "blur(4px)",
           }}
         />
-      )}
 
-      <div className={`transition-all duration-300 ${isLocked ? "grayscale opacity-50" : ""}`}>
-        <CastleSVG
-          completed={isCompleted}
-          color={color}
-          size={isCurrent ? 1.15 : 1}
+        {/* Bottom cloud — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-md.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 114,
+            height: 66,
+            bottom: -12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.85,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
+
+        {/* Left cloud — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 50,
+            height: 34,
+            left: -14,
+            top: "48%",
+            transform: "translateY(-30%)",
+            opacity: 0.7,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Right cloud — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 46,
+            height: 30,
+            right: -14,
+            top: "44%",
+            transform: "translateY(-30%) scaleX(-1)",
+            opacity: 0.65,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Castle tile */}
+        <img
+          src="/game-assets/iso/castle-tile.png"
+          alt=""
+          className="absolute pixelated z-[2]"
+          style={{
+            width: 96,
+            height: 96,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            filter: isCompleted ? "hue-rotate(90deg) brightness(1.1)" : isCurrent ? "brightness(1.2)" : "none",
+            boxShadow: isCurrent ? "0 0 16px rgba(255,215,0,0.4), 0 6px 18px rgba(0,0,0,0.5)" : "0 6px 14px rgba(0,0,0,0.4)",
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {/* Top cloud wisp — actual sprite */}
+        <img
+          src="/game-assets/clouds/cloud-xs.png"
+          alt=""
+          className="absolute z-[3] pixelated pointer-events-none"
+          style={{
+            width: 34,
+            height: 24,
+            top: -4,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.5,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+
+        {isCompleted && (
+          <div className="absolute z-[5]" style={{ top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg, #FFD700, #F9A825)", border: "2px solid #8B6508" }}>
+            <span className="text-[#5D3A00] text-[8px] font-extrabold">✓</span>
+          </div>
+        )}
       </div>
 
-      {/* Stars if completed */}
       {isCompleted && node.stars > 0 && (
         <div className="mt-0.5">
           <StarDisplay count={node.stars} size={10} />
         </div>
       )}
 
-      {/* Label */}
       {isCurrent && (
-        <div
-          className="mt-0.5 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
+        <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: "linear-gradient(180deg, #FFD700, #F9A825)", color: "#5D3A00", border: "1px solid #8B6508", fontFamily: "'Fredoka', sans-serif" }}>
           Challenge
         </div>
       )}
     </div>
-  );
-}
-
-// ─── Decoration renderer ───────────────────────────────────────────────
-function DecorationLayer({ worldIndex }: { worldIndex: number }) {
-  const decorations = useMemo(() => getWorldDecorations(worldIndex), [worldIndex]);
-
-  return (
-    <>
-      {decorations.map((d, i) => {
-        const flipTransform = d.flip ? "translate(-50%, -50%) scaleX(-1)" : "translate(-50%, -50%)";
-        const style: React.CSSProperties = {
-          position: "absolute",
-          left: d.x,
-          top: d.y,
-          transform: flipTransform,
-          zIndex: 0,
-          opacity: 0.75,
-        };
-        switch (d.type) {
-          case "pine":
-            return <div key={i} style={style}><PineTree size={d.size} /></div>;
-          case "round_tree":
-            return <div key={i} style={style}><RoundTree size={d.size} /></div>;
-          case "hill":
-            return <div key={i} style={{...style, opacity: 0.35, zIndex: 0}}><Hill size={d.size} /></div>;
-          case "rock":
-            return <div key={i} style={style}><Rock size={d.size} /></div>;
-          case "bush":
-            return <div key={i} style={style}><Bush size={d.size} /></div>;
-          case "flowers":
-            return <div key={i} style={{...style, opacity: 0.85}}><Flowers /></div>;
-          case "mushroom":
-            return <div key={i} style={style}><Mushroom size={d.size} /></div>;
-          case "signpost":
-            return <div key={i} style={style}><Signpost size={d.size} /></div>;
-          case "fence":
-            return <div key={i} style={{...style, opacity: 0.6}}><Fence size={d.size} /></div>;
-          case "pond":
-            return <div key={i} style={{...style, opacity: 0.5, zIndex: 0}}><Pond size={d.size} /></div>;
-          case "grass":
-            return <div key={i} style={{...style, opacity: 0.6}}><GrassTuft size={d.size} /></div>;
-          case "bird":
-            return <div key={i} style={{...style, opacity: 0.7}}><Bird size={d.size} /></div>;
-          case "rabbit":
-            return <div key={i} style={{...style, opacity: 0.8}}><Rabbit size={d.size} /></div>;
-          case "butterfly":
-            return <div key={i} style={{...style, opacity: 0.75}}><Butterfly size={d.size} /></div>;
-          case "sheep":
-            return <div key={i} style={{...style, opacity: 0.8}}><Sheep size={d.size} /></div>;
-          default:
-            return null;
-        }
-      })}
-    </>
   );
 }
 
@@ -357,21 +529,9 @@ export default function WorldMap({
   const color = DEFICIT_AREA_COLORS[area];
   const worldName = WORLD_NAMES[area];
   const worldNum = WORLD_NUMBERS[area];
-  const [gradFrom, gradTo] = WORLD_GRADIENTS[area];
 
-  // Build map nodes with castle checkpoints
-  const mapNodes = useMemo(
-    () => buildMapNodes(games, sessions),
-    [games, sessions]
-  );
-
-  // Gather positions for path generation
-  const positions = useMemo(
-    () => mapNodes.map((n) => n.position),
-    [mapNodes]
-  );
-
-  // SVG paths
+  const mapNodes = useMemo(() => buildMapNodes(games, sessions), [games, sessions]);
+  const positions = useMemo(() => mapNodes.map((n) => n.position), [mapNodes]);
   const fullPathD = useMemo(() => generateSVGPath(positions), [positions]);
 
   const lastCompletedIndex = useMemo(() => {
@@ -387,308 +547,213 @@ export default function WorldMap({
     [positions, lastCompletedIndex]
   );
 
-  // Current node for avatar placement
   const currentIndex = mapNodes.findIndex((n) => n.state === "current");
   const avatarNode = currentIndex >= 0 ? mapNodes[currentIndex] : mapNodes[mapNodes.length - 1];
 
-  // Stats
-  const completedCount = mapNodes.filter(
-    (n) => n.state === "completed" && n.type === "level"
-  ).length;
+  const completedCount = mapNodes.filter((n) => n.state === "completed" && n.type === "level").length;
   const totalGameLevels = mapNodes.filter((n) => n.type === "level").length;
-  const totalStars = mapNodes
-    .filter((n) => n.state === "completed")
-    .reduce((s, n) => s + n.stars, 0);
+  const totalStars = mapNodes.filter((n) => n.state === "completed").reduce((s, n) => s + n.stars, 0);
   const maxStars = totalGameLevels * 3;
 
+  const worldThemeKey = DEFICIT_AREA_THEME[area];
+  const worldThemeConfig = WORLD_THEMES[worldThemeKey];
+  const bgConfig = WORLD_BG_CONFIG[worldThemeKey] || WORLD_BG_CONFIG.grassland;
+
   return (
-    <div
-      className="fixed inset-0 overflow-hidden"
-      style={{
-        background: `linear-gradient(170deg, ${gradFrom} 0%, ${gradTo} 50%, ${gradFrom} 100%)`,
-      }}
-    >
-      {/* Grass-like bottom gradient */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-        style={{
-          background: `linear-gradient(to top, ${color}12, transparent)`,
-        }}
+    <div className="fixed inset-0 overflow-hidden" style={{ background: bgConfig.fallbackBg }}>
+      {/* ─── Full unique world background image (dimmed for readability) ─── */}
+      <img
+        src={bgConfig.worldImage}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none pixelated"
+        style={{ imageRendering: "pixelated", opacity: 0.55, filter: "brightness(0.7) saturate(0.8)" }}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
 
-      {/* Animated Cloud Border */}
-      <CloudBorder />
+      {/* Dark overlay for contrast + vignette */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: "rgba(0,0,0,0.3)" }}
+      />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: bgConfig.overlay }}
+      />
 
-      {/* ─── HUD Overlay (frosted glass) ─────────────────────────────── */}
+      {/* Stars for dark themes */}
+      {worldThemeConfig.stars && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: `${1 + Math.random() * 2}px`,
+                height: `${1 + Math.random() * 2}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 40}%`,
+                opacity: 0.3 + Math.random() * 0.5,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ─── HUD Header ──────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-50 px-4 py-2.5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between bg-white/70 backdrop-blur-xl rounded-2xl px-4 py-2 shadow-sm border border-white/50">
-          {/* Left: Back + World name */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
-            >
-              <ChevronLeft size={16} className="text-neutral-600" />
+        <div
+          className="max-w-5xl mx-auto flex items-center justify-between rounded-lg px-4 py-2 shadow-lg border-2 border-[#8B6914] relative overflow-hidden"
+          style={{ background: "linear-gradient(180deg, #3E2723 0%, #2C1D17 100%)", boxShadow: "inset 0 1px 0 rgba(255,215,0,0.15), 0 4px 12px rgba(0,0,0,0.4)" }}
+        >
+          <img src="/game-assets/ui/healthbar-frame.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none" style={{ opacity: 0.2, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+
+          <div className="flex items-center gap-3 relative z-[1]">
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center shadow-sm border border-[#8B6914] rounded-sm" style={{ background: "linear-gradient(180deg, #5A3A1A, #3E2723)" }}>
+              <ChevronLeft size={16} className="text-[#FFD700]" />
             </button>
             <div className="flex items-center gap-2">
-              <span
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-bold text-white shadow-sm"
-                style={{ backgroundColor: color }}
-              >
+              <span className="w-7 h-7 flex items-center justify-center text-[12px] font-bold shadow-sm" style={{ background: "linear-gradient(180deg, #FFD700, #B8860B)", color: "#3E2723", border: "1px solid #6B5014", borderRadius: "2px", fontFamily: "'Fredoka', sans-serif" }}>
                 {worldNum}
               </span>
               <div>
-                <h1 className="text-[14px] font-semibold text-neutral-900 leading-tight">
-                  {worldName}
-                </h1>
-                <p className="text-[10px] text-neutral-400 font-medium">
-                  {DEFICIT_AREA_LABELS[area]}
-                </p>
+                <h1 className="text-[14px] font-semibold leading-tight text-[#FFD700]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)", fontFamily: "'Fredoka', sans-serif" }}>{worldName}</h1>
+                <p className="text-[10px] font-medium text-[#C4A35A]">{DEFICIT_AREA_LABELS[area]} — {worldThemeConfig.subtitle}</p>
               </div>
             </div>
           </div>
 
-          {/* Right: Stats */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <Star size={14} className="text-amber-400" fill="currentColor" />
-              <span className="text-[13px] font-semibold text-neutral-800">
-                {totalStars}
-              </span>
-              <span className="text-[11px] text-neutral-400">/{maxStars}</span>
+          <div className="flex items-center gap-4 relative z-[1]">
+            <div className="flex items-center gap-1.5 relative px-2 py-0.5">
+              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <Star size={14} className="text-amber-400 relative z-[1]" fill="currentColor" />
+              <span className="text-[13px] font-bold text-[#FFD700] relative z-[1]">{totalStars}</span>
+              <span className="text-[11px] text-[#8B6914] relative z-[1]">/{maxStars}</span>
             </div>
-            <div className="w-px h-5 bg-neutral-200" />
-            <div className="flex items-center gap-1.5">
-              <Coins size={14} className="text-amber-500" />
-              <span className="text-[13px] font-semibold text-neutral-800">
-                {totalPoints}
-              </span>
+            <div className="w-px h-5 bg-[#8B6914]/40" />
+            <div className="flex items-center gap-1.5 relative px-2 py-0.5">
+              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <Coins size={14} className="text-amber-400 relative z-[1]" />
+              <span className="text-[13px] font-bold text-[#FFD700] relative z-[1]">{totalPoints}</span>
             </div>
-            <div className="w-px h-5 bg-neutral-200" />
-            <div className="text-right">
-              <p className="text-[11px] text-neutral-400">Progress</p>
-              <p className="text-[13px] font-semibold text-neutral-800 leading-tight">
-                {completedCount}/{totalGameLevels}
-              </p>
+            <div className="w-px h-5 bg-[#8B6914]/40" />
+            <div className="text-right relative px-2 py-0.5">
+              <img src="/game-assets/ui/stat-badge.png" alt="" className="absolute inset-0 w-full h-full pixelated pointer-events-none rounded" style={{ opacity: 0.4, objectFit: "fill" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <p className="text-[11px] text-[#8B6914] relative z-[1]">Progress</p>
+              <p className="text-[13px] font-bold leading-tight text-[#FFD700] relative z-[1]" style={{ fontFamily: "'Fredoka', sans-serif" }}>{completedCount}/{totalGameLevels}</p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ─── Scrollable Map Area ─────────────────────────────────────── */}
+      {/* ─── Scrollable Map Area ──────────────────────────────── */}
       <div className="absolute inset-0 overflow-auto scrollbar-hide pt-16 pb-4">
         <div className="flex items-center justify-center min-h-full p-4">
-          <div
-            className="relative flex-shrink-0"
-            style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}
-          >
-            {/* Background dot pattern */}
-            <div
-              className="absolute inset-0 opacity-[0.04] rounded-3xl"
-              style={{
-                backgroundImage: `radial-gradient(circle, ${color} 1px, transparent 1px)`,
-                backgroundSize: "30px 30px",
-              }}
-            />
+          <div className="relative flex-shrink-0" style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}>
 
-            {/* ─── Decorative landscape (behind road, z-index 0) ──── */}
-            <DecorationLayer worldIndex={worldNum - 1} />
-
-            {/* ─── SVG Road (z-index 1, above decorations) ─────────── */}
-            <svg
-              className="absolute inset-0 pointer-events-none"
-              style={{ zIndex: 1 }}
-              width={MAP_WIDTH}
-              height={MAP_HEIGHT}
-              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
-            >
-              {/* Road shadow */}
-              <path
-                d={fullPathD}
-                fill="none"
-                stroke="#00000008"
-                strokeWidth={28}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Outer road border */}
-              <path
-                d={fullPathD}
-                fill="none"
-                stroke="#00000012"
-                strokeWidth={18}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Road base (light tan) */}
-              <path
-                d={fullPathD}
-                fill="none"
-                stroke="#E8DCC8"
-                strokeWidth={14}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Road dashed center line */}
-              <path
-                d={fullPathD}
-                fill="none"
-                stroke="#D4C9B5"
-                strokeWidth={2}
-                strokeDasharray="10 8"
-                strokeLinecap="round"
-                className="map-road-dash"
-                opacity={0.6}
-              />
-
-              {/* Completed road overlay (colored) */}
+            {/* ─── Road — smooth solid path ──────────────────── */}
+            <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }} width={MAP_WIDTH} height={MAP_HEIGHT} viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
+              {/* Road outer glow */}
+              <path d={fullPathD} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Road border (dark edge) */}
+              <path d={fullPathD} fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Road surface */}
+              <path d={fullPathD} fill="none" stroke={bgConfig.roadColor} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Completed section — bright highlight */}
               {completedPathD && (
-                <path
-                  d={completedPathD}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={14}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={0.25}
-                  className="map-road-glow"
-                />
-              )}
-
-              {/* Completed road solid center stripe */}
-              {completedPathD && (
-                <path
-                  d={completedPathD}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  opacity={0.5}
-                />
+                <path d={completedPathD} fill="none" stroke="rgba(255,215,0,0.7)" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
               )}
             </svg>
 
-            {/* ─── Level Nodes (above road, z-index 3+) ───────────── */}
+            {/* ─── Level Nodes — top-down 3D isometric tiles ──── */}
             <div className="absolute inset-0" style={{ zIndex: 3 }}>
               {mapNodes.map((node) =>
                 node.type === "castle" ? (
-                  <CastleNode key={node.id} node={node} color={color} />
+                  <CastleNode key={node.id} node={node} color={color} worldThemeKey={worldThemeKey} />
                 ) : (
-                  <GameLevelNode key={node.id} node={node} studentId={studentId} />
+                  <GameLevelNode key={node.id} node={node} studentId={studentId} worldThemeKey={worldThemeKey} />
                 )
               )}
             </div>
 
-            {/* ─── Avatar on current node ─────────────────────────── */}
+            {/* ─── Wizard — STATIC, no animation ──────────────── */}
             {avatarNode && (
               <div
-                className="absolute map-avatar-float transition-all duration-700"
+                className="absolute"
                 style={{
                   zIndex: 15,
                   left: avatarNode.position.x,
-                  top: avatarNode.position.y - 45,
+                  top: avatarNode.position.y - 52,
                   transform: "translate(-50%, -100%)",
-                  transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               >
-                <div className="relative">
-                  <Avatar
-                    config={avatarConfig}
-                    seed={avatarSeed}
-                    size={38}
-                    className="rounded-full border-2 border-white shadow-lg"
+                <div className="relative flex flex-col items-center">
+                  <img
+                    src="/game-assets/player/idle.png"
+                    alt="Wizard"
+                    className="w-12 h-12 drop-shadow-lg"
+                    style={{ imageRendering: "pixelated" }}
                   />
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white rotate-45 shadow-sm" />
+                  <div
+                    className="w-0 h-0 -mt-0.5"
+                    style={{
+                      borderLeft: "6px solid transparent",
+                      borderRight: "6px solid transparent",
+                      borderTop: `8px solid ${color}`,
+                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))",
+                    }}
+                  />
                 </div>
-              </div>
-            )}
-
-            {/* ─── "START" label at first node ───────────────────── */}
-            {mapNodes.length > 0 && mapNodes[0].state !== "locked" && (
-              <div
-                className="absolute text-[10px] font-bold uppercase tracking-widest text-emerald-600/70 pointer-events-none"
-                style={{
-                  left: mapNodes[0].position.x,
-                  top: mapNodes[0].position.y + NODE_SIZE / 2 + 24,
-                  transform: "translateX(-50%)",
-                  zIndex: 4,
-                }}
-              >
-                Start
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ─── Bottom Level List (slide-up panel) ──────────────────────── */}
+      {/* ─── Bottom Level List ──────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
         <div className="max-w-2xl mx-auto px-4 pb-3 pointer-events-auto">
           <details className="group">
             <summary className="flex items-center justify-center gap-2 py-2 cursor-pointer select-none">
               <div className="w-10 h-1 rounded-full bg-neutral-400/30 group-open:bg-neutral-400/50 transition-colors" />
             </summary>
-            <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-xl border border-white/60 max-h-56 overflow-y-auto p-2 space-y-0.5">
+            <div className="rounded-lg shadow-xl border-2 border-[#8B6914] max-h-56 overflow-y-auto p-2 space-y-0.5" style={{ background: "linear-gradient(180deg, rgba(62,39,35,0.95), rgba(44,29,23,0.95))" }}>
               {mapNodes.map((node) => {
                 const asset = node.game ? getGameAsset(node.game.id) : null;
                 const isCastle = node.type === "castle";
                 return (
                   <div
                     key={node.id}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
-                      node.state === "current"
-                        ? "bg-neutral-100/80"
-                        : node.state === "locked"
-                        ? "opacity-40"
-                        : "hover:bg-neutral-50"
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                      node.state === "current" ? "bg-[#FFD700]/10" : node.state === "locked" ? "opacity-40" : "hover:bg-white/5"
                     }`}
                   >
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white ${
-                        isCastle ? "rounded-md" : ""
-                      }`}
+                      className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
                       style={{
-                        backgroundColor:
-                          node.state === "locked"
-                            ? "#a3a3a3"
-                            : isCastle
-                            ? color
-                            : asset?.accent || "#888",
+                        background: node.state === "locked" ? "#555" : isCastle ? color : "linear-gradient(180deg, #FFD700, #B8860B)",
+                        color: node.state === "locked" ? "#999" : "#3E2723",
+                        border: "1px solid #5a3e1e",
+                        fontFamily: "'Fredoka', sans-serif",
                       }}
                     >
                       {isCastle ? "C" : node.levelNumber}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold text-neutral-800 truncate">
-                        {node.label}
-                      </p>
-                      {node.game && (
-                        <p className="text-[10px] text-neutral-400 truncate">
-                          {node.game.description}
-                        </p>
-                      )}
-                      {isCastle && (
-                        <p className="text-[10px] text-neutral-400">
-                          Test your skills!
-                        </p>
-                      )}
+                      <p className="text-[12px] font-semibold text-[#FFD700] truncate" style={{ fontFamily: "'Fredoka', sans-serif" }}>{node.label}</p>
+                      {node.game && <p className="text-[10px] text-[#C4A35A] truncate">{node.game.description}</p>}
+                      {isCastle && <p className="text-[10px] text-[#C4A35A]">Test your skills!</p>}
                     </div>
                     {node.state === "completed" && <StarDisplay count={node.stars} size={10} />}
                     {node.state === "current" && node.game && (
                       <Link
                         href={`/exercises/play?studentId=${studentId}&gameId=${node.game.id}`}
-                        className="btn-primary text-[10px] px-2.5 py-1"
+                        className="text-[10px] px-2.5 py-1 font-bold rounded"
+                        style={{ background: "linear-gradient(180deg, #FFD700, #F9A825)", color: "#5D3A00", fontFamily: "'Fredoka', sans-serif" }}
                       >
-                        <Play size={11} />
                         Play
                       </Link>
                     )}
-                    {node.state === "locked" && (
-                      <Lock size={12} className="text-neutral-300 flex-shrink-0" />
-                    )}
+                    {node.state === "locked" && <Lock size={12} className="text-[#8B6914]/50 flex-shrink-0" />}
                   </div>
                 );
               })}

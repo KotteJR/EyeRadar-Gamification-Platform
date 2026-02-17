@@ -9,6 +9,21 @@ import { DEFICIT_AREA_LABELS, DEFICIT_AREA_COLORS } from "@/types";
 import ProgressBar from "@/components/ProgressBar";
 import GameIcon from "@/components/GameIcon";
 import { getGameAsset } from "@/lib/game-assets";
+import GamifiedRenderer from "@/components/gamified/GamifiedRenderer";
+import { useGameMode } from "@/components/gamified/useGameMode";
+import dynamic from "next/dynamic";
+
+const PhaserGame = dynamic(() => import("@/components/phaser/PhaserGame"), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-3 border-[#FF5A39] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-white/60 text-sm font-semibold">Loading game engine...</p>
+      </div>
+    </div>
+  ),
+});
 import {
   X,
   Check,
@@ -23,6 +38,8 @@ import {
   Lightbulb,
   Play,
   Volume2,
+  Gamepad2,
+  BookOpen,
 } from "lucide-react";
 
 // =============================================================================
@@ -169,6 +186,7 @@ function ExercisePlayContent() {
   const router = useRouter();
   const studentId = searchParams.get("studentId");
   const gameId = searchParams.get("gameId");
+  const { mode, gamifiedMode, toggleGameMode, setMode } = useGameMode();
 
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -223,6 +241,9 @@ function ExercisePlayContent() {
         setStreak(0);
       }
 
+      // In Phaser mode, give extra time for kill sequence animation on last question
+      const isLastQuestion = currentIndex >= session.items.length - 1;
+      const delay = mode === "phaser" && isLastQuestion && result.is_correct ? 4000 : 1500;
       setTimeout(() => {
         if (currentIndex < session.items.length - 1) {
           setCurrentIndex(prev => prev + 1);
@@ -234,15 +255,17 @@ function ExercisePlayContent() {
           completeSession();
         }
         setSubmitting(false);
-      }, 1500);
+      }, delay);
     } catch (err) {
       console.error(err);
       setSubmitting(false);
     }
   };
 
+  const completingRef = useRef(false);
   const completeSession = async () => {
-    if (!session) return;
+    if (!session || completingRef.current) return;
+    completingRef.current = true;
     try {
       const result = await api.completeSession(session.id);
       setSession(result);
@@ -253,6 +276,7 @@ function ExercisePlayContent() {
   };
 
   const handleReplay = () => {
+    completingRef.current = false;
     setCompleted(false);
     setCurrentIndex(0);
     setSelectedAnswer("");
@@ -314,7 +338,94 @@ function ExercisePlayContent() {
     );
   }
 
-  // ─── Playing View ─────────────────────────────────────
+  // ─── PHASER ENGINE MODE ─────────────────────────────────
+  if (mode === "phaser") {
+    return (
+      <PhaserGame
+        item={currentItem}
+        lastResult={lastResult}
+        submitting={submitting}
+        selectedAnswer={selectedAnswer}
+        textInput={textInput}
+        onSelectAnswer={setSelectedAnswer}
+        onTextInput={setTextInput}
+        onSubmit={handleSubmit}
+        progress={currentIndex}
+        maxProgress={session.items.length}
+        streak={streak}
+        points={session.points_earned}
+        deficitArea={session.deficit_area}
+        onExit={() => router.back()}
+        onSwitchMode={() => setMode("classic")}
+        onGameComplete={completeSession}
+      />
+    );
+  }
+
+  // ─── GAMIFIED MODE (legacy React/CSS) ──────────────────
+  if (mode === "gamified") {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black">
+        {/* Floating mode toggle & exit */}
+        <div className="fixed top-3 left-3 z-[200] flex gap-2">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 px-3 py-2 bg-black/40 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-black/50 transition-colors"
+          >
+            <X size={14} />
+            Exit
+          </button>
+          <button
+            onClick={() => setMode("phaser")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-white/30 transition-colors"
+            title="Switch to Phaser mode"
+          >
+            <Gamepad2 size={14} />
+            Phaser
+          </button>
+          <button
+            onClick={() => setMode("classic")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-white/30 transition-colors"
+            title="Switch to classic mode"
+          >
+            <BookOpen size={14} />
+            Classic
+          </button>
+        </div>
+
+        {/* Points Popup */}
+        {pointsPopup !== null && (
+          <div className="fixed top-16 right-6 z-[200] animate-float-up">
+            <div className="flex items-center gap-1.5 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-2xl text-lg font-bold shadow-lg">
+              <Star size={18} fill="currentColor" />
+              +{pointsPopup}
+            </div>
+          </div>
+        )}
+
+        {/* Gamified Game View — fills entire screen */}
+        <div className="w-full h-full">
+          <GamifiedRenderer
+            item={currentItem}
+            lastResult={lastResult}
+            submitting={submitting}
+            selectedAnswer={selectedAnswer}
+            textInput={textInput}
+            onSelectAnswer={setSelectedAnswer}
+            onTextInput={setTextInput}
+            onSubmit={handleSubmit}
+            progress={currentIndex}
+            maxProgress={session.items.length}
+            streak={streak}
+            points={session.points_earned}
+            deficitArea={session.deficit_area}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── CLASSIC Playing View ─────────────────────────────
   return (
     <div className="student-ui max-w-3xl mx-auto">
       {/* Session Header */}
@@ -344,13 +455,24 @@ function ExercisePlayContent() {
           </div>
           <h1 className="text-xl font-bold text-gray-900">{session.game_name}</h1>
         </div>
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 font-semibold transition-colors"
-        >
-          <X size={16} />
-          Exit
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Phaser game mode toggle */}
+          <button
+            onClick={() => setMode("phaser")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full hover:from-purple-600 hover:to-pink-600 transition-all shadow-md"
+            title="Switch to adventure mode"
+          >
+            <Gamepad2 size={14} />
+            Adventure
+          </button>
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 font-semibold transition-colors"
+          >
+            <X size={16} />
+            Exit
+          </button>
+        </div>
       </div>
 
       {/* Progress */}

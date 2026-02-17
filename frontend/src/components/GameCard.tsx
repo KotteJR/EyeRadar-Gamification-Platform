@@ -19,6 +19,10 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   tracking: "Track Path",
   pattern_match: "Match Pattern",
   dual_task: "Dual Task",
+  yes_no: "Yes / No",
+  voice_input: "Read Aloud",
+  image_match: "Image Match",
+  grid_naming: "Speed Naming",
 };
 
 interface GameCardProps {

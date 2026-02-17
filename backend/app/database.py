@@ -22,6 +22,8 @@ async def get_db() -> aiosqlite.Connection:
         # Enable WAL mode for better concurrent read/write
         await _db.execute("PRAGMA journal_mode=WAL")
         await _db.execute("PRAGMA busy_timeout=5000")
+        # Enable foreign key constraints
+        await _db.execute("PRAGMA foreign_keys=ON")
     return _db
 
 
@@ -106,6 +108,7 @@ async def init_db():
             ON adventure_maps(student_id);
         CREATE INDEX IF NOT EXISTS idx_adventure_status
             ON adventure_maps(status);
+
     """
     )
     await db.commit()
@@ -116,6 +119,7 @@ async def init_db():
     except Exception:
         await db.execute("ALTER TABLE students ADD COLUMN diagnostic TEXT DEFAULT '{}'")
         await db.commit()
+
 
 
 # ─── Student CRUD ─────────────────────────────────────────────────────────────

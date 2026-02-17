@@ -60,6 +60,20 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     bgLight: "#FFF7ED",
     accent: "#FB923C",
   },
+  sound_matching: {
+    icon: "Ear",
+    image: "/game-images/sound_safari.png",
+    gradient: ["#FEF3F2", "#FEE5E2"],
+    bgLight: "#FEF3F2",
+    accent: "#F97068",
+  },
+  word_sound_match: {
+    icon: "Volume2",
+    image: "/game-images/rhyme_time_race.png",
+    gradient: ["#EFF8FF", "#DBEFFE"],
+    bgLight: "#EFF8FF",
+    accent: "#5EB8FB",
+  },
 
   // ─── Rapid Naming ──────────────────────────────────────
   speed_namer: {
@@ -89,6 +103,13 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     gradient: ["#EFF8FF", "#BFDBFE"],
     bgLight: "#EFF8FF",
     accent: "#3B82F6",
+  },
+  ran_grid: {
+    icon: "LayoutGrid",
+    image: "/game-images/object_blitz.png",
+    gradient: ["#FDF2F8", "#FCE7F3"],
+    bgLight: "#FDF2F8",
+    accent: "#EC4899",
   },
 
   // ─── Working Memory ────────────────────────────────────
@@ -201,6 +222,13 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     bgLight: "#FAF5FF",
     accent: "#9333EA",
   },
+  decoding_read_aloud: {
+    icon: "Mic",
+    image: "/game-images/prosody_practice.png",
+    gradient: ["#EFF8FF", "#93C5FD"],
+    bgLight: "#EFF8FF",
+    accent: "#3B82F6",
+  },
 
   // ─── Comprehension ──────────────────────────────────────
   question_quest: {
@@ -237,6 +265,13 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     gradient: ["#FDF2F8", "#F472B6"],
     bgLight: "#FDF2F8",
     accent: "#DB2777",
+  },
+  word_image_match: {
+    icon: "Image",
+    image: "/game-images/question_quest.png",
+    gradient: ["#ECFDF5", "#6EE7B7"],
+    bgLight: "#ECFDF5",
+    accent: "#059669",
   },
 };
 
@@ -295,6 +330,10 @@ export const GAME_TYPE_ICONS: Record<GameType, string> = {
   tracking: "Navigation",
   pattern_match: "Shapes",
   dual_task: "Brain",
+  yes_no: "ThumbsUp",
+  voice_input: "Mic",
+  image_match: "Image",
+  grid_naming: "LayoutGrid",
 };
 
 /** Default asset for unknown games */

@@ -136,7 +136,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Students Panel */}
-        <div className="bg-white rounded-2xl bg-cream shadow-sm overflow-hidden">
+        <div className="bg-cream rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
             <h2 className="text-sm font-semibold text-neutral-900">Students</h2>
             <Link
@@ -205,7 +205,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Sessions Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl bg-cream shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-cream rounded-2xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-neutral-100">
             <h2 className="text-sm font-semibold text-neutral-900">Recent Sessions</h2>
           </div>
@@ -292,7 +292,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Deficit Areas Overview */}
-      <div className="bg-white rounded-2xl bg-cream shadow-sm p-6">
+      <div className="bg-cream rounded-2xl shadow-sm p-6">
         <h2 className="text-sm font-semibold text-neutral-900 mb-5">
           Performance by Deficit Area
         </h2>
@@ -322,7 +322,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={area}
-                className="p-4 rounded-xl border border-neutral-100 text-center hover:border-neutral-200 transition-colors"
+                className="p-4 rounded-xl bg-white text-center hover:shadow-sm transition-all"
               >
                 <div
                   className="w-9 h-9 rounded-lg mx-auto mb-2.5 flex items-center justify-center text-white text-xs font-bold"

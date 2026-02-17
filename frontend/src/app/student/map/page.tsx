@@ -12,6 +12,10 @@ import {
 import WorldMap from "@/components/WorldMap";
 import { CloudBorder } from "@/components/MapDecorations";
 import { WORLD_BIOMES } from "@/components/WorldBiomes";
+import {
+  INTEREST_DECORATION_SETS,
+  renderInterestDecoration,
+} from "@/components/InterestDecorations";
 import { Star, Trophy, Coins, ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -26,21 +30,43 @@ const WORLD_PCT: { x: number; y: number }[] = [
   { x: 93, y: 26 },  // 6 — top-right
 ];
 
-// Build SVG path from percentage positions (relative to a 1000x500 viewBox)
+// Build SVG path with organic curves (relative to a 1000x500 viewBox)
 function buildCurvedPath(pcts: { x: number; y: number }[]): string {
   if (pcts.length < 2) return "";
   const pts = pcts.map((p) => ({ x: p.x * 10, y: p.y * 5 }));
+
+  const seed = (n: number) => {
+    const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  };
+
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 1; i < pts.length; i++) {
     const prev = pts[i - 1];
     const curr = pts[i];
     const dx = curr.x - prev.x;
-    d += ` C ${prev.x + dx * 0.45},${prev.y} ${curr.x - dx * 0.45},${curr.y} ${curr.x},${curr.y}`;
+    const dy = curr.y - prev.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const perpX = -dy / (dist || 1);
+    const perpY = dx / (dist || 1);
+    const wobble = dist * 0.28;
+    const r1 = seed(i * 7 + 3);
+    const r2 = seed(i * 13 + 5);
+    const r3 = seed(i * 19 + 11);
+    const t1 = 0.25 + r3 * 0.15;
+    const t2 = 0.6 + r3 * 0.2;
+    const o1 = (r1 - 0.5) * wobble;
+    const o2 = (r2 - 0.5) * wobble * -1;
+    const cx1 = Math.round(prev.x + dx * t1 + perpX * o1);
+    const cy1 = Math.round(prev.y + dy * t1 + perpY * o1);
+    const cx2 = Math.round(prev.x + dx * t2 + perpX * o2);
+    const cy2 = Math.round(prev.y + dy * t2 + perpY * o2);
+    d += ` C ${cx1},${cy1} ${cx2},${cy2} ${curr.x},${curr.y}`;
   }
   return d;
 }
 
-// ─── World biome node ────────────────────────────────────────────────
+// ─── World biome node — pixel-art styled ────────────────────────────
 function WorldBiomeNode({
   world,
   pct,
@@ -50,13 +76,22 @@ function WorldBiomeNode({
   pct: { x: number; y: number };
   onClick: () => void;
 }) {
-  const BiomeScene = WORLD_BIOMES[world.area];
   const progressPercent =
     world.totalLevels > 0
       ? Math.round((world.completedLevels / world.totalLevels) * 100)
       : 0;
   const isCompleted =
     world.completedLevels === world.totalLevels && world.totalLevels > 0;
+
+  // Map deficit areas to isometric biome tiles (top-down 3D)
+  const WORLD_BIOME_TILES: Record<string, string> = {
+    phonological_awareness: "/game-assets/iso/forest-tile.png",
+    rapid_naming: "/game-assets/iso/desert-tile.png",
+    working_memory: "/game-assets/iso/mountain-tile.png",
+    visual_processing: "/game-assets/iso/crystal-tile.png",
+    reading_fluency: "/game-assets/iso/volcano-tile.png",
+    comprehension: "/game-assets/iso/castle-tile.png",
+  };
 
   return (
     <div
@@ -72,56 +107,155 @@ function WorldBiomeNode({
         onClick={onClick}
         className="group relative flex flex-col items-center cursor-pointer focus:outline-none"
       >
-        {/* Biome illustration — offset upward so badge sits on road */}
-        <div className="w-[140px] h-[120px] relative -mb-6">
-          {BiomeScene && <BiomeScene className="w-full h-full" />}
-        </div>
+        {/* Floating isometric biome tile with real cloud sprites */}
+        <div className="relative transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1" style={{ width: 130, height: 134 }}>
+          {/* Shadow below floating tile */}
+          <div
+            className="absolute z-[0]"
+            style={{
+              width: 80,
+              height: 14,
+              bottom: 2,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)",
+              borderRadius: "50%",
+              filter: "blur(4px)",
+            }}
+          />
 
-        {/* Number badge — at the center = on the road */}
-        <div
-          className="relative w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-extrabold shadow-lg border-[3px] border-white/80 group-hover:shadow-xl transition-all -mt-4 z-[4]"
-          style={{ backgroundColor: world.color }}
-        >
-          {world.worldNumber}
+          {/* Bottom cloud — actual sprite */}
+          <img
+            src="/game-assets/clouds/cloud-md.png"
+            alt=""
+            className="absolute z-[1] pixelated pointer-events-none"
+            style={{
+              width: 110,
+              height: 64,
+              bottom: -12,
+              left: "50%",
+              transform: "translateX(-50%)",
+              opacity: 0.9,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
 
-          {/* Stars pill */}
-          <div className="absolute -top-5 -right-6 flex items-center gap-0.5 bg-white/90 backdrop-blur-sm rounded-full px-1.5 py-0.5 shadow-sm border border-neutral-100">
-            <Star size={9} className="text-amber-400" fill="currentColor" />
-            <span className="text-[8px] font-bold text-neutral-600">
+          {/* Left cloud — actual sprite */}
+          <img
+            src="/game-assets/clouds/cloud-sm.png"
+            alt=""
+            className="absolute z-[1] pixelated pointer-events-none"
+            style={{
+              width: 48,
+              height: 32,
+              left: -14,
+              top: "48%",
+              transform: "translateY(-30%)",
+              opacity: 0.75,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+
+          {/* Right cloud — actual sprite */}
+          <img
+            src="/game-assets/clouds/cloud-sm.png"
+            alt=""
+            className="absolute z-[1] pixelated pointer-events-none"
+            style={{
+              width: 44,
+              height: 30,
+              right: -14,
+              top: "44%",
+              transform: "translateY(-30%) scaleX(-1)",
+              opacity: 0.7,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+
+          {/* Isometric tile */}
+          <img
+            src={WORLD_BIOME_TILES[world.area]}
+            alt=""
+            className="absolute pixelated z-[2]"
+            style={{
+              width: 100,
+              height: 100,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.4))",
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+
+          {/* Top cloud wisp — actual sprite */}
+          <img
+            src="/game-assets/clouds/cloud-xs.png"
+            alt=""
+            className="absolute z-[3] pixelated pointer-events-none"
+            style={{
+              width: 36,
+              height: 26,
+              top: -4,
+              left: "50%",
+              transform: "translateX(-50%)",
+              opacity: 0.55,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+
+          {/* World number — centered on tile */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-[14px] font-extrabold shadow-lg z-[4]"
+            style={{
+              background: isCompleted
+                ? "linear-gradient(180deg, #4CAF50, #2E7D32)"
+                : "linear-gradient(180deg, #FFD700, #B8860B)",
+              border: "2px solid #6B5014",
+              color: isCompleted ? "#fff" : "#3E2723",
+              textShadow: isCompleted ? "0 1px 2px rgba(0,0,0,0.3)" : "none",
+              fontFamily: "'Fredoka', sans-serif",
+            }}
+          >
+            {isCompleted ? "✓" : world.worldNumber}
+          </div>
+
+          {/* Stars — top right */}
+          <div className="absolute -top-1 -right-1 flex items-center gap-0.5 bg-black/70 border border-[#8B6914]/50 rounded-sm px-1.5 py-0.5 z-[5]">
+            <Star size={8} className="text-amber-400" fill="currentColor" />
+            <span className="text-[7px] font-bold text-[#FFD700]">
               {world.totalStars}/{world.maxStars}
             </span>
           </div>
-
-          {isCompleted && (
-            <div className="absolute -top-4 -left-4 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm border-2 border-white">
-              <span className="text-white text-[8px] font-bold">✓</span>
-            </div>
-          )}
         </div>
 
-        {/* Name + progress */}
-        <div className="mt-1.5 text-center">
-          <h3 className="text-[11px] font-bold text-neutral-800 leading-tight whitespace-nowrap">
+        {/* World name below tile */}
+        <div className="mt-1 px-2 py-0.5 rounded-sm" style={{ background: "rgba(30,20,12,0.85)", border: "1px solid #5a3e1e" }}>
+          <p className="text-[9px] font-bold text-[#FFD700] text-center leading-tight truncate max-w-[100px]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.6)", fontFamily: "'Fredoka', sans-serif" }}>
             {world.worldName}
-          </h3>
-          <p className="text-[9px] text-neutral-400 font-medium mt-0.5 whitespace-nowrap">
-            {world.label}
           </p>
-          <div className="mt-1 w-20 mx-auto">
-            <div className="h-[3px] bg-neutral-200/60 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${progressPercent}%`, backgroundColor: world.color }}
-              />
-            </div>
-            <p className="text-[8px] text-neutral-400 mt-0.5 font-medium">
-              {world.completedLevels}/{world.totalLevels} levels
-            </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-1 w-[90px] mx-auto">
+          <div className="h-[4px] rounded-sm overflow-hidden border border-[#8B6914]/50" style={{ background: "#1a0a04" }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${progressPercent}%`,
+                background: `linear-gradient(180deg, ${world.color}, ${world.color}BB)`,
+              }}
+            />
           </div>
-          <div className="mt-1 flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[9px] font-semibold" style={{ color: world.color }}>Play</span>
-            <ChevronRight size={9} style={{ color: world.color }} />
-          </div>
+          <p className="text-[7px] mt-0.5 font-bold text-center text-[#8B6914]">
+            {world.completedLevels}/{world.totalLevels}
+          </p>
+        </div>
+
+        {/* Hover label */}
+        <div className="mt-0 flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[9px] font-bold text-[#FFD700]" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>Enter</span>
+          <ChevronRight size={9} className="text-[#FFD700]" />
         </div>
       </button>
     </div>
@@ -294,151 +428,89 @@ export default function AdventureMapPage() {
     );
   }
 
-  // ─── Overworld ────────────────────────────────────────────────────
+  // ─── Overworld — Top-down 3D perspective ──────────────────────────
   return (
-    <div className={`fixed inset-0 bg-gradient-to-br ${themeGradient} flex flex-col overflow-hidden`}>
-      <CloudBorder />
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: "#1a3a5c" }}>
+      {/* PixelLab overworld map background — full 3D top-down */}
+      <img
+        src="/game-assets/ui/overworld-map-3d.png"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none pixelated"
+        style={{ opacity: 0.5 }}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+      />
+      {/* Ocean tile overlay for depth */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 30%, rgba(10,30,60,0.5) 100%)",
+        }}
+      />
 
-      {/* Header — frosted glass bar matching the world map navbar */}
+      {/* Header — medieval RPG style with PixelLab stat badge images */}
       <header className="relative z-[50] flex-shrink-0 px-4 py-2.5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between bg-white/70 backdrop-blur-xl rounded-2xl px-4 py-2 shadow-sm border border-white/50">
-          <div className="flex items-center gap-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between rounded-lg px-4 py-2 shadow-lg border-2 border-[#8B6914] relative overflow-hidden" style={{ background: "linear-gradient(180deg, #3E2723 0%, #2C1D17 100%)", boxShadow: "inset 0 1px 0 rgba(255,215,0,0.15), 0 4px 12px rgba(0,0,0,0.4)" }}>
+          <img
+            src="/game-assets/ui/healthbar-frame.png"
+            alt=""
+            className="absolute inset-0 w-full h-full pixelated pointer-events-none"
+            style={{ opacity: 0.25, objectFit: "fill" }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className="flex items-center gap-3 relative z-[1]">
             <Link
               href="/student"
-              className="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
+              className="w-8 h-8 flex items-center justify-center transition-colors shadow-sm border border-[#8B6914] rounded-sm"
+              style={{ background: "linear-gradient(180deg, #5A3A1A, #3E2723)" }}
             >
-              <ArrowLeft size={16} className="text-neutral-600" />
+              <ArrowLeft size={16} className="text-[#FFD700]" />
             </Link>
             <div>
-              <h1 className="text-[14px] font-semibold text-neutral-900 leading-tight">Adventure Map</h1>
-              <p className="text-[10px] text-neutral-400 font-medium">Choose a world to explore</p>
+              <h1 className="text-[14px] font-semibold text-[#FFD700] leading-tight" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)", fontFamily: "'Fredoka', sans-serif" }}>Adventure Map</h1>
+              <p className="text-[10px] text-[#C4A35A] font-medium">Choose a world to explore</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-[1]">
             <div className="flex items-center gap-1.5">
               <Star size={14} className="text-amber-400" fill="currentColor" />
-              <span className="text-[12px] font-bold text-neutral-700">{totalStars}<span className="text-neutral-400 font-medium">/{maxStars}</span></span>
+              <span className="text-[12px] font-bold text-[#FFD700]">{totalStars}<span className="text-[#8B6914] font-medium">/{maxStars}</span></span>
             </div>
-            <div className="w-px h-5 bg-neutral-200/60" />
+            <div className="w-px h-5 bg-[#8B6914]/40" />
             <div className="flex items-center gap-1.5">
-              <Trophy size={14} className="text-purple-400" />
-              <span className="text-[12px] font-bold text-neutral-700">{totalCompleted}<span className="text-neutral-400 font-medium">/{totalLevels}</span></span>
+              <Trophy size={14} className="text-purple-300" />
+              <span className="text-[12px] font-bold text-[#FFD700]">{totalCompleted}<span className="text-[#8B6914] font-medium">/{totalLevels}</span></span>
             </div>
-            <div className="w-px h-5 bg-neutral-200/60" />
+            <div className="w-px h-5 bg-[#8B6914]/40" />
             <div className="flex items-center gap-1.5">
-              <Coins size={14} className="text-amber-500" />
-              <span className="text-[12px] font-bold text-neutral-700">{totalPoints}</span>
+              <Coins size={14} className="text-amber-400" />
+              <span className="text-[12px] font-bold text-[#FFD700]">{totalPoints}</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Map area — fills remaining space, centers the aspect-ratio box */}
+      {/* Map area — top-down 3D perspective */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 relative z-10 min-h-0">
-        {/* Aspect-ratio container — matches SVG viewBox ratio exactly */}
         <div
           className="relative max-w-full max-h-full"
           style={{ aspectRatio: "2 / 1", width: "min(100%, calc((100vh - 80px) * 2))" }}
         >
-          {/* Dot grid */}
-          <div
-            className="absolute inset-0 opacity-[0.03] rounded-3xl"
-            style={{
-              backgroundImage: "radial-gradient(circle, #666 1px, transparent 1px)",
-              backgroundSize: "30px 30px",
-            }}
-          />
+          {/* Background kept clean — floating world tiles stand on their own */}
 
-          {/* Road SVG — stretches to fill container exactly (no letterbox) */}
+          {/* Road — smooth solid path connecting worlds */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
             viewBox="0 0 1000 500"
             preserveAspectRatio="none"
             style={{ zIndex: 1 }}
           >
-            <path d={pathD} fill="none" stroke="#00000008" strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" />
-            <path d={pathD} fill="none" stroke="#00000010" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" />
-            <path d={pathD} fill="none" stroke="#E8DCC8" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" />
-            <path d={pathD} fill="none" stroke="#D4C9B5" strokeWidth={1.5} strokeDasharray="8 6" strokeLinecap="round" opacity={0.5} className="map-road-dash" />
-
-            {/* ─── Scattered decorations — randomly distributed ─── */}
-
-            {/* Pine trees — varied sizes, spread across canvas */}
-            <g opacity="0.55">
-              <g transform="translate(35,200) scale(0.7)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(155,450) scale(1.1)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(310,58) scale(0.65)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(505,470) scale(0.85)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(670,55) scale(0.75)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(850,440) scale(0.95)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-              <g transform="translate(970,250) scale(0.6)"><rect x="-3" y="18" width="6" height="12" rx="1" fill="#8B6914" /><polygon points="0,0 14,14 -14,14" fill="#4AAE4A" /><polygon points="0,5 12,17 -12,17" fill="#3D9140" /><polygon points="0,10 10,20 -10,20" fill="#2E7D32" /></g>
-            </g>
-
-            {/* Round trees — scattered */}
-            <g opacity="0.5">
-              <g transform="translate(75,440) scale(0.9)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#66BB6A" /><circle cx="-5" cy="-3" r="7" fill="#81C784" opacity="0.7" /></g>
-              <g transform="translate(240,260) scale(0.7)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#4CAF50" /><circle cx="5" cy="-2" r="6" fill="#66BB6A" opacity="0.7" /></g>
-              <g transform="translate(430,55) scale(0.65)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#66BB6A" /><circle cx="-5" cy="-3" r="7" fill="#81C784" opacity="0.7" /></g>
-              <g transform="translate(590,455) scale(0.8)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#4CAF50" /><circle cx="5" cy="-2" r="6" fill="#66BB6A" opacity="0.7" /></g>
-              <g transform="translate(780,65) scale(0.6)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#66BB6A" /><circle cx="-5" cy="-3" r="7" fill="#81C784" opacity="0.7" /></g>
-              <g transform="translate(940,370) scale(0.75)"><rect x="-3" y="10" width="6" height="14" rx="1" fill="#8B6914" /><circle cx="0" cy="0" r="12" fill="#4CAF50" /><circle cx="5" cy="-2" r="6" fill="#66BB6A" opacity="0.7" /></g>
-            </g>
-
-            {/* Rocks — randomly scattered */}
-            <g opacity="0.4">
-              <g transform="translate(120,290) scale(0.65)"><polygon points="-8,8 -4,-2 2,-5 8,-1 10,8" fill="#9E9E9E" /><polygon points="-4,-2 2,-5 3,2 -2,4" fill="#BDBDBD" opacity="0.6" /></g>
-              <g transform="translate(380,460) scale(0.8)"><polygon points="-8,8 -4,-2 2,-5 8,-1 10,8" fill="#9E9E9E" /><polygon points="-4,-2 2,-5 3,2 -2,4" fill="#BDBDBD" opacity="0.6" /></g>
-              <g transform="translate(560,240) scale(0.55)"><polygon points="-8,8 -4,-2 2,-5 8,-1 10,8" fill="#9E9E9E" /><polygon points="-4,-2 2,-5 3,2 -2,4" fill="#BDBDBD" opacity="0.6" /></g>
-              <g transform="translate(730,460) scale(0.7)"><polygon points="-8,8 -4,-2 2,-5 8,-1 10,8" fill="#9E9E9E" /><polygon points="-4,-2 2,-5 3,2 -2,4" fill="#BDBDBD" opacity="0.6" /></g>
-              <g transform="translate(910,105) scale(0.6)"><polygon points="-8,8 -4,-2 2,-5 8,-1 10,8" fill="#9E9E9E" /><polygon points="-4,-2 2,-5 3,2 -2,4" fill="#BDBDBD" opacity="0.6" /></g>
-            </g>
-
-            {/* Bushes — scattered */}
-            <g opacity="0.45">
-              <g transform="translate(55,330) scale(0.7)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-              <g transform="translate(200,475) scale(0.85)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-              <g transform="translate(450,135) scale(0.6)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-              <g transform="translate(645,470) scale(0.75)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-              <g transform="translate(825,250) scale(0.55)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-              <g transform="translate(965,460) scale(0.8)"><ellipse cx="-5" cy="0" rx="8" ry="6" fill="#66BB6A" /><ellipse cx="6" cy="-1" rx="9" ry="7" fill="#4CAF50" /><ellipse cx="0" cy="-2" rx="6" ry="7" fill="#81C784" /></g>
-            </g>
-
-            {/* Flowers — sprinkled everywhere */}
-            <g opacity="0.5">
-              <g transform="translate(90,380)"><circle cx="-4" cy="0" r="2.5" fill="#F48FB1" /><circle cx="3" cy="-2" r="2" fill="#FFD54F" /><circle cx="-4" cy="0" r="1" fill="#F06292" /></g>
-              <g transform="translate(270,475)"><circle cx="-4" cy="0" r="2" fill="#CE93D8" /><circle cx="4" cy="1" r="2.5" fill="#F48FB1" /><circle cx="4" cy="1" r="1" fill="#F06292" /></g>
-              <g transform="translate(370,175)"><circle cx="0" cy="0" r="2.5" fill="#FFD54F" /><circle cx="7" cy="-1" r="2" fill="#CE93D8" /><circle cx="0" cy="0" r="1" fill="#FFB300" /></g>
-              <g transform="translate(520,65)"><circle cx="-3" cy="0" r="2" fill="#F48FB1" /><circle cx="4" cy="1" r="2.5" fill="#CE93D8" /><circle cx="-3" cy="0" r="0.8" fill="#F06292" /></g>
-              <g transform="translate(700,475)"><circle cx="-5" cy="0" r="2.5" fill="#FFD54F" /><circle cx="2" cy="-1" r="2" fill="#F48FB1" /><circle cx="-5" cy="0" r="1" fill="#FFB300" /></g>
-              <g transform="translate(880,210)"><circle cx="0" cy="0" r="2" fill="#CE93D8" /><circle cx="6" cy="1" r="2.5" fill="#F48FB1" /><circle cx="0" cy="0" r="0.8" fill="#AB47BC" /></g>
-            </g>
-
-            {/* Mushrooms — a few scattered */}
-            <g opacity="0.4">
-              <g transform="translate(175,310) scale(0.7)"><rect x="-2" y="2" width="4" height="6" rx="1" fill="#E8D5B0" /><ellipse cx="0" cy="1" rx="6" ry="4" fill="#E53935" /><circle cx="-2" cy="0" r="1.2" fill="white" opacity="0.8" /><circle cx="2" cy="-0.5" r="1" fill="white" opacity="0.7" /></g>
-              <g transform="translate(480,475) scale(0.6)"><rect x="-2" y="2" width="4" height="6" rx="1" fill="#E8D5B0" /><ellipse cx="0" cy="1" rx="6" ry="4" fill="#E53935" /><circle cx="-2" cy="0" r="1.2" fill="white" opacity="0.8" /><circle cx="2" cy="-0.5" r="1" fill="white" opacity="0.7" /></g>
-              <g transform="translate(755,105) scale(0.55)"><rect x="-2" y="2" width="4" height="6" rx="1" fill="#E8D5B0" /><ellipse cx="0" cy="1" rx="6" ry="4" fill="#E53935" /><circle cx="-2" cy="0" r="1.2" fill="white" opacity="0.8" /><circle cx="2" cy="-0.5" r="1" fill="white" opacity="0.7" /></g>
-            </g>
-
-            {/* Birds — in the sky at varied heights */}
-            <g opacity="0.25" stroke="#455A64" strokeWidth="1.5" fill="none">
-              <g transform="translate(150,45)"><path d="M0,0 Q-5,-5 -10,0" /><path d="M0,0 Q5,-5 10,0" /></g>
-              <g transform="translate(420,30)"><path d="M0,0 Q-4,-4 -8,0" /><path d="M0,0 Q4,-4 8,0" /></g>
-              <g transform="translate(610,42)"><path d="M0,0 Q-5,-5 -10,0" /><path d="M0,0 Q5,-5 10,0" /></g>
-              <g transform="translate(830,35)"><path d="M0,0 Q-4,-4 -8,0" /><path d="M0,0 Q4,-4 8,0" /></g>
-            </g>
-
-            {/* Grass tufts — around the canvas */}
-            <g opacity="0.35" fill="#66BB6A">
-              <g transform="translate(60,460)"><path d="M-6,5 Q-4,-2 -2,5" /><path d="M-3,5 Q0,-4 3,5" /><path d="M1,5 Q4,-2 7,5" /></g>
-              <g transform="translate(280,130)"><path d="M-5,4 Q-3,-2 -1,4" /><path d="M-2,4 Q0,-3 2,4" /><path d="M1,4 Q3,-2 5,4" /></g>
-              <g transform="translate(550,475)"><path d="M-6,5 Q-4,-2 -2,5" /><path d="M-3,5 Q0,-4 3,5" /><path d="M1,5 Q4,-2 7,5" /></g>
-              <g transform="translate(720,250)"><path d="M-5,4 Q-3,-2 -1,4" /><path d="M-2,4 Q0,-3 2,4" /><path d="M1,4 Q3,-2 5,4" /></g>
-              <g transform="translate(920,470)"><path d="M-6,5 Q-4,-2 -2,5" /><path d="M-3,5 Q0,-4 3,5" /><path d="M1,5 Q4,-2 7,5" /></g>
-            </g>
+            {/* Road border (dark edge) */}
+            <path d={pathD} fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth={10} strokeLinecap="round" strokeLinejoin="round" />
+            {/* Road surface */}
+            <path d={pathD} fill="none" stroke="rgba(200,170,80,0.45)" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
 
-          {/* World nodes — percentage-positioned, scale with the container */}
+          {/* World nodes */}
           {worlds.map((world, i) => (
             <WorldBiomeNode
               key={world.area}
@@ -452,12 +524,10 @@ export default function AdventureMapPage() {
 
       {worlds.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-[50]">
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 text-center border border-white/80 max-w-md">
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-              <Star size={24} className="text-amber-500" />
-            </div>
-            <h3 className="text-neutral-800 text-[16px] font-semibold mb-2">Your Adventure Awaits!</h3>
-            <p className="text-neutral-500 text-[14px] font-medium">
+          <div className="rounded-lg p-12 text-center border-2 border-[#8B6914] max-w-md" style={{ background: "linear-gradient(180deg, rgba(62,39,35,0.95), rgba(44,29,23,0.95))" }}>
+            <img src="/game-assets/ui/boss-emblem.png" alt="" className="w-14 h-14 pixelated mx-auto mb-4" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <h3 className="text-[#FFD700] text-[16px] font-semibold mb-2" style={{ fontFamily: "'Fredoka', sans-serif" }}>Your Adventure Awaits!</h3>
+            <p className="text-[#C4A35A] text-[14px] font-medium">
               {adventure
                 ? "Your teacher is setting up your personalized adventure. Check back soon!"
                 : "Your teacher hasn't created your adventure map yet. Ask them to set one up for you!"}

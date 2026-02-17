@@ -1,5 +1,5 @@
 """
-All 29 game definitions for the EyeRadar Dyslexia Exercise System.
+All 34 game definitions for the EyeRadar Dyslexia Exercise System.
 Each game targets one of the 6 deficit areas and specifies a game_type
 that determines the interactive mechanic used in the frontend.
 """
@@ -13,7 +13,7 @@ def _register(g: GameDefinition):
     GAMES[g.id] = g
 
 
-# ─── Phonological Awareness (5 games) ────────────────────────────────────────
+# ─── Phonological Awareness (7 games) ────────────────────────────────────────
 
 _register(GameDefinition(
     id="sound_safari",
@@ -75,7 +75,31 @@ _register(GameDefinition(
     icon="🔄",
 ))
 
-# ─── Rapid Automatized Naming (4 games) ──────────────────────────────────────
+_register(GameDefinition(
+    id="sound_matching",
+    name="Sound Matching",
+    description="Listen to two words and decide if they rhyme or share the same ending sound. Train your ear for phonological patterns!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.YES_NO,
+    age_range_min=4, age_range_max=10,
+    mechanics="Binary auditory discrimination",
+    instructions="Listen to the two words. Do they sound the same at the end? Click Yes or No!",
+    icon="👂",
+))
+
+_register(GameDefinition(
+    id="word_sound_match",
+    name="Word-to-Sound Matching",
+    description="Find the word that sounds like the target! Pick the matching sound from three choices to sharpen phonological skills.",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.MULTIPLE_CHOICE,
+    age_range_min=5, age_range_max=11,
+    mechanics="Auditory matching with choices",
+    instructions="Look at the word on top. Which of the three words below sounds the same? Tap to choose!",
+    icon="🔊",
+))
+
+# ─── Rapid Automatized Naming (5 games) ──────────────────────────────────────
 
 _register(GameDefinition(
     id="speed_namer",
@@ -123,6 +147,18 @@ _register(GameDefinition(
     mechanics="Visual attention + naming",
     instructions="Watch the stream of letters and tap the target letter when you see it!",
     icon="🌊",
+))
+
+_register(GameDefinition(
+    id="ran_grid",
+    name="RAN Grid Challenge",
+    description="Name a grid of images as fast and accurately as possible! Animals, colors, and objects test your rapid naming speed.",
+    deficit_area=DeficitArea.RAPID_NAMING,
+    game_type=GameType.GRID_NAMING,
+    age_range_min=5, age_range_max=12,
+    mechanics="Grid-based rapid naming with voice",
+    instructions="Press the microphone, then name every image in the grid from left to right, top to bottom, as fast as you can!",
+    icon="🐾",
 ))
 
 # ─── Working Memory (5 games) ────────────────────────────────────────────────
@@ -249,7 +285,7 @@ _register(GameDefinition(
     icon="✨",
 ))
 
-# ─── Reading Fluency (5 games) ───────────────────────────────────────────────
+# ─── Reading Fluency (6 games) ───────────────────────────────────────────────
 
 _register(GameDefinition(
     id="phrase_flash",
@@ -311,7 +347,19 @@ _register(GameDefinition(
     icon="🎵",
 ))
 
-# ─── Reading Comprehension (5 games) ─────────────────────────────────────────
+_register(GameDefinition(
+    id="decoding_read_aloud",
+    name="Decoding Challenge",
+    description="Read words and pseudo-words aloud to practice decoding skills! Includes made-up words to test letter-sound knowledge.",
+    deficit_area=DeficitArea.READING_FLUENCY,
+    game_type=GameType.VOICE_INPUT,
+    age_range_min=5, age_range_max=12,
+    mechanics="Voice-based decoding practice",
+    instructions="A word appears on screen. Press the microphone button, say the word out loud, then click to move on. Some words are made up — try your best to sound them out!",
+    icon="🎤",
+))
+
+# ─── Reading Comprehension (6 games) ─────────────────────────────────────────
 
 _register(GameDefinition(
     id="question_quest",
@@ -371,6 +419,18 @@ _register(GameDefinition(
     mechanics="Narrative comprehension",
     instructions="Read the story events and arrange them in the correct order by tapping them first to last.",
     icon="📋",
+))
+
+_register(GameDefinition(
+    id="word_image_match",
+    name="Word-Image Match",
+    description="Match words to their pictures and pictures to their words! Build vocabulary and reading comprehension through visual connections.",
+    deficit_area=DeficitArea.COMPREHENSION,
+    game_type=GameType.IMAGE_MATCH,
+    age_range_min=4, age_range_max=10,
+    mechanics="Bidirectional word-image association",
+    instructions="See the word? Pick the matching picture! See the picture? Pick the matching word! Connect what you read with what you see.",
+    icon="🖼️",
 ))
 
 

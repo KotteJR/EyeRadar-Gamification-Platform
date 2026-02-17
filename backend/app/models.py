@@ -106,6 +106,10 @@ class GameType(str, Enum):
     TRACKING = "tracking"                # Tracking Trail: follow a visual path
     PATTERN_MATCH = "pattern_match"      # Pattern Matcher: visual comparison
     DUAL_TASK = "dual_task"              # Dual Task: split attention challenge
+    YES_NO = "yes_no"                    # Sound Matching: binary yes/no response
+    VOICE_INPUT = "voice_input"          # Decoding / RAN: microphone-based input
+    IMAGE_MATCH = "image_match"          # Word-Image Matching: match words to pictures
+    GRID_NAMING = "grid_naming"          # RAN Grid: name a grid of items rapidly
 
 
 class GameDefinition(BaseModel):
