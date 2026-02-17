@@ -17,6 +17,111 @@ interface AnswerOverlayProps {
   onSelectAnswer: (answer: string) => void;
 }
 
+// ─── Interactive grid for spot_target — tap cells to select them ────────
+function InteractiveGridAnswer({
+  item,
+  onSubmit,
+  disabled,
+}: {
+  item: ExerciseItem;
+  onSubmit: (answer: string) => void;
+  disabled: boolean;
+}) {
+  const ed = item.extra_data || {};
+  const grid = (ed.grid as string[]) || [];
+  const cols = (typeof ed.grid_cols === "number" ? ed.grid_cols : 5) as number;
+  const target = typeof ed.target === "string" ? (ed.target as string) : "";
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [wrongFlash, setWrongFlash] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [item]);
+
+  const isTarget = (cell: string) =>
+    cell.toLowerCase() === target.toLowerCase();
+
+  const toggleCell = (index: number) => {
+    if (disabled) return;
+    const cell = grid[index];
+
+    if (!isTarget(cell)) {
+      setWrongFlash(index);
+      setTimeout(() => setWrongFlash(null), 400);
+      return;
+    }
+
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  const totalTargets = grid.filter((c) => isTarget(c)).length;
+  const selectedCount = selected.size;
+
+  const handleDone = () => {
+    if (disabled || selectedCount === 0) return;
+    onSubmit(String(selectedCount));
+  };
+
+  return (
+    <>
+      <div className="qa-problem-block">
+        {target && (
+          <p className="qa-hint-text">
+            Find: <span className="qa-accent">{target}</span>
+          </p>
+        )}
+        <div
+          className="qa-letter-grid"
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+        >
+          {grid.map((cell, i) => {
+            const tapped = selected.has(i);
+            const flashing = wrongFlash === i;
+            return (
+              <button
+                key={i}
+                onClick={() => toggleCell(i)}
+                disabled={disabled}
+                className={`qa-grid-cell qa-grid-cell-btn ${
+                  tapped
+                    ? "qa-grid-cell-correct"
+                    : flashing
+                    ? "qa-grid-cell-wrong"
+                    : ""
+                } ${disabled ? "opacity-60 cursor-default" : ""}`}
+              >
+                {cell}
+              </button>
+            );
+          })}
+        </div>
+        <p className="qa-hint-sub mt-2" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+          {selectedCount > 0
+            ? `${selectedCount} / ${totalTargets} found`
+            : "Tap the matching letters"}
+        </p>
+      </div>
+      <div className="mt-3 flex justify-center">
+        <button
+          onClick={handleDone}
+          disabled={disabled || selectedCount === 0}
+          className="qa-btn-submit disabled:opacity-40"
+        >
+          Done ({selectedCount})
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ─── Render the problem content that the question references ─────────────
 function ProblemDisplay({ item }: { item: ExerciseItem }) {
   const ed = item.extra_data || {};
@@ -136,29 +241,7 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
     }
   }
 
-  // ── spot_target: show grid and target ──
-  if (type === "spot_target" && Array.isArray(ed.grid)) {
-    const grid = ed.grid as string[];
-    const cols = (typeof ed.grid_cols === "number" ? ed.grid_cols : 5) as number;
-    const target = typeof ed.target === "string" ? (ed.target as string) : null;
-    return (
-      <div className="qa-problem-block">
-        {target && (
-          <p className="qa-hint-text">
-            Find: <span className="qa-accent">{target}</span>
-          </p>
-        )}
-        <div
-          className="qa-letter-grid"
-          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-        >
-          {grid.map((cell, i) => (
-            <span key={i} className="qa-grid-cell">{cell}</span>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // spot_target with grid is handled by InteractiveGridAnswer in the main overlay
 
   // ── sorting: show the events to sort ──
   if (type === "sorting" && Array.isArray(ed.events)) {
@@ -262,6 +345,8 @@ export default function AnswerOverlay({
   const options = item.options || [];
   const needsTextInput = ["text_input", "fill_blank"].includes(item.item_type);
   const hasOptions = options.length > 0;
+  const isGridType =
+    item.item_type === "spot_target" && Array.isArray(item.extra_data?.grid);
 
   return (
     <div className="absolute inset-x-0 top-[76px] z-20 flex flex-col items-center pointer-events-none">
@@ -270,32 +355,45 @@ export default function AnswerOverlay({
           {/* Question panel */}
           <div className="qa-question-panel">
             <p className="qa-question">{item.question}</p>
-            {/* Problem content — adapted per game type */}
-            <ProblemDisplay item={item} />
-          </div>
 
-          {/* Answer buttons */}
-          <div className="mt-3">
-            {needsTextInput ? (
-              <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
-            ) : hasOptions ? (
-              <div className={`grid gap-2.5 ${options.length <= 2 ? "grid-cols-2" : options.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-                {options.map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleAnswer(opt)}
-                    disabled={submitting}
-                    className={`qa-answer-btn ${submitting ? "opacity-50" : ""}`}
-                  >
-                    <span className="qa-answer-letter">{String.fromCharCode(65 + i)}</span>
-                    <span className="qa-answer-text">{opt}</span>
-                  </button>
-                ))}
-              </div>
+            {isGridType ? (
+              <InteractiveGridAnswer
+                item={item}
+                onSubmit={handleAnswer}
+                disabled={submitting}
+              />
             ) : (
-              <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
+              <>
+                {/* Problem content — adapted per game type */}
+                <ProblemDisplay item={item} />
+              </>
             )}
           </div>
+
+          {/* Answer buttons (not shown for grid types — grid has its own submit) */}
+          {!isGridType && (
+            <div className="mt-3">
+              {needsTextInput ? (
+                <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
+              ) : hasOptions ? (
+                <div className={`grid gap-2.5 ${options.length <= 2 ? "grid-cols-2" : options.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                  {options.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleAnswer(opt)}
+                      disabled={submitting}
+                      className={`qa-answer-btn ${submitting ? "opacity-50" : ""}`}
+                    >
+                      <span className="qa-answer-letter">{String.fromCharCode(65 + i)}</span>
+                      <span className="qa-answer-text">{opt}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <TextInputAnswer onSubmit={handleAnswer} disabled={submitting} />
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -1,13 +1,22 @@
 "use client";
 
 import React from "react";
-import BossEncounter from "./BossEncounter";
+import dynamic from "next/dynamic";
 import CardDealer from "./CardDealer";
 import MemoryBlocks from "./MemoryBlocks";
 import RunnerMode from "./RunnerMode";
 import PuzzleBridge from "./PuzzleBridge";
 import type { ExerciseItem, ExerciseItemResult, DeficitArea } from "@/types";
 import { DEFICIT_AREA_THEME, type WorldTheme } from "@/lib/level-config";
+
+const DragonBattle = dynamic(() => import("./DragonBattle"), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  ),
+});
 
 interface GamifiedRendererProps {
   item: ExerciseItem;
@@ -39,7 +48,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
     case "yes_no":
     case "image_match":
       return (
-        <BossEncounter
+        <DragonBattle
           item={item}
           lastResult={props.lastResult}
           submitting={props.submitting}
@@ -128,7 +137,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
 
     default:
       return (
-        <BossEncounter
+        <DragonBattle
           item={item}
           lastResult={props.lastResult}
           submitting={props.submitting}

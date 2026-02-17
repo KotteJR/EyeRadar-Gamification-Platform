@@ -109,65 +109,94 @@ function WorldBiomeNode({
       >
         {/* Floating isometric biome tile with real cloud sprites */}
         <div className="relative transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1" style={{ width: 130, height: 134 }}>
-          {/* Shadow below floating tile */}
-          <div
-            className="absolute z-[0]"
+          {/* ── BEHIND clouds (behind the block) ── */}
+          {/* Back-left cloud — peeks from behind upper-left */}
+          <img
+            src="/game-assets/clouds/cloud-sm.png"
+            alt=""
+            className="absolute z-[1] pixelated pointer-events-none"
             style={{
-              width: 80,
-              height: 14,
-              bottom: 2,
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)",
-              borderRadius: "50%",
-              filter: "blur(4px)",
+              width: 64,
+              height: 42,
+              left: -8,
+              bottom: 24,
+              opacity: 0.8,
             }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
-
-          {/* Bottom cloud — actual sprite */}
+          {/* Back-right cloud — peeks from behind upper-right */}
+          <img
+            src="/game-assets/clouds/cloud-sm.png"
+            alt=""
+            className="absolute z-[1] pixelated pointer-events-none"
+            style={{
+              width: 60,
+              height: 40,
+              right: -8,
+              bottom: 28,
+              transform: "scaleX(-1)",
+              opacity: 0.75,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          {/* Back center cloud — behind block bottom */}
           <img
             src="/game-assets/clouds/cloud-md.png"
             alt=""
             className="absolute z-[1] pixelated pointer-events-none"
             style={{
-              width: 110,
-              height: 64,
-              bottom: -12,
+              width: 150,
+              height: 84,
+              bottom: 0,
               left: "50%",
               transform: "translateX(-50%)",
-              opacity: 0.9,
+              opacity: 0.85,
             }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
 
-          {/* Left cloud — actual sprite */}
+          {/* ── FRONT clouds (in front of the block) ── */}
+          {/* Front center cloud — large, overlaps bottom of block */}
           <img
-            src="/game-assets/clouds/cloud-sm.png"
+            src="/game-assets/clouds/cloud-md.png"
             alt=""
-            className="absolute z-[1] pixelated pointer-events-none"
+            className="absolute z-[3] pixelated pointer-events-none"
             style={{
-              width: 48,
-              height: 32,
-              left: -14,
-              top: "48%",
-              transform: "translateY(-30%)",
-              opacity: 0.75,
+              width: 140,
+              height: 78,
+              bottom: -4,
+              left: "50%",
+              transform: "translateX(-50%)",
+              opacity: 0.92,
             }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
-
-          {/* Right cloud — actual sprite */}
+          {/* Front-left cloud puff */}
           <img
             src="/game-assets/clouds/cloud-sm.png"
             alt=""
-            className="absolute z-[1] pixelated pointer-events-none"
+            className="absolute z-[3] pixelated pointer-events-none"
             style={{
-              width: 44,
-              height: 30,
-              right: -14,
-              top: "44%",
-              transform: "translateY(-30%) scaleX(-1)",
-              opacity: 0.7,
+              width: 70,
+              height: 46,
+              bottom: 4,
+              left: -6,
+              opacity: 0.88,
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          {/* Front-right cloud puff */}
+          <img
+            src="/game-assets/clouds/cloud-sm.png"
+            alt=""
+            className="absolute z-[3] pixelated pointer-events-none"
+            style={{
+              width: 66,
+              height: 44,
+              bottom: 6,
+              right: -6,
+              transform: "scaleX(-1)",
+              opacity: 0.85,
             }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
@@ -188,11 +217,11 @@ function WorldBiomeNode({
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
 
-          {/* Top cloud wisp — actual sprite */}
+          {/* Top cloud wisp — decorative */}
           <img
             src="/game-assets/clouds/cloud-xs.png"
             alt=""
-            className="absolute z-[3] pixelated pointer-events-none"
+            className="absolute z-[4] pixelated pointer-events-none"
             style={{
               width: 36,
               height: 26,

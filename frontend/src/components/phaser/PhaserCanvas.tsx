@@ -28,14 +28,20 @@ export default function PhaserCanvas({
     const game = new Phaser.Game(config);
     gameRef.current = game;
 
-    // When PreloadScene finishes, start BattleScene directly
+    // When PreloadScene finishes, start the appropriate battle scene
     const unsub = eventBus.on(GameEvents.GAME_READY, () => {
       setTimeout(() => {
         if (game.scene.isActive("PreloadScene")) {
           game.scene.stop("PreloadScene");
         }
-        // ALL game types go through BattleScene now
-        game.scene.start("BattleScene", levelConfigRef.current);
+
+        // Use DragonBattleScene for dragon boss, BattleScene for others
+        const config = levelConfigRef.current;
+        const sceneName = config.bossType === "dragon"
+          ? "DragonBattleScene"
+          : "BattleScene";
+
+        game.scene.start(sceneName, config);
 
         if (!readySent.current && onReady) {
           readySent.current = true;

@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BootScene } from "./scenes/BootScene";
 import { PreloadScene } from "./scenes/PreloadScene";
 import { BattleScene } from "./scenes/BattleScene";
+import { DragonBattleScene } from "./scenes/DragonBattleScene";
 import { RunnerScene } from "./scenes/RunnerScene";
 import { MemoryScene } from "./scenes/MemoryScene";
 import { WorldMapScene } from "./scenes/WorldMapScene";
@@ -32,6 +33,6 @@ export function createGameConfig(
         debug: false,
       },
     },
-    scene: [BootScene, PreloadScene, BattleScene, RunnerScene, MemoryScene, WorldMapScene],
+    scene: [BootScene, PreloadScene, BattleScene, DragonBattleScene, RunnerScene, MemoryScene, WorldMapScene],
   };
 }

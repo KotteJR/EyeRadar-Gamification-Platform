@@ -150,23 +150,6 @@ function GameLevelNode({
         </div>
       )}
 
-      {/* Static glow ring for current */}
-      {isCurrent && (
-        <div
-          className="absolute"
-          style={{
-            width: NODE_SIZE + 20,
-            height: NODE_SIZE + 20,
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, #FFD70044 0%, transparent 70%)",
-            border: "2px solid #FFD70040",
-          }}
-        />
-      )}
-
       {/* Level node — floating isometric tile with real cloud sprites */}
       <div
         className={`relative flex items-center justify-center ${
@@ -174,30 +157,45 @@ function GameLevelNode({
         } ${!isLocked ? "hover:scale-105" : ""} transition-transform duration-200`}
         style={{ width: NODE_SIZE + 36, height: NODE_SIZE + 40 }}
       >
-        {/* Shadow below the floating tile */}
-        <div
-          className="absolute z-[0]"
+        {/* ── BEHIND clouds (z-[1], behind the block) ── */}
+        {/* Back-left cloud — peeks from behind */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
           style={{
-            width: NODE_SIZE - 4,
-            height: 14,
-            bottom: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%)",
-            borderRadius: "50%",
-            filter: "blur(4px)",
+            width: 56,
+            height: 38,
+            left: -6,
+            bottom: 22,
+            opacity: 0.8,
           }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
-
-        {/* Bottom cloud — actual sprite */}
+        {/* Back-right cloud — peeks from behind */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 52,
+            height: 36,
+            right: -6,
+            bottom: 26,
+            transform: "scaleX(-1)",
+            opacity: 0.75,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        {/* Back center cloud — wide behind block bottom */}
         <img
           src="/game-assets/clouds/cloud-md.png"
           alt=""
           className="absolute z-[1] pixelated pointer-events-none"
           style={{
-            width: 100,
-            height: 58,
-            bottom: -10,
+            width: 130,
+            height: 74,
+            bottom: 2,
             left: "50%",
             transform: "translateX(-50%)",
             opacity: 0.85,
@@ -205,34 +203,48 @@ function GameLevelNode({
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
 
-        {/* Left cloud puff — actual sprite */}
+        {/* ── FRONT clouds (z-[3], in front of the block) ── */}
+        {/* Front center cloud — large, overlaps block bottom */}
         <img
-          src="/game-assets/clouds/cloud-sm.png"
+          src="/game-assets/clouds/cloud-md.png"
           alt=""
-          className="absolute z-[1] pixelated pointer-events-none"
+          className="absolute z-[3] pixelated pointer-events-none"
           style={{
-            width: 42,
-            height: 28,
-            left: -12,
-            top: "48%",
-            transform: "translateY(-30%)",
-            opacity: 0.7,
+            width: 124,
+            height: 70,
+            bottom: -2,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.92,
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
-
-        {/* Right cloud puff — actual sprite */}
+        {/* Front-left cloud puff */}
         <img
           src="/game-assets/clouds/cloud-sm.png"
           alt=""
-          className="absolute z-[1] pixelated pointer-events-none"
+          className="absolute z-[3] pixelated pointer-events-none"
           style={{
-            width: 40,
-            height: 26,
-            right: -12,
-            top: "44%",
-            transform: "translateY(-30%) scaleX(-1)",
-            opacity: 0.65,
+            width: 62,
+            height: 42,
+            bottom: 6,
+            left: -4,
+            opacity: 0.88,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        {/* Front-right cloud puff */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[3] pixelated pointer-events-none"
+          style={{
+            width: 58,
+            height: 40,
+            bottom: 8,
+            right: -4,
+            transform: "scaleX(-1)",
+            opacity: 0.85,
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
@@ -246,10 +258,8 @@ function GameLevelNode({
             width: NODE_SIZE + 8,
             height: NODE_SIZE + 8,
             borderRadius: "6px",
-            filter: isLocked ? "saturate(0) brightness(0.6)" : isCurrent ? "brightness(1.15)" : "none",
-            boxShadow: isCurrent
-              ? "0 0 14px rgba(255,215,0,0.5), 0 6px 18px rgba(0,0,0,0.5)"
-              : "0 6px 14px rgba(0,0,0,0.45)",
+            filter: isLocked ? "saturate(0) brightness(0.6)" : isCurrent ? "brightness(1.1)" : "none",
+            boxShadow: "0 6px 14px rgba(0,0,0,0.45)",
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
@@ -393,30 +403,45 @@ function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: stri
 
       {/* Floating castle tile with real cloud sprites */}
       <div className={`relative ${isLocked ? "opacity-40 grayscale" : ""} ${!isLocked ? "hover:scale-105" : ""} transition-transform duration-200`} style={{ width: 130, height: 136 }}>
-        {/* Shadow below floating tile */}
-        <div
-          className="absolute z-[0]"
+        {/* ── BEHIND clouds (z-[1], behind the castle) ── */}
+        {/* Back-left cloud */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
           style={{
-            width: 86,
-            height: 16,
-            bottom: 2,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%)",
-            borderRadius: "50%",
-            filter: "blur(4px)",
+            width: 64,
+            height: 42,
+            left: -8,
+            bottom: 24,
+            opacity: 0.8,
           }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
-
-        {/* Bottom cloud — actual sprite */}
+        {/* Back-right cloud */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[1] pixelated pointer-events-none"
+          style={{
+            width: 60,
+            height: 40,
+            right: -8,
+            bottom: 28,
+            transform: "scaleX(-1)",
+            opacity: 0.75,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        {/* Back center cloud */}
         <img
           src="/game-assets/clouds/cloud-md.png"
           alt=""
           className="absolute z-[1] pixelated pointer-events-none"
           style={{
-            width: 114,
-            height: 66,
-            bottom: -12,
+            width: 150,
+            height: 84,
+            bottom: 0,
             left: "50%",
             transform: "translateX(-50%)",
             opacity: 0.85,
@@ -424,34 +449,48 @@ function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: stri
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
 
-        {/* Left cloud — actual sprite */}
+        {/* ── FRONT clouds (z-[3], in front of the castle) ── */}
+        {/* Front center cloud — large */}
         <img
-          src="/game-assets/clouds/cloud-sm.png"
+          src="/game-assets/clouds/cloud-md.png"
           alt=""
-          className="absolute z-[1] pixelated pointer-events-none"
+          className="absolute z-[3] pixelated pointer-events-none"
           style={{
-            width: 50,
-            height: 34,
-            left: -14,
-            top: "48%",
-            transform: "translateY(-30%)",
-            opacity: 0.7,
+            width: 140,
+            height: 78,
+            bottom: -4,
+            left: "50%",
+            transform: "translateX(-50%)",
+            opacity: 0.92,
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
-
-        {/* Right cloud — actual sprite */}
+        {/* Front-left cloud puff */}
         <img
           src="/game-assets/clouds/cloud-sm.png"
           alt=""
-          className="absolute z-[1] pixelated pointer-events-none"
+          className="absolute z-[3] pixelated pointer-events-none"
           style={{
-            width: 46,
-            height: 30,
-            right: -14,
-            top: "44%",
-            transform: "translateY(-30%) scaleX(-1)",
-            opacity: 0.65,
+            width: 70,
+            height: 46,
+            bottom: 4,
+            left: -6,
+            opacity: 0.88,
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        {/* Front-right cloud puff */}
+        <img
+          src="/game-assets/clouds/cloud-sm.png"
+          alt=""
+          className="absolute z-[3] pixelated pointer-events-none"
+          style={{
+            width: 66,
+            height: 44,
+            bottom: 6,
+            right: -6,
+            transform: "scaleX(-1)",
+            opacity: 0.85,
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
@@ -468,7 +507,7 @@ function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: stri
             left: "50%",
             transform: "translate(-50%, -50%)",
             filter: isCompleted ? "hue-rotate(90deg) brightness(1.1)" : isCurrent ? "brightness(1.2)" : "none",
-            boxShadow: isCurrent ? "0 0 16px rgba(255,215,0,0.4), 0 6px 18px rgba(0,0,0,0.5)" : "0 6px 14px rgba(0,0,0,0.4)",
+            boxShadow: "0 6px 14px rgba(0,0,0,0.4)",
           }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
@@ -675,14 +714,14 @@ export default function WorldMap({
               )}
             </div>
 
-            {/* ─── Wizard — STATIC, no animation ──────────────── */}
+            {/* ─── Wizard — STATIC, standing on island ──────────────── */}
             {avatarNode && (
               <div
                 className="absolute"
                 style={{
                   zIndex: 15,
                   left: avatarNode.position.x,
-                  top: avatarNode.position.y - 52,
+                  top: avatarNode.position.y - 30,
                   transform: "translate(-50%, -100%)",
                 }}
               >
@@ -690,17 +729,8 @@ export default function WorldMap({
                   <img
                     src="/game-assets/player/idle.png"
                     alt="Wizard"
-                    className="w-12 h-12 drop-shadow-lg"
+                    className="w-10 h-10 drop-shadow-lg"
                     style={{ imageRendering: "pixelated" }}
-                  />
-                  <div
-                    className="w-0 h-0 -mt-0.5"
-                    style={{
-                      borderLeft: "6px solid transparent",
-                      borderRight: "6px solid transparent",
-                      borderTop: `8px solid ${color}`,
-                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))",
-                    }}
                   />
                 </div>
               </div>

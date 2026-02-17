@@ -13,19 +13,21 @@ export function useGameMode() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "classic" || saved === "gamified" || saved === "phaser") {
+      if (saved === "classic" || saved === "gamified") {
         setModeState(saved);
+      } else if (saved === "phaser") {
+        setModeState("phaser");
       } else {
         // Migrate old boolean format
         const oldKey = localStorage.getItem("eyeradar_gamified_mode");
         if (oldKey === "true") {
           setModeState("gamified");
           localStorage.setItem(STORAGE_KEY, "gamified");
-        } else {
-          // Default to phaser (new engine)
-          setModeState("phaser");
-          localStorage.setItem(STORAGE_KEY, "phaser");
-        }
+      } else {
+        // Default to phaser (new engine)
+        setModeState("phaser");
+        localStorage.setItem(STORAGE_KEY, "phaser");
+      }
       }
     } catch {
       // noop
