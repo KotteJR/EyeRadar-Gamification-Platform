@@ -47,6 +47,9 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
     case "multiple_choice":
     case "yes_no":
     case "image_match":
+    case "sound_matching":
+    case "word_sound_match":
+    case "word_image_match":
       return (
         <DragonBattle
           item={item}
@@ -64,6 +67,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
       );
 
     case "pattern_match":
+    case "memory_recall":
       return (
         <CardDealer
           item={item}
@@ -100,6 +104,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
     case "timed_reading":
     case "grid_naming":
     case "voice_input":
+    case "rapid_naming":
       return (
         <RunnerMode
           item={item}
@@ -110,7 +115,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
           maxProgress={props.maxProgress}
           streak={props.streak}
           points={props.points}
-          timeLimit={type === "timed_reading" ? 30 : type === "speed_round" ? 8 : 15}
+          timeLimit={type === "timed_reading" ? 30 : type === "speed_round" ? 8 : type === "rapid_naming" ? 30 : 15}
           worldTheme={worldTheme}
         />
       );
@@ -121,6 +126,7 @@ export default function GamifiedRenderer(props: GamifiedRendererProps) {
     case "text_input":
     case "sequence_tap":
     case "dual_task":
+    case "read_aloud":
       return (
         <PuzzleBridge
           item={item}

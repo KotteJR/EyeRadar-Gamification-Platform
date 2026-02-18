@@ -58,6 +58,12 @@ export const GameEvents = {
   GAME_READY: "game:ready",
   // Phaser → React: player requesting to submit answer
   REQUEST_SUBMIT: "request:submit",
+
+  // Castle Boss events
+  CASTLE_QUESTION: "castle:question",
+  CASTLE_ANSWER: "castle:answer",
+  CASTLE_PHASE_UPDATE: "castle:phase_update",
+  CASTLE_VICTORY: "castle:victory",
 } as const;
 
 // Payload types for type safety
@@ -103,4 +109,21 @@ export interface LevelStartPayload {
   maxProgress: number;
   streak: number;
   points: number;
+}
+
+export interface CastlePhasePayload {
+  bossPhase: number;
+  bossHp: number;
+  maxBossHp: number;
+  playerHp: number;
+  maxPlayerHp: number;
+  gameState: "spawning" | "fighting" | "question" | "victory";
+}
+
+export interface CastleQuestionPayload {
+  bossPhase: number;
+}
+
+export interface CastleAnswerPayload {
+  correct: boolean;
 }

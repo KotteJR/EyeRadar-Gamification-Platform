@@ -273,6 +273,27 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     bgLight: "#ECFDF5",
     accent: "#059669",
   },
+  rapid_naming: {
+    icon: "LayoutGrid",
+    image: "/game-images/object_blitz.png",
+    gradient: ["#FEF3F2", "#FECFCB"],
+    bgLight: "#FEF3F2",
+    accent: "#F04438",
+  },
+  memory_recall: {
+    icon: "Brain",
+    image: "/game-images/memory_matrix.png",
+    gradient: ["#FAF5FF", "#E9D5FF"],
+    bgLight: "#FAF5FF",
+    accent: "#8B5CF6",
+  },
+  read_aloud: {
+    icon: "Mic",
+    image: "/game-images/prosody_practice.png",
+    gradient: ["#EFF8FF", "#93C5FD"],
+    bgLight: "#EFF8FF",
+    accent: "#3B82F6",
+  },
 };
 
 /** Category images for browsing */
@@ -334,6 +355,12 @@ export const GAME_TYPE_ICONS: Record<GameType, string> = {
   voice_input: "Mic",
   image_match: "Image",
   grid_naming: "LayoutGrid",
+  sound_matching: "Ear",
+  word_sound_match: "Volume2",
+  read_aloud: "Mic",
+  word_image_match: "Image",
+  rapid_naming: "LayoutGrid",
+  memory_recall: "Brain",
 };
 
 /** Default asset for unknown games */

@@ -35,11 +35,17 @@ export default function PhaserCanvas({
           game.scene.stop("PreloadScene");
         }
 
-        // Use DragonBattleScene for dragon boss, BattleScene for others
         const config = levelConfigRef.current;
-        const sceneName = config.bossType === "dragon"
-          ? "DragonBattleScene"
-          : "BattleScene";
+        let sceneName: string;
+        if (config.bossType === "castle_dungeon") {
+          sceneName = "CastleDungeonScene";
+        } else if (config.bossType === "castle_boss") {
+          sceneName = "CastleBossScene";
+        } else if (config.bossType === "dragon") {
+          sceneName = "DragonBattleScene";
+        } else {
+          sceneName = "BattleScene";
+        }
 
         game.scene.start(sceneName, config);
 

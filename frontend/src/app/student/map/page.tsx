@@ -6,7 +6,8 @@ import { api } from "@/lib/api";
 import { UISounds } from "@/lib/ui-sounds";
 import { MusicManager } from "@/lib/music-manager";
 import MuteButton from "@/components/MuteButton";
-import type { GameDefinition, ExerciseSession, DeficitArea, AdventureMap as AdventureMapType } from "@/types";
+import LanguageToggle from "@/components/LanguageToggle";
+import type { GameDefinition, ExerciseSession, DeficitArea, AdventureMap as AdventureMapType, Student } from "@/types";
 import {
   computeAllWorldsSummary,
   computeCustomWorldsSummary,
@@ -303,6 +304,7 @@ export default function AdventureMapPage() {
   const [selectedWorld, setSelectedWorld] = useState<DeficitArea | null>(null);
   const [totalPoints, setTotalPoints] = useState(0);
   const [adventure, setAdventure] = useState<AdventureMapType | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
 
   // Start worldmap music when entering map, stop on unmount
   useEffect(() => {
@@ -313,15 +315,17 @@ export default function AdventureMapPage() {
   useEffect(() => {
     if (!user?.studentId) return;
     async function load() {
-      const [g, s, gamification, adv] = await Promise.all([
+      const [g, s, gamification, adv, stu] = await Promise.all([
         api.getGames().catch(() => []),
         api.getStudentSessions(user!.studentId).catch(() => []),
         api.getGamificationSummary(user!.studentId).catch(() => null),
         api.getStudentAdventure(user!.studentId).catch(() => null),
+        api.getStudent(user!.studentId).catch(() => null),
       ]);
       setGames(g);
       setSessions(s);
       if (gamification) setTotalPoints(gamification.total_points);
+      if (stu) setStudent(stu);
       if (adv) {
         setAdventure(adv);
         // Auto-update adventure theme if student has interests but theme is still default
@@ -501,7 +505,10 @@ export default function AdventureMapPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <MuteButton />
+            {user?.studentId && student && (
+              <LanguageToggle studentId={user.studentId} initialLang={student.language} />
+            )}
+            <MuteButton variant="header" />
             <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-xl">
               <Star size={13} className="text-amber-500" fill="currentColor" />
               <span className="text-[12px] font-bold text-amber-700">{totalStars}<span className="text-amber-400 font-medium">/{maxStars}</span></span>

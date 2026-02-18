@@ -1,5 +1,5 @@
 """
-All 34 game definitions for the EyeRadar Dyslexia Exercise System.
+All 35 game definitions for the EyeRadar Dyslexia Exercise System.
 Each game targets one of the 6 deficit areas and specifies a game_type
 that determines the interactive mechanic used in the frontend.
 """
@@ -80,9 +80,9 @@ _register(GameDefinition(
     name="Sound Matching",
     description="Listen to two words and decide if they rhyme or share the same ending sound. Train your ear for phonological patterns!",
     deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
-    game_type=GameType.YES_NO,
+    game_type=GameType.SOUND_MATCHING,
     age_range_min=4, age_range_max=10,
-    mechanics="Binary auditory discrimination",
+    mechanics="Binary auditory discrimination with TTS",
     instructions="Listen to the two words. Do they sound the same at the end? Click Yes or No!",
     icon="👂",
 ))
@@ -92,10 +92,10 @@ _register(GameDefinition(
     name="Word-to-Sound Matching",
     description="Find the word that sounds like the target! Pick the matching sound from three choices to sharpen phonological skills.",
     deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
-    game_type=GameType.MULTIPLE_CHOICE,
+    game_type=GameType.WORD_SOUND_MATCH,
     age_range_min=5, age_range_max=11,
-    mechanics="Auditory matching with choices",
-    instructions="Look at the word on top. Which of the three words below sounds the same? Tap to choose!",
+    mechanics="Auditory matching with TTS and choices",
+    instructions="Look at the word on top and listen to it. Which of the three words below sounds the same? Tap to choose!",
     icon="🔊",
 ))
 
@@ -154,9 +154,9 @@ _register(GameDefinition(
     name="RAN Grid Challenge",
     description="Name a grid of images as fast and accurately as possible! Animals, colors, and objects test your rapid naming speed.",
     deficit_area=DeficitArea.RAPID_NAMING,
-    game_type=GameType.GRID_NAMING,
+    game_type=GameType.RAPID_NAMING,
     age_range_min=5, age_range_max=12,
-    mechanics="Grid-based rapid naming with voice",
+    mechanics="Grid-based rapid naming with voice recording",
     instructions="Press the microphone, then name every image in the grid from left to right, top to bottom, as fast as you can!",
     icon="🐾",
 ))
@@ -221,6 +221,18 @@ _register(GameDefinition(
     mechanics="Central executive training",
     instructions="Remember the word shown, then solve the math problem. You'll be asked about both!",
     icon="🧠",
+))
+
+_register(GameDefinition(
+    id="memory_recall",
+    name="Memory Recall",
+    description="After playing exercises you'll see images — can you remember which ones appeared earlier? Test your visual memory!",
+    deficit_area=DeficitArea.WORKING_MEMORY,
+    game_type=GameType.MEMORY_RECALL,
+    age_range_min=5, age_range_max=12,
+    mechanics="Image recognition memory",
+    instructions="You'll see a grid of images. Some were shown to you before, some are new. Pick the ones you remember seeing (or the new ones, depending on the challenge)!",
+    icon="🧩",
 ))
 
 # ─── Visual Processing (5 games) ─────────────────────────────────────────────
@@ -352,9 +364,9 @@ _register(GameDefinition(
     name="Decoding Challenge",
     description="Read words and pseudo-words aloud to practice decoding skills! Includes made-up words to test letter-sound knowledge.",
     deficit_area=DeficitArea.READING_FLUENCY,
-    game_type=GameType.VOICE_INPUT,
+    game_type=GameType.READ_ALOUD,
     age_range_min=5, age_range_max=12,
-    mechanics="Voice-based decoding practice",
+    mechanics="Voice-based decoding practice with STT",
     instructions="A word appears on screen. Press the microphone button, say the word out loud, then click to move on. Some words are made up — try your best to sound them out!",
     icon="🎤",
 ))
@@ -426,11 +438,26 @@ _register(GameDefinition(
     name="Word-Image Match",
     description="Match words to their pictures and pictures to their words! Build vocabulary and reading comprehension through visual connections.",
     deficit_area=DeficitArea.COMPREHENSION,
-    game_type=GameType.IMAGE_MATCH,
+    game_type=GameType.WORD_IMAGE_MATCH,
     age_range_min=4, age_range_max=10,
     mechanics="Bidirectional word-image association",
     instructions="See the word? Pick the matching picture! See the picture? Pick the matching word! Connect what you read with what you see.",
     icon="🖼️",
+))
+
+
+# ─── Castle Boss Challenge ──────────────────────────────────────────────────
+
+_register(GameDefinition(
+    id="castle_challenge",
+    name="Castle Boss Challenge",
+    description="Battle fearsome castle bosses! Defeat three bosses and answer questions between each fight. A reward level that tests your skills!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.CASTLE_BOSS,
+    age_range_min=5, age_range_max=14,
+    mechanics="Side-scrolling boss fight with quiz questions",
+    instructions="Use arrow keys to move and jump. Press X to shoot spells at the boss. Defeat the boss, then answer a question to advance!",
+    icon="🏰",
 ))
 
 

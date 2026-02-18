@@ -133,17 +133,30 @@ export default function RunnerMode({
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6">
         {phase === "answering" && !lastResult && options.length > 0 && (
           <div className="w-full max-w-xl animate-slide-in-right">
-            <div className="flex flex-wrap gap-4 justify-center">
-              {options.map((opt, i) => {
-                const c = ["bg-[#FF5A39] border-[#CC4730]", "bg-[#475093] border-[#333D70]", "bg-emerald-500 border-emerald-700", "bg-purple-500 border-purple-700"][i % 4];
-                return (
-                  <button key={i} onClick={() => onSubmit(opt)} disabled={submitting}
-                    className={`${c} text-white px-8 py-4 rounded-2xl text-base font-bold shadow-lg border-b-4 transition-all active:translate-y-1 active:border-b-0 cursor-pointer ${submitting ? "opacity-50" : ""}`}
-                    style={{ fontFamily: "'Fredoka', sans-serif" }}
-                  >{opt}</button>
-                );
-              })}
-            </div>
+            {item.extra_data?.answer_mode === "image_grid" && Array.isArray(item.extra_data?.image_options) ? (
+              <div className="grid grid-cols-4 gap-3 max-w-md mx-auto">
+                {(item.extra_data.image_options as { id: string; url: string; label: string }[]).map((img) => (
+                  <button key={img.id} onClick={() => onSubmit(img.id)} disabled={submitting}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-black/40 backdrop-blur-sm border-2 border-white/20 hover:border-amber-400 transition-all active:scale-90 ${submitting ? "opacity-50" : ""}`}
+                  >
+                    <img src={img.url} alt={img.label} className="w-14 h-14 object-contain rounded-xl" />
+                    <span className="text-[11px] font-bold text-white truncate w-full text-center" style={{ fontFamily: "'Fredoka', sans-serif" }}>{img.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-4 justify-center">
+                {options.map((opt, i) => {
+                  const c = ["bg-[#FF5A39] border-[#CC4730]", "bg-[#475093] border-[#333D70]", "bg-emerald-500 border-emerald-700", "bg-purple-500 border-purple-700"][i % 4];
+                  return (
+                    <button key={i} onClick={() => onSubmit(opt)} disabled={submitting}
+                      className={`${c} text-white px-8 py-4 rounded-2xl text-base font-bold shadow-lg border-b-4 transition-all active:translate-y-1 active:border-b-0 cursor-pointer ${submitting ? "opacity-50" : ""}`}
+                      style={{ fontFamily: "'Fredoka', sans-serif" }}
+                    >{opt}</button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

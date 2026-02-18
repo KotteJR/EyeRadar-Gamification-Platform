@@ -12,7 +12,6 @@ import { DEFICIT_AREA_LABELS, DEFICIT_AREA_COLORS } from "@/types";
 import ProgressBar from "@/components/ProgressBar";
 import GameIcon from "@/components/GameIcon";
 import { getGameAsset } from "@/lib/game-assets";
-import GamifiedRenderer from "@/components/gamified/GamifiedRenderer";
 import { useGameMode } from "@/components/gamified/useGameMode";
 import GameRenderer from "@/components/games/GameRenderer";
 import dynamic from "next/dynamic";
@@ -37,9 +36,7 @@ import {
   Star,
   Trophy,
   RotateCcw,
-  Play,
   Gamepad2,
-  BookOpen,
 } from "lucide-react";
 
 // =============================================================================
@@ -186,7 +183,7 @@ function ExercisePlayContent() {
   const router = useRouter();
   const studentId = searchParams.get("studentId");
   const gameId = searchParams.get("gameId");
-  const { mode, gamifiedMode, toggleGameMode, setMode } = useGameMode();
+  const { mode, setMode } = useGameMode();
 
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -225,7 +222,7 @@ function ExercisePlayContent() {
   useEffect(() => {
     if (!session || session.items.length === 0) return;
     const firstType = session.items[0].item_type;
-    const MEMORY_TYPES = ["grid_memory", "pattern_match", "sequence_tap", "tracking", "dual_task"];
+    const MEMORY_TYPES = ["grid_memory", "pattern_match", "sequence_tap", "tracking", "dual_task", "memory_recall"];
     const track: MusicTrack = MEMORY_TYPES.includes(firstType) ? "memory" : "boss";
     MusicManager.play(track);
     return () => { MusicManager.stop(); };
@@ -380,70 +377,6 @@ function ExercisePlayContent() {
         onGameOver={handleReplay}
         onBackToWorld={() => router.push("/student/map")}
       />
-    );
-  }
-
-  // ─── GAMIFIED MODE (legacy React/CSS) ──────────────────
-  if (mode === "gamified") {
-    return (
-      <div className="fixed inset-0 z-[100] bg-black">
-        {/* Floating mode toggle & exit */}
-        <div className="fixed top-3 left-3 z-[200] flex gap-2">
-          <MuteButton className="!w-8 !h-8 !rounded-full bg-black/40 hover:bg-black/50 !text-white/70" />
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1 px-3 py-2 bg-black/40 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-black/50 transition-colors"
-          >
-            <X size={14} />
-            Exit
-          </button>
-          <button
-            onClick={() => setMode("phaser")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-white/30 transition-colors"
-            title="Switch to Phaser mode"
-          >
-            <Gamepad2 size={14} />
-            Phaser
-          </button>
-          <button
-            onClick={() => setMode("classic")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full hover:bg-white/30 transition-colors"
-            title="Switch to classic mode"
-          >
-            <BookOpen size={14} />
-            Classic
-          </button>
-        </div>
-
-        {/* Points Popup */}
-        {pointsPopup !== null && (
-          <div className="fixed top-16 right-6 z-[200] animate-float-up">
-            <div className="flex items-center gap-1.5 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-2xl text-lg font-bold shadow-lg">
-              <Star size={18} fill="currentColor" />
-              +{pointsPopup}
-            </div>
-          </div>
-        )}
-
-        {/* Gamified Game View — fills entire screen */}
-        <div className="w-full h-full">
-          <GamifiedRenderer
-            item={currentItem}
-            lastResult={lastResult}
-            submitting={submitting}
-            selectedAnswer={selectedAnswer}
-            textInput={textInput}
-            onSelectAnswer={setSelectedAnswer}
-            onTextInput={setTextInput}
-            onSubmit={handleSubmit}
-            progress={currentIndex}
-            maxProgress={session.items.length}
-            streak={streak}
-            points={session.points_earned}
-            deficitArea={session.deficit_area}
-          />
-        </div>
-      </div>
     );
   }
 

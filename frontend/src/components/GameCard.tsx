@@ -23,6 +23,12 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   voice_input: "Read Aloud",
   image_match: "Image Match",
   grid_naming: "Speed Naming",
+  sound_matching: "Sound Match",
+  word_sound_match: "Sound Pick",
+  read_aloud: "Read Aloud",
+  word_image_match: "Word & Image",
+  rapid_naming: "Rapid Naming",
+  memory_recall: "Memory Recall",
 };
 
 interface GameCardProps {

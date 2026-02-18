@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 
 from app.database import init_db
-from app.routers import students, exercises, games, gamification, analytics, adventures
+from app.routers import students, exercises, games, gamification, analytics, adventures, tts
 from app.services.ollama_client import check_ollama
 
 logging.basicConfig(level=logging.INFO)
@@ -99,6 +99,7 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytic
 app.include_router(
     adventures.router, prefix="/api/v1/adventures", tags=["Adventures"]
 )
+app.include_router(tts.router, prefix="/api/v1/tts", tags=["TTS"])
 
 
 @app.get("/")

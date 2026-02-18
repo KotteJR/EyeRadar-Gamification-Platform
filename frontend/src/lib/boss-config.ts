@@ -120,6 +120,9 @@ export const GAME_MODE_BOSS: Record<string, BossType> = {
   multiple_choice: "dark_sorcerer",
   yes_no: "dark_sorcerer",
   image_match: "dark_sorcerer",
+  sound_matching: "dark_sorcerer",
+  word_sound_match: "dark_sorcerer",
+  word_image_match: "dark_sorcerer",
   // RunnerMode modes
   speed_round: "shadow_beast",
   spot_target: "shadow_beast",
@@ -127,10 +130,12 @@ export const GAME_MODE_BOSS: Record<string, BossType> = {
   timed_reading: "shadow_beast",
   grid_naming: "shadow_beast",
   voice_input: "shadow_beast",
+  rapid_naming: "shadow_beast",
   // MemoryBlocks mode
   grid_memory: "giant_golem",
   // CardDealer mode
   pattern_match: "corrupted_knight",
+  memory_recall: "corrupted_knight",
   // PuzzleBridge modes
   word_building: "dragon",
   sorting: "dragon",
@@ -138,6 +143,7 @@ export const GAME_MODE_BOSS: Record<string, BossType> = {
   text_input: "dragon",
   sequence_tap: "dragon",
   dual_task: "dragon",
+  read_aloud: "dragon",
 };
 
 // PixelLab animation templates for each boss action

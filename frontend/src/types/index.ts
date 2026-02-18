@@ -158,7 +158,13 @@ export type GameType =
   | "yes_no"
   | "voice_input"
   | "image_match"
-  | "grid_naming";
+  | "grid_naming"
+  | "sound_matching"
+  | "word_sound_match"
+  | "read_aloud"
+  | "word_image_match"
+  | "rapid_naming"
+  | "memory_recall";
 
 export interface GameDefinition {
   id: string;

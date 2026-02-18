@@ -99,11 +99,13 @@ async def start_session(data: ExerciseSessionCreate):
         item_count = params["item_count"]
 
     # Generate exercise items (AI-enhanced with template fallback)
+    student_lang = student.get("language", "en")
     items = await generate_exercise_items(
         game_id=data.game_id,
         difficulty_level=difficulty,
         item_count=item_count,
         student_interests=student.get("interests"),
+        lang=student_lang,
     )
 
     session_data = {

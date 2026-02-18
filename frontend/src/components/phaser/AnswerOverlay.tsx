@@ -356,7 +356,7 @@ export default function AnswerOverlay({
             )}
           </div>
 
-          {/* ══ Answer buttons — each uses answer-btn-normal.png as background ══ */}
+          {/* ══ Answer buttons ══ */}
           {!isGridType && (
             <div className="mt-3">
               {needsTextInput ? (
@@ -364,10 +364,26 @@ export default function AnswerOverlay({
                   onSubmit={handleAnswer}
                   disabled={submitting}
                 />
+              ) : item.extra_data?.answer_mode === "image_grid" && Array.isArray(item.extra_data?.image_options) ? (
+                <div className="grid grid-cols-4 gap-2.5">
+                  {(item.extra_data.image_options as { id: string; url: string; label: string }[]).map((img) => (
+                    <button
+                      key={img.id}
+                      onClick={() => { UISounds.select(); handleAnswer(img.id); }}
+                      disabled={submitting}
+                      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-black/20 hover:bg-black/30 border-2 border-transparent hover:border-amber-400/60 transition-all active:scale-95 backdrop-blur-sm"
+                    >
+                      <img src={img.url} alt={img.label} className="w-14 h-14 object-contain rounded-lg" />
+                      <span className="text-[10px] font-bold text-white/90 truncate w-full text-center">{img.label}</span>
+                    </button>
+                  ))}
+                </div>
               ) : hasOptions ? (
                 <div
                   className={`grid gap-2.5 ${
-                    options.length <= 2
+                    item.extra_data?.answer_mode === "number_cards"
+                      ? "grid-cols-4"
+                      : options.length <= 2
                       ? "grid-cols-2"
                       : options.length === 3
                       ? "grid-cols-3"

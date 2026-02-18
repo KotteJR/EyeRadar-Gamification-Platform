@@ -377,24 +377,29 @@ function GameLevelNode({
 }
 
 // ─── Castle Checkpoint Node — isometric castle tile ─────────────────────
-function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: string; worldThemeKey: string }) {
+function CastleNode({ node, color, worldThemeKey, studentId, area }: { node: MapNode; color: string; worldThemeKey: string; studentId: string; area: DeficitArea }) {
   const [hovered, setHovered] = useState(false);
   const isCurrent = node.state === "current";
   const isCompleted = node.state === "completed";
   const isLocked = node.state === "locked";
 
-  return (
-    <div
-      className="absolute flex flex-col items-center"
-      style={{
-        left: node.position.x,
-        top: node.position.y,
-        transform: "translate(-50%, -50%)",
-        zIndex: isCurrent ? 12 : 5,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+  const castleHref = !isLocked
+    ? `/exercises/castle?studentId=${studentId}&area=${area}&castleId=${node.id}`
+    : "";
+
+  const sharedProps = {
+    className: `absolute flex flex-col items-center ${!isLocked ? "cursor-pointer" : ""}`,
+    style: {
+      left: node.position.x,
+      top: node.position.y,
+      transform: "translate(-50%, -50%)" as const,
+      zIndex: isCurrent ? 12 : 5,
+    },
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => setHovered(false),
+  };
+
+  const content = (<>
       {hovered && (
         <div className="absolute bottom-full mb-2 px-3 py-1.5 bg-[#3E2723]/95 text-[#FFD700] text-[11px] font-bold rounded-sm whitespace-nowrap z-30 shadow-xl border border-[#8B6914]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)" }}>
           {node.label}
@@ -549,8 +554,13 @@ function CastleNode({ node, color, worldThemeKey }: { node: MapNode; color: stri
           Challenge
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (castleHref) {
+    return <Link href={castleHref} {...sharedProps}>{content}</Link>;
+  }
+  return <div {...sharedProps}>{content}</div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -663,7 +673,7 @@ export default function WorldMap({
           </div>
 
           <div className="flex items-center gap-3">
-            <MuteButton />
+            <MuteButton variant="header" />
             <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-xl">
               <Star size={13} className="text-amber-500" fill="currentColor" />
               <span className="text-[12px] font-bold text-amber-700">{totalStars}<span className="text-amber-400 font-medium">/{maxStars}</span></span>
@@ -703,7 +713,7 @@ export default function WorldMap({
             <div className="absolute inset-0" style={{ zIndex: 3 }}>
               {mapNodes.map((node) =>
                 node.type === "castle" ? (
-                  <CastleNode key={node.id} node={node} color={color} worldThemeKey={worldThemeKey} />
+                  <CastleNode key={node.id} node={node} color={color} worldThemeKey={worldThemeKey} studentId={studentId} area={area} />
                 ) : (
                   <GameLevelNode key={node.id} node={node} studentId={studentId} worldThemeKey={worldThemeKey} />
                 )

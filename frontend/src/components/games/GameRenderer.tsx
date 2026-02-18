@@ -5,6 +5,12 @@ import { RotateCcw, ArrowRight, Clock, Volume2, Check, X, Lightbulb } from "luci
 import type { ExerciseItem, ExerciseItemResult } from "@/types";
 import { SubmitButton, AnswerOption, HintSection, type GameRendererProps } from "./shared";
 import { UISounds } from "@/lib/ui-sounds";
+import SoundMatchingGame from "./SoundMatchingGame";
+import WordSoundMatchGame from "./WordSoundMatchGame";
+import ReadAloudGame from "./ReadAloudGame";
+import WordImageMatchGame from "./WordImageMatchGame";
+import RapidNamingGame from "./RapidNamingGame";
+import MemoryRecallGame from "./MemoryRecallGame";
 
 export type { GameRendererProps };
 export { SubmitButton, AnswerOption, HintSection };
@@ -24,6 +30,12 @@ export default function GameRenderer(props: GameRendererProps) {
     case "pattern_match": return <PatternMatchGame {...props} />;
     case "dual_task": return <DualTaskGame {...props} />;
     case "text_input": return <TextInputGame {...props} />;
+    case "sound_matching": return <SoundMatchingGame {...props} />;
+    case "word_sound_match": return <WordSoundMatchGame {...props} />;
+    case "read_aloud": return <ReadAloudGame {...props} />;
+    case "word_image_match": return <WordImageMatchGame {...props} />;
+    case "rapid_naming": return <RapidNamingGame {...props} />;
+    case "memory_recall": return <MemoryRecallGame {...props} />;
     case "multiple_choice":
     default: return <MultipleChoiceGame {...props} />;
   }
@@ -277,7 +289,7 @@ function TapRepeatGame({ item, extra, lastResult, submitting, onSubmit }: { item
 // =============================================================================
 
 function SpeedRoundGame({ item, lastResult, submitting, selectedAnswer, onSelectAnswer, onSubmit }: GameRendererProps) {
-  const extra = item.extra_data as { time_limit_seconds?: number; display_emoji?: string; display_item?: string };
+  const extra = item.extra_data as { time_limit_seconds?: number; display_emoji?: string; display_image?: string; display_image_label?: string; display_item?: string };
   const timeLimit = (extra.time_limit_seconds || 8) * 1000;
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -316,7 +328,16 @@ function SpeedRoundGame({ item, lastResult, submitting, selectedAnswer, onSelect
         </p>
       </div>
 
-      <p className="text-lg text-gray-900 mb-4 text-center font-bold">{item.question}</p>
+      <p className="text-lg text-gray-900 mb-2 text-center font-bold">{item.question}</p>
+
+      {extra.display_image && (
+        <div className="flex justify-center mb-4">
+          <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-50 border-2 border-gray-100 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={extra.display_image} alt={extra.display_image_label || "object"} className="w-full h-full object-contain" />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {item.options.map((option, idx) => {
@@ -490,11 +511,22 @@ function SpotTargetGame({ item, lastResult, submitting, onSubmit }: GameRenderer
 // TIMED READING GAME
 // =============================================================================
 
+interface PhraseFlashExtra {
+  passage: string;
+  reading_time_seconds: number;
+  passage_visible_during_questions?: boolean;
+  answer_mode?: "image_grid" | "number_cards" | "word_cards";
+  image_options?: { id: string; url: string; label: string }[];
+  word_count?: number;
+}
+
 function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSelectAnswer, onSubmit }: GameRendererProps) {
-  const extra = item.extra_data as { passage: string; reading_time_seconds: number; passage_visible_during_questions: boolean };
+  const extra = item.extra_data as PhraseFlashExtra;
   const passage = extra.passage || "";
   const readingTime = (extra.reading_time_seconds || 10) * 1000;
   const staysVisible = extra.passage_visible_during_questions;
+  const answerMode = extra.answer_mode || "word_cards";
+  const imageOptions = extra.image_options || [];
 
   const [phase, setPhase] = useState<"reading" | "answering">("reading");
   const [timeLeft, setTimeLeft] = useState(readingTime);
@@ -508,6 +540,8 @@ function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSele
     return () => clearInterval(timer);
   }, [item.index, readingTime]);
 
+  const showResult = lastResult !== null;
+
   if (phase === "reading") {
     return (
       <div className="game-card">
@@ -515,30 +549,167 @@ function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSele
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-[#FF5A39] rounded-full transition-all duration-100" style={{ width: `${(timeLeft / readingTime) * 100}%` }} />
           </div>
-          <p className="flex items-center gap-1 text-xs text-gray-400 mt-1 text-right font-bold"><Clock size={12} /> {Math.ceil(timeLeft / 1000)}s to read</p>
+          <p className="flex items-center gap-1 text-xs text-gray-400 mt-1 text-right font-bold"><Clock size={12} /> {Math.ceil(timeLeft / 1000)}s</p>
         </div>
-        <p className="text-lg text-gray-900 leading-relaxed mb-6 font-medium">{passage}</p>
+        <p className="text-xl text-gray-900 leading-relaxed mb-6 font-bold text-center tracking-wide">{passage}</p>
         <button onClick={() => setPhase("answering")} className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-bold rounded-2xl hover:bg-gray-200 flex items-center justify-center gap-2">
-          Ready! Show questions <ArrowRight size={16} />
+          Ready! <ArrowRight size={16} />
         </button>
       </div>
     );
   }
 
+  if (answerMode === "image_grid" && imageOptions.length > 0) {
+    return (
+      <div className="game-card">
+        {staysVisible && <div className="p-3 bg-gray-50 rounded-2xl mb-3 text-sm text-gray-700 italic font-medium text-center">{passage}</div>}
+        <p className="text-base font-bold text-gray-900 mb-4 text-center">{item.question}</p>
+        <div className="grid grid-cols-4 gap-3">
+          {imageOptions.map((img) => {
+            const isSelected = selectedAnswer === img.id;
+            const isCorrect = showResult && img.id === lastResult.correct_answer;
+            const isWrong = showResult && isSelected && !lastResult.is_correct;
+
+            let borderColor = "border-gray-100";
+            let bg = "bg-white";
+            if (isCorrect) { borderColor = "border-emerald-400"; bg = "bg-emerald-50"; }
+            else if (isWrong) { borderColor = "border-red-400"; bg = "bg-red-50"; }
+            else if (isSelected) { borderColor = "border-[#475093]"; bg = "bg-[#475093]/[0.06]"; }
+
+            return (
+              <button
+                key={img.id}
+                onClick={() => {
+                  if (!submitting && !showResult) {
+                    UISounds.select();
+                    onSelectAnswer(img.id);
+                  }
+                }}
+                disabled={submitting || showResult}
+                className={`relative flex flex-col items-center gap-1.5 p-2.5 rounded-2xl border-2 transition-all active:scale-95 ${borderColor} ${bg} ${
+                  isCorrect ? "animate-bounce-once" : isWrong ? "animate-shake" : ""
+                }`}
+              >
+                <img src={img.url} alt={img.label} className="w-16 h-16 object-contain rounded-xl" />
+                <span className="text-[11px] font-bold text-gray-600 truncate w-full text-center">{img.label}</span>
+                {isCorrect && (
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <Check size={12} className="text-white" />
+                  </div>
+                )}
+                {isWrong && (
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                    <X size={12} className="text-white" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {!lastResult && (
+          <SubmitButton onClick={() => onSubmit()} disabled={submitting || !selectedAnswer} submitting={submitting} />
+        )}
+      </div>
+    );
+  }
+
+  if (answerMode === "number_cards") {
+    const numberEmojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"];
+    return (
+      <div className="game-card">
+        {staysVisible && <div className="p-3 bg-gray-50 rounded-2xl mb-3 text-sm text-gray-700 italic font-medium text-center">{passage}</div>}
+        <p className="text-base font-bold text-gray-900 mb-4 text-center">{item.question}</p>
+        <div className="grid grid-cols-4 gap-3">
+          {item.options.map((opt, idx) => {
+            const isSelected = selectedAnswer === opt;
+            const isCorrect = showResult && opt === lastResult.correct_answer;
+            const isWrong = showResult && isSelected && !lastResult.is_correct;
+
+            let borderColor = "border-gray-100";
+            let bg = "bg-white";
+            if (isCorrect) { borderColor = "border-emerald-400"; bg = "bg-emerald-50"; }
+            else if (isWrong) { borderColor = "border-red-400"; bg = "bg-red-50"; }
+            else if (isSelected) { borderColor = "border-[#475093]"; bg = "bg-[#475093]/[0.06]"; }
+
+            const num = parseInt(opt) || idx + 1;
+            return (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (!submitting && !showResult) {
+                    UISounds.select();
+                    onSelectAnswer(opt);
+                  }
+                }}
+                disabled={submitting || showResult}
+                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all active:scale-95 ${borderColor} ${bg} ${
+                  isCorrect ? "animate-bounce-once" : isWrong ? "animate-shake" : ""
+                }`}
+              >
+                <span className="text-3xl">{numberEmojis[num - 1] || `${num}`}</span>
+                <span className="text-xs font-bold text-gray-500">{opt}</span>
+                {isCorrect && (
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <Check size={12} className="text-white" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {!lastResult && (
+          <SubmitButton onClick={() => onSubmit()} disabled={submitting || !selectedAnswer} submitting={submitting} />
+        )}
+      </div>
+    );
+  }
+
+  // word_cards mode (default) — styled word chips
   return (
     <div className="game-card">
-      {staysVisible && <div className="p-4 bg-gray-50 rounded-2xl mb-4 text-sm text-gray-700 leading-relaxed italic font-medium">{passage}</div>}
-      <p className="text-lg text-gray-900 mb-4 font-bold">{item.question}</p>
-      <div className="space-y-2.5">
+      {staysVisible && <div className="p-3 bg-gray-50 rounded-2xl mb-3 text-sm text-gray-700 italic font-medium text-center">{passage}</div>}
+      <p className="text-base font-bold text-gray-900 mb-4 text-center">{item.question}</p>
+      <div className="grid grid-cols-2 gap-3">
         {item.options.map((option, idx) => {
           const isSelected = selectedAnswer === option;
-          const showResult = lastResult !== null;
+          const isCorrect = showResult && option === lastResult.correct_answer;
+          const isWrong = showResult && isSelected && !lastResult.is_correct;
+
+          let borderColor = "border-gray-100";
+          let bg = "bg-white";
+          if (isCorrect) { borderColor = "border-emerald-400"; bg = "bg-emerald-50"; }
+          else if (isWrong) { borderColor = "border-red-400"; bg = "bg-red-50"; }
+          else if (isSelected) { borderColor = "border-[#475093]"; bg = "bg-[#475093]/[0.06]"; }
+
+          const colors = ["from-blue-100 to-blue-50", "from-purple-100 to-purple-50", "from-orange-100 to-orange-50", "from-green-100 to-green-50"];
+
           return (
-            <AnswerOption key={idx} option={option} index={idx} isSelected={isSelected}
-              isCorrectAnswer={showResult && option === lastResult!.correct_answer}
-              isWrongSelection={showResult && isSelected && !lastResult!.is_correct}
-              showResult={showResult} disabled={submitting || showResult} areaColor="#475093"
-              onClick={() => !submitting && !showResult && onSelectAnswer(option)} />
+            <button
+              key={idx}
+              onClick={() => {
+                if (!submitting && !showResult) {
+                  UISounds.select();
+                  onSelectAnswer(option);
+                }
+              }}
+              disabled={submitting || showResult}
+              className={`relative flex items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-95 ${borderColor} ${bg} ${
+                isCorrect ? "animate-bounce-once" : isWrong ? "animate-shake" : ""
+              }`}
+            >
+              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${colors[idx % 4]} opacity-40`} />
+              <span className="relative text-lg font-bold text-gray-800">{option}</span>
+              {isCorrect && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <Check size={12} className="text-white" />
+                </div>
+              )}
+              {isWrong && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                  <X size={12} className="text-white" />
+                </div>
+              )}
+            </button>
           );
         })}
       </div>

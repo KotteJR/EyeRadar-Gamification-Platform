@@ -110,6 +110,13 @@ class GameType(str, Enum):
     VOICE_INPUT = "voice_input"          # Decoding / RAN: microphone-based input
     IMAGE_MATCH = "image_match"          # Word-Image Matching: match words to pictures
     GRID_NAMING = "grid_naming"          # RAN Grid: name a grid of items rapidly
+    SOUND_MATCHING = "sound_matching"    # Phonological: listen to 2 words, decide if rhyme
+    WORD_SOUND_MATCH = "word_sound_match"  # Phonological: pick word that sounds same
+    READ_ALOUD = "read_aloud"            # Decoding: read word/pseudo-word aloud via STT
+    WORD_IMAGE_MATCH = "word_image_match"  # Comprehension: match words to images
+    RAPID_NAMING = "rapid_naming"        # RAN: name grid of images as fast as possible
+    MEMORY_RECALL = "memory_recall"      # Memory: recall images seen earlier in session
+    CASTLE_BOSS = "castle_boss"          # Castle boss fight: questions between boss phases
 
 
 class GameDefinition(BaseModel):
