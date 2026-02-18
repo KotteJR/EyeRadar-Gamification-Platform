@@ -30,7 +30,7 @@ export default function LanguageToggle({
     try {
       await api.updateStudent(studentId, { language: next });
       setLang(next);
-      UISounds.play("click");
+      UISounds.click();
     } catch {
       // silently fail
     } finally {

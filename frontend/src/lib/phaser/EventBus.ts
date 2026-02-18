@@ -117,7 +117,7 @@ export interface CastlePhasePayload {
   maxBossHp: number;
   playerHp: number;
   maxPlayerHp: number;
-  gameState: "spawning" | "fighting" | "question" | "victory";
+  gameState: "spawning" | "fighting" | "question" | "victory" | "playing" | "paused";
 }
 
 export interface CastleQuestionPayload {

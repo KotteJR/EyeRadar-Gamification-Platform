@@ -117,6 +117,7 @@ class GameType(str, Enum):
     RAPID_NAMING = "rapid_naming"        # RAN: name grid of images as fast as possible
     MEMORY_RECALL = "memory_recall"      # Memory: recall images seen earlier in session
     CASTLE_BOSS = "castle_boss"          # Castle boss fight: questions between boss phases
+    CASTLE_DUNGEON = "castle_dungeon"    # Top-down dungeon: explore, fight, solve
 
 
 class GameDefinition(BaseModel):

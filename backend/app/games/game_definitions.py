@@ -461,6 +461,33 @@ _register(GameDefinition(
 ))
 
 
+# ─── Dungeon Adventure Games ────────────────────────────────────────────────
+
+_register(GameDefinition(
+    id="dungeon_forest",
+    name="Forest Dungeon",
+    description="Explore a vast forest dungeon! Fight monsters, dodge attacks, and answer questions to prove your knowledge. Collect apples to stay alive!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.CASTLE_DUNGEON,
+    age_range_min=5, age_range_max=14,
+    mechanics="Top-down adventure with combat and quiz challenges",
+    instructions="WASD to move, X to attack, C to dodge, E to talk to NPCs. Defeat all enemies and answer questions correctly to clear the dungeon!",
+    icon="🌲",
+))
+
+_register(GameDefinition(
+    id="dungeon_beach",
+    name="Beach Dungeon",
+    description="Adventure across a sandy beach dungeon! Battle creatures, explore the shores, and solve challenges to escape the island!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.CASTLE_DUNGEON,
+    age_range_min=5, age_range_max=14,
+    mechanics="Top-down adventure with combat and quiz challenges",
+    instructions="WASD to move, X to attack, C to dodge, E to talk to NPCs. Defeat all enemies and answer questions correctly to clear the dungeon!",
+    icon="🏖️",
+))
+
+
 def get_all_games() -> list[GameDefinition]:
     return list(GAMES.values())
 

@@ -29,6 +29,8 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   word_image_match: "Word & Image",
   rapid_naming: "Rapid Naming",
   memory_recall: "Memory Recall",
+  castle_boss: "Castle Boss",
+  castle_dungeon: "Dungeon Adventure",
 };
 
 interface GameCardProps {
@@ -112,9 +114,19 @@ export default function GameCard({ game, studentId, locked }: GameCardProps) {
     </div>
   );
 
+  const getPlayHref = () => {
+    if (game.game_type === "castle_dungeon") {
+      return `/exercises/dungeon?studentId=${studentId}&gameId=${game.id}`;
+    }
+    if (game.game_type === "castle_boss") {
+      return `/exercises/castle?studentId=${studentId}&gameId=${game.id}`;
+    }
+    return `/exercises/play?studentId=${studentId}&gameId=${game.id}`;
+  };
+
   if (studentId && !locked) {
     return (
-      <Link href={`/exercises/play?studentId=${studentId}&gameId=${game.id}`}>
+      <Link href={getPlayHref()}>
         {cardContent}
       </Link>
     );

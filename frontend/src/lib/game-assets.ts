@@ -294,6 +294,28 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     bgLight: "#EFF8FF",
     accent: "#3B82F6",
   },
+  // ─── Dungeon Adventures ──────────────────────────────
+  castle_challenge: {
+    icon: "Castle",
+    image: "/game-images/default.png",
+    gradient: ["#4A1D6B", "#7C3AED"],
+    bgLight: "#F5F3FF",
+    accent: "#7C3AED",
+  },
+  dungeon_forest: {
+    icon: "Swords",
+    image: "/game-images/default.png",
+    gradient: ["#14532D", "#22C55E"],
+    bgLight: "#F0FDF4",
+    accent: "#16A34A",
+  },
+  dungeon_beach: {
+    icon: "Swords",
+    image: "/game-images/default.png",
+    gradient: ["#854D0E", "#EAB308"],
+    bgLight: "#FEFCE8",
+    accent: "#CA8A04",
+  },
 };
 
 /** Category images for browsing */
@@ -361,6 +383,8 @@ export const GAME_TYPE_ICONS: Record<GameType, string> = {
   word_image_match: "Image",
   rapid_naming: "LayoutGrid",
   memory_recall: "Brain",
+  castle_boss: "Castle",
+  castle_dungeon: "Swords",
 };
 
 /** Default asset for unknown games */

@@ -521,7 +521,7 @@ interface PhraseFlashExtra {
 }
 
 function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSelectAnswer, onSubmit }: GameRendererProps) {
-  const extra = item.extra_data as PhraseFlashExtra;
+  const extra = item.extra_data as unknown as PhraseFlashExtra;
   const passage = extra.passage || "";
   const readingTime = (extra.reading_time_seconds || 10) * 1000;
   const staysVisible = extra.passage_visible_during_questions;

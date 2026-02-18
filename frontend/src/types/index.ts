@@ -164,7 +164,9 @@ export type GameType =
   | "read_aloud"
   | "word_image_match"
   | "rapid_naming"
-  | "memory_recall";
+  | "memory_recall"
+  | "castle_boss"
+  | "castle_dungeon";
 
 export interface GameDefinition {
   id: string;
