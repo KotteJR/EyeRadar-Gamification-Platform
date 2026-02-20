@@ -316,6 +316,13 @@ export const GAME_ASSETS: Record<string, GameAsset> = {
     bgLight: "#FEFCE8",
     accent: "#CA8A04",
   },
+  dungeon_3stage: {
+    icon: "Swords",
+    image: "/game-images/default.png",
+    gradient: ["#4A0E6B", "#9333EA"],
+    bgLight: "#FAF5FF",
+    accent: "#7C3AED",
+  },
 };
 
 /** Category images for browsing */
@@ -385,6 +392,7 @@ export const GAME_TYPE_ICONS: Record<GameType, string> = {
   memory_recall: "Brain",
   castle_boss: "Castle",
   castle_dungeon: "Swords",
+  castle_dungeon_3stage: "Swords",
 };
 
 /** Default asset for unknown games */

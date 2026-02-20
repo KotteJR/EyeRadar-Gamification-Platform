@@ -166,7 +166,8 @@ export type GameType =
   | "rapid_naming"
   | "memory_recall"
   | "castle_boss"
-  | "castle_dungeon";
+  | "castle_dungeon"
+  | "castle_dungeon_3stage";
 
 export interface GameDefinition {
   id: string;

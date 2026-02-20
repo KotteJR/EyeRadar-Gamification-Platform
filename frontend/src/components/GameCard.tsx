@@ -31,6 +31,7 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   memory_recall: "Memory Recall",
   castle_boss: "Castle Boss",
   castle_dungeon: "Dungeon Adventure",
+  castle_dungeon_3stage: "3-Stage Dungeon",
 };
 
 interface GameCardProps {
@@ -115,6 +116,9 @@ export default function GameCard({ game, studentId, locked }: GameCardProps) {
   );
 
   const getPlayHref = () => {
+    if (game.game_type === "castle_dungeon_3stage") {
+      return `/exercises/dungeon3?studentId=${studentId}&gameId=${game.id}`;
+    }
     if (game.game_type === "castle_dungeon") {
       return `/exercises/dungeon?studentId=${studentId}&gameId=${game.id}`;
     }

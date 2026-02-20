@@ -64,6 +64,13 @@ export const GameEvents = {
   CASTLE_ANSWER: "castle:answer",
   CASTLE_PHASE_UPDATE: "castle:phase_update",
   CASTLE_VICTORY: "castle:victory",
+
+  // Zone dungeon events
+  ZONE_UPDATE: "zone:update",
+  SHRINE_QUESTION: "shrine:question",
+  SHRINE_ANSWER: "shrine:answer",
+  BOSS_SHIELD: "boss:shield",
+  GATE_OPENED: "gate:opened",
 } as const;
 
 // Payload types for type safety
@@ -118,10 +125,15 @@ export interface CastlePhasePayload {
   playerHp: number;
   maxPlayerHp: number;
   gameState: "spawning" | "fighting" | "question" | "victory" | "playing" | "paused";
+  currentZone?: number;
+  totalZones?: number;
+  zoneProgress?: Array<{ zone: number; name: string; enemiesLeft: number; shrineComplete: boolean; gateOpen: boolean }>;
 }
 
 export interface CastleQuestionPayload {
   bossPhase: number;
+  source?: "enemy" | "shrine" | "boss_shield";
+  zoneName?: string;
 }
 
 export interface CastleAnswerPayload {

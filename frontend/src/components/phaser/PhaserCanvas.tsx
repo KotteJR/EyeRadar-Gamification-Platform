@@ -37,7 +37,9 @@ export default function PhaserCanvas({
 
         const config = levelConfigRef.current;
         let sceneName: string;
-        if (config.bossType === "castle_dungeon") {
+        if (config.bossType === "castle_dungeon_3stage") {
+          sceneName = "CastleDungeon3StageScene";
+        } else if (config.bossType === "castle_dungeon") {
           sceneName = "CastleDungeonScene";
         } else if (config.bossType === "castle_boss") {
           sceneName = "CastleBossScene";

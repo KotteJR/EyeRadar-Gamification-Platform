@@ -487,6 +487,18 @@ _register(GameDefinition(
     icon="🏖️",
 ))
 
+_register(GameDefinition(
+    id="dungeon_3stage",
+    name="3-Stage Dungeon",
+    description="Conquer a 3-zone dungeon with gates, shrines, and powerful bosses! Clear enemies, solve shrine challenges to unlock gates, and face the Shadow Lord in the final arena!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.CASTLE_DUNGEON_3STAGE,
+    age_range_min=5, age_range_max=14,
+    mechanics="Zone-based dungeon with gates, shrine challenges, and boss shield phases",
+    instructions="WASD to move, X to attack, C to dodge, E to interact with NPCs and shrines. Clear each zone's enemies, complete the shrine challenge to unlock the gate, and defeat the Shadow Lord!",
+    icon="⚔️",
+))
+
 
 def get_all_games() -> list[GameDefinition]:
     return list(GAMES.values())

@@ -118,6 +118,7 @@ class GameType(str, Enum):
     MEMORY_RECALL = "memory_recall"      # Memory: recall images seen earlier in session
     CASTLE_BOSS = "castle_boss"          # Castle boss fight: questions between boss phases
     CASTLE_DUNGEON = "castle_dungeon"    # Top-down dungeon: explore, fight, solve
+    CASTLE_DUNGEON_3STAGE = "castle_dungeon_3stage"  # 3-zone dungeon: gates, shrines, boss phases
 
 
 class GameDefinition(BaseModel):

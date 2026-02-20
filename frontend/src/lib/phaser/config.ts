@@ -8,6 +8,7 @@ import { MemoryScene } from "./scenes/MemoryScene";
 import { WorldMapScene } from "./scenes/WorldMapScene";
 import { CastleBossScene } from "./scenes/CastleBossScene";
 import { CastleDungeonScene } from "./scenes/CastleDungeonScene";
+import { CastleDungeon3StageScene } from "./scenes/CastleDungeon3StageScene";
 import { GAME_WIDTH, GAME_HEIGHT } from "./constants";
 
 // Re-export so existing consumers still work
@@ -35,6 +36,6 @@ export function createGameConfig(
         debug: false,
       },
     },
-    scene: [BootScene, PreloadScene, BattleScene, DragonBattleScene, RunnerScene, MemoryScene, WorldMapScene, CastleBossScene, CastleDungeonScene],
+    scene: [BootScene, PreloadScene, BattleScene, DragonBattleScene, RunnerScene, MemoryScene, WorldMapScene, CastleBossScene, CastleDungeonScene, CastleDungeon3StageScene],
   };
 }
