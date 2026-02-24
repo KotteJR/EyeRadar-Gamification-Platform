@@ -2,12 +2,13 @@
 Student management endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from datetime import datetime
 import uuid
 
 from app.models import Student, StudentCreate, StudentUpdate, EyeRadarAssessment
 from app import database as db
+from app.services.assessment_parser import parse_assessment_file
 
 router = APIRouter()
 
@@ -83,13 +84,47 @@ async def upsert_student(student_id: str, data: StudentCreate):
 
 @router.post("/{student_id}/assessment", response_model=Student)
 async def import_assessment(student_id: str, assessment: EyeRadarAssessment):
-    """Import EyeRadar assessment data for a student."""
+    """Import EyeRadar assessment data for a student (JSON body)."""
     existing = await db.get_student(student_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Student not found")
 
     assessment_dict = assessment.model_dump()
     assessment_dict["assessment_date"] = assessment.assessment_date.isoformat()
+    result = await db.save_assessment(student_id, assessment_dict)
+    return result
+
+
+@router.post("/{student_id}/assessment/upload", response_model=Student)
+async def upload_assessment_file(
+    student_id: str,
+    file: UploadFile = File(...),
+):
+    """
+    Upload any assessment file (PDF, image, Word doc, JSON, plain text, CSV…)
+    and automatically extract structured assessment data using AI (GPT-4o).
+
+    JSON files are parsed directly without AI.
+    All other formats require OPENAI_API_KEY to be set.
+    """
+    existing = await db.get_student(student_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    file_bytes = await file.read()
+    content_type = file.content_type or "application/octet-stream"
+    filename = file.filename or "upload"
+
+    try:
+        assessment_dict = await parse_assessment_file(file_bytes, filename, content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    # Ensure assessment_date is a plain ISO string (not a datetime object)
+    ad = assessment_dict.get("assessment_date")
+    if isinstance(ad, datetime):
+        assessment_dict["assessment_date"] = ad.isoformat()
+
     result = await db.save_assessment(student_id, assessment_dict)
     return result
 

@@ -59,6 +59,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify(assessment),
     }),
+  uploadAssessmentFile: async (studentId: string, file: File): Promise<Student> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/students/${studentId}/assessment/upload`, {
+      method: "POST",
+      body: formData,
+      // Do NOT set Content-Type here — browser sets it automatically with the multipart boundary
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || `API Error: ${res.status}`);
+    }
+    return res.json();
+  },
 
   // Games
   getGames: () => fetchAPI<GameDefinition[]>("/games"),

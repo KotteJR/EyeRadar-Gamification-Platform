@@ -7,3 +7,4 @@ httpx==0.28.1
 edge-tts==7.2.7
 python-jose[cryptography]==3.3.0
 python-multipart==0.0.9
+pypdf>=4.0.0

@@ -49,6 +49,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentJson, setAssessmentJson] = useState("");
+  const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [assessmentFileName, setAssessmentFileName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "adventure">(initialTab || "overview");
@@ -100,19 +101,31 @@ export default function StudentDetailPage() {
   }, [studentId, router]);
 
   const handleImportAssessment = async () => {
+    setImporting(true);
     try {
-      const data: EyeRadarAssessment = JSON.parse(assessmentJson);
-      setImporting(true);
-      const updated = await api.importAssessment(
-        studentId,
-        data as unknown as Record<string, unknown>
-      );
+      let updated: import("@/types").Student;
+
+      // Non-JSON file → send to AI extraction endpoint
+      if (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json")) {
+        updated = await api.uploadAssessmentFile(studentId, assessmentFile);
+      } else if (assessmentJson.trim()) {
+        // JSON text (pasted or .json upload)
+        const data = JSON.parse(assessmentJson);
+        updated = await api.importAssessment(studentId, data as Record<string, unknown>);
+      } else {
+        alert("Please select a file or paste JSON.");
+        setImporting(false);
+        return;
+      }
+
       setStudent(updated);
       setShowAssessment(false);
       setAssessmentJson("");
+      setAssessmentFile(null);
       setAssessmentFileName(null);
-    } catch {
-      alert("Invalid JSON. Please check the format.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Import failed";
+      alert(`Import failed: ${msg}`);
     } finally {
       setImporting(false);
     }
@@ -122,12 +135,19 @@ export default function StudentDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setAssessmentFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      setAssessmentJson(text);
-    };
-    reader.readAsText(file);
+    setAssessmentFile(file);
+
+    // For JSON files, also read the text so the textarea preview works
+    if (file.name.toLowerCase().endsWith(".json")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setAssessmentJson(ev.target?.result as string);
+      };
+      reader.readAsText(file);
+    } else {
+      // Non-JSON — clear any stale JSON text
+      setAssessmentJson("");
+    }
     // Reset so the same file can be re-selected
     e.target.value = "";
   };
@@ -450,7 +470,7 @@ export default function StudentDetailPage() {
                 {student.assessment ? "Replace EyeRadar Assessment" : "Import EyeRadar Assessment"}
               </h2>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Upload a .json file exported from EyeRadar, or paste the JSON directly.
+                Upload any report file — PDF, image, Word doc, JSON, or plain text. AI extracts the data automatically.
                 {student.assessment && (
                   <span className="ml-1 text-amber-600 font-medium">This will replace the existing assessment.</span>
                 )}
@@ -467,17 +487,23 @@ export default function StudentDetailPage() {
             </div>
             <div className="flex-1 min-w-0">
               {assessmentFileName ? (
-                <p className="text-sm font-medium text-neutral-700 truncate">{assessmentFileName}</p>
+                <div>
+                  <p className="text-sm font-medium text-neutral-700 truncate">{assessmentFileName}</p>
+                  {assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json") && (
+                    <p className="text-[11px] text-[#475093] mt-0.5">AI will extract assessment data from this file</p>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-neutral-400">
-                  <span className="font-medium text-[#FF5A39]">Upload .json file</span> — or paste below
+                  <span className="font-medium text-[#FF5A39]">Upload any report</span>
+                  <span className="text-neutral-400"> — PDF, image, DOCX, JSON, TXT</span>
                 </p>
               )}
             </div>
             {assessmentFileName && (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); setAssessmentFileName(null); setAssessmentJson(""); }}
+                onClick={(e) => { e.preventDefault(); setAssessmentFileName(null); setAssessmentFile(null); setAssessmentJson(""); }}
                 className="text-neutral-400 hover:text-neutral-600 flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,30 +513,35 @@ export default function StudentDetailPage() {
             )}
             <input
               type="file"
-              accept=".json,application/json"
+              accept="*"
               onChange={handleAssessmentFileUpload}
               className="sr-only"
             />
           </label>
 
-          <textarea
-            value={assessmentJson}
-            onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) setAssessmentFileName(null); }}
-            placeholder={`{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { "phonological_awareness": { "severity": 4, "percentile": 12 }, ... },\n  "reading_metrics": { "words_per_minute": 65, "fixation_duration_ms": 280, ... }\n}`}
-            rows={7}
-            className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
-          />
+          {/* JSON paste area — only shown when no non-JSON file is selected */}
+          {(!assessmentFile || assessmentFile.name.toLowerCase().endsWith(".json")) && (
+            <textarea
+              value={assessmentJson}
+              onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) { setAssessmentFileName(null); setAssessmentFile(null); } }}
+              placeholder={`Or paste JSON directly:\n{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { "phonological_awareness": { "severity": 4, "percentile": 12 }, ... },\n  "reading_metrics": { "words_per_minute": 65, "fixation_duration_ms": 280, ... }\n}`}
+              rows={6}
+              className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
+            />
+          )}
 
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleImportAssessment}
-              disabled={importing || !assessmentJson.trim()}
+              disabled={importing || (!assessmentFile && !assessmentJson.trim())}
               className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {importing ? "Importing..." : student.assessment ? "Replace Assessment" : "Import Assessment"}
+              {importing
+                ? (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json") ? "Extracting with AI..." : "Importing...")
+                : student.assessment ? "Replace Assessment" : "Import Assessment"}
             </button>
             <button
-              onClick={() => { setShowAssessment(false); setAssessmentJson(""); setAssessmentFileName(null); }}
+              onClick={() => { setShowAssessment(false); setAssessmentJson(""); setAssessmentFile(null); setAssessmentFileName(null); }}
               className="px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-xl hover:bg-neutral-200 transition-colors"
             >
               Cancel

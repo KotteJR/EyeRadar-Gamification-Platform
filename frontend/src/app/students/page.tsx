@@ -54,6 +54,7 @@ export default function StudentsPage() {
   const [creating, setCreating] = useState(false);
   const [diagExpanded, setDiagExpanded] = useState(false);
   const [assessmentJson, setAssessmentJson] = useState("");
+  const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
   const [assessmentFileName, setAssessmentFileName] = useState<string | null>(null);
 
   const diag = formData.diagnostic || DEFAULT_DIAGNOSTIC;
@@ -94,12 +95,18 @@ export default function StudentsPage() {
       const result = await api.createStudent(formData);
 
       // Optionally import the EyeRadar assessment right away
-      if (assessmentJson.trim() && result?.id) {
+      if (result?.id) {
         try {
-          const assessmentData = JSON.parse(assessmentJson);
-          await api.importAssessment(result.id, assessmentData);
-        } catch {
-          console.warn("Assessment import failed — student was still created");
+          if (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json")) {
+            // Non-JSON file → AI extraction endpoint
+            await api.uploadAssessmentFile(result.id, assessmentFile);
+          } else if (assessmentJson.trim()) {
+            // JSON text (pasted or .json file)
+            const assessmentData = JSON.parse(assessmentJson);
+            await api.importAssessment(result.id, assessmentData);
+          }
+        } catch (err) {
+          console.warn("Assessment import failed — student was still created:", err);
         }
       }
 
@@ -128,6 +135,7 @@ export default function StudentsPage() {
       setInterestInput("");
       setDiagExpanded(false);
       setAssessmentJson("");
+      setAssessmentFile(null);
       setAssessmentFileName(null);
       fetchStudents();
     } catch (err) {
@@ -452,7 +460,7 @@ export default function StudentsPage() {
                 <svg className="w-4 h-4 text-[#475093]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                <span className="text-sm font-semibold text-[#303030]">EyeRadar Assessment</span>
+                <span className="text-sm font-semibold text-[#303030]">Assessment Report</span>
                 <span className="text-xs text-[#ABABAB] ml-1">(optional — can be added later)</span>
                 {assessmentFileName && (
                   <span className="ml-auto text-xs font-medium text-emerald-600 flex items-center gap-1">
@@ -460,6 +468,9 @@ export default function StudentsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     {assessmentFileName}
+                    {assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json") && (
+                      <span className="text-[#475093] font-medium"> · AI extract</span>
+                    )}
                   </span>
                 )}
               </div>
@@ -470,31 +481,43 @@ export default function StudentsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                   </div>
-                  <p className="text-sm text-[#ABABAB]">
-                    <span className="font-medium text-[#FF5A39]">Upload .json file</span> from EyeRadar — or paste below
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[#ABABAB]">
+                      <span className="font-medium text-[#FF5A39]">Upload any report</span>
+                      <span> — PDF, image, DOCX, JSON, or plain text</span>
+                    </p>
+                    <p className="text-[11px] text-[#CDCDCD] mt-0.5">AI extracts the data automatically from non-JSON files</p>
+                  </div>
                   <input
                     type="file"
-                    accept=".json,application/json"
+                    accept="*"
                     className="sr-only"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setAssessmentFileName(file.name);
-                      const reader = new FileReader();
-                      reader.onload = (ev) => setAssessmentJson(ev.target?.result as string);
-                      reader.readAsText(file);
+                      setAssessmentFile(file);
+                      if (file.name.toLowerCase().endsWith(".json")) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setAssessmentJson(ev.target?.result as string);
+                        reader.readAsText(file);
+                      } else {
+                        setAssessmentJson("");
+                      }
                       e.target.value = "";
                     }}
                   />
                 </label>
-                <textarea
-                  value={assessmentJson}
-                  onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) setAssessmentFileName(null); }}
-                  placeholder={`Paste EyeRadar JSON here (optional)...\n{\n  "assessment_date": "...",\n  "overall_severity": 3,\n  "deficits": { ... },\n  "reading_metrics": { ... }\n}`}
-                  rows={4}
-                  className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-xs font-mono bg-[#F8F8F8] placeholder:text-[#ABABAB] resize-none"
-                />
+                {/* JSON paste — hidden when a non-JSON file is selected */}
+                {(!assessmentFile || assessmentFile.name.toLowerCase().endsWith(".json")) && (
+                  <textarea
+                    value={assessmentJson}
+                    onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) { setAssessmentFileName(null); setAssessmentFile(null); } }}
+                    placeholder={`Or paste JSON directly (optional):\n{\n  "assessment_date": "...",\n  "overall_severity": 3,\n  "deficits": { ... },\n  "reading_metrics": { ... }\n}`}
+                    rows={4}
+                    className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-xs font-mono bg-[#F8F8F8] placeholder:text-[#ABABAB] resize-none"
+                  />
+                )}
               </div>
             </div>
 
