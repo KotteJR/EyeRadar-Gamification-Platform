@@ -383,7 +383,6 @@ export const GAME_TYPE_ICONS: Record<GameType, string> = {
   castle_boss: "Castle",
   castle_dungeon: "Swords",
   castle_dungeon_3stage: "Swords",
-  wizard_test: "Sparkles",
 };
 
 /** Default asset for unknown games */

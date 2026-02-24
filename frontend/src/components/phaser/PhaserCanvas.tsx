@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import { createGameConfig } from "@/lib/phaser/config";
-import { WizardTestScene } from "@/lib/phaser/scenes/WizardTestScene";
 import { eventBus, GameEvents } from "@/lib/phaser/EventBus";
 import type { LevelStartPayload } from "@/lib/phaser/EventBus";
 
@@ -38,14 +37,8 @@ export default function PhaserCanvas({
 
         const config = levelConfigRef.current;
         let sceneName: string;
-        if (config.bossType === "castle_dungeon_3stage") {
+        if (config.bossType === "castle_dungeon_3stage" || config.bossType === "castle_dungeon") {
           sceneName = "CastleDungeon3StageScene";
-        } else if (config.bossType === "wizard_test") {
-          sceneName = "WizardTestScene";
-        } else if (config.bossType === "castle_dungeon") {
-          sceneName = "CastleDungeon3StageScene";
-        } else if (config.bossType === "castle_dungeon" || config.bossType === "wizard_test") {
-          sceneName = "CastleDungeonScene";
         } else if (config.bossType === "castle_boss") {
           sceneName = "CastleBossScene";
         } else if (config.bossType === "dragon") {
