@@ -32,6 +32,7 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   castle_boss: "Castle Boss",
   castle_dungeon: "Dungeon Adventure",
   castle_dungeon_3stage: "3-Stage Dungeon",
+  wizard_test: "Wizard Test",
 };
 
 interface GameCardProps {
@@ -124,6 +125,9 @@ export default function GameCard({ game, studentId, locked }: GameCardProps) {
     }
     if (game.game_type === "castle_boss") {
       return `/exercises/castle?studentId=${studentId}&gameId=${game.id}`;
+    }
+    if (game.game_type === "wizard_test") {
+      return `/wizard?studentId=${studentId}&gameId=${game.id}`;
     }
     return `/exercises/play?studentId=${studentId}&gameId=${game.id}`;
   };
