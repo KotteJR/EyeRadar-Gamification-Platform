@@ -32,8 +32,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Initialize and cleanup application resources"""
     logger.info("Starting EyeRadar API — initializing database...")
-    await init_db()
-    logger.info("Database initialized successfully.")
+    try:
+        await init_db()
+        app.state.db_ready = True
+        logger.info("Database initialized successfully.")
+    except Exception as exc:
+        app.state.db_ready = False
+        logger.error("Database init failed (app will start but DB calls will fail): %s", exc)
 
     # Probe LLM providers (OpenAI or Ollama) — never let this crash the app
     try:
@@ -115,8 +120,10 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    db_ready = getattr(app.state, "db_ready", False)
     return {
-        "status": "healthy",
+        "status": "healthy" if db_ready else "degraded",
+        "db": "connected" if db_ready else "unavailable",
         "ai_provider": getattr(app.state, "ollama_status", {}).get("provider", "none"),
         "ai_status": getattr(app.state, "ollama_status", {}).get("status", "unknown"),
     }
