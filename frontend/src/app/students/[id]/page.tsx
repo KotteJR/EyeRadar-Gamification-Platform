@@ -8,8 +8,6 @@ import type {
   Student,
   GameDefinition,
   ExerciseSession,
-  ExerciseRecommendation,
-  GamificationSummary,
   EyeRadarAssessment,
   DiagnosticInfo,
   AdventureMap,
@@ -23,9 +21,7 @@ import {
   DYSLEXIA_TYPE_LABELS,
   SEVERITY_LABELS,
 } from "@/types";
-import StatsCard from "@/components/StatsCard";
 import ProgressBar from "@/components/ProgressBar";
-import BadgeCard from "@/components/BadgeCard";
 import {
   Map,
   Sparkles,
@@ -45,18 +41,16 @@ export default function StudentDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentId = params.id as string;
-  const initialTab = searchParams.get("tab") as "overview" | "sessions" | "badges" | "adventure" | null;
+  const initialTab = searchParams.get("tab") as "overview" | "sessions" | "adventure" | null;
 
   const [student, setStudent] = useState<Student | null>(null);
   const [games, setGames] = useState<GameDefinition[]>([]);
   const [sessions, setSessions] = useState<ExerciseSession[]>([]);
-  const [recommendations, setRecommendations] = useState<ExerciseRecommendation[]>([]);
-  const [gamification, setGamification] = useState<GamificationSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentJson, setAssessmentJson] = useState("");
   const [importing, setImporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "badges" | "adventure">(initialTab || "overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "adventure">(initialTab || "overview");
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   // Adventure builder state
@@ -79,18 +73,14 @@ export default function StudentDetailPage() {
         if (cancelled) return;
         setStudent(s);
 
-        const [g, sess, r, gm, adv] = await Promise.all([
+        const [g, sess, adv] = await Promise.all([
           api.getGames().catch(() => []),
           api.getStudentSessions(studentId).catch(() => []),
-          api.getRecommendations(studentId).catch(() => []),
-          api.getGamificationSummary(studentId).catch(() => null),
           api.getStudentAdventure(studentId).catch(() => null),
         ]);
         if (cancelled) return;
         setGames(g);
         setSessions(sess);
-        setRecommendations(r);
-        setGamification(gm);
         if (adv) {
           setAdventure(adv);
           setAdventureWorlds(adv.worlds);
@@ -119,8 +109,6 @@ export default function StudentDetailPage() {
       setStudent(updated);
       setShowAssessment(false);
       setAssessmentJson("");
-      const recs = await api.getRecommendations(studentId).catch(() => []);
-      setRecommendations(recs);
     } catch {
       alert("Invalid JSON. Please check the format.");
     } finally {
@@ -283,20 +271,13 @@ export default function StudentDetailPage() {
     : null) as DiagnosticInfo | null;
   const hasDiag = diagData && diagData.dyslexia_type && diagData.dyslexia_type !== "unspecified";
 
-  const deficitAreas = Object.keys(student.current_levels || {});
   const completedSessions = sessions.filter((s) => s.status === "completed");
   const totalCorrect = completedSessions.reduce((sum, s) => sum + s.correct_count, 0);
   const totalItems = completedSessions.reduce((sum, s) => sum + s.total_items, 0);
   const overallAccuracy =
     totalItems > 0 ? Math.round((totalCorrect / totalItems) * 100) : 0;
-  const avgResponseTime =
-    completedSessions.length > 0
-      ? Math.round(
-          completedSessions.reduce((sum, s) => sum + s.avg_response_time_ms, 0) /
-            completedSessions.length
-        )
-      : 0;
 
+  // All-time area stats
   const areaStats: Record<string, { sessions: number; correct: number; total: number }> = {};
   for (const s of completedSessions) {
     const area = s.deficit_area;
@@ -306,8 +287,21 @@ export default function StudentDetailPage() {
     areaStats[area].total += s.total_items;
   }
 
-  const getGameName = (gameId: string) =>
-    games.find((g) => g.id === gameId)?.name || gameId;
+  // Monthly performance (current calendar month)
+  const now = new Date();
+  const monthSessions = completedSessions.filter((s) => {
+    const d = new Date(s.started_at);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const monthAreaStats: Record<string, { sessions: number; correct: number; total: number }> = {};
+  for (const s of monthSessions) {
+    const area = s.deficit_area;
+    if (!monthAreaStats[area]) monthAreaStats[area] = { sessions: 0, correct: 0, total: 0 };
+    monthAreaStats[area].sessions++;
+    monthAreaStats[area].correct += s.correct_count;
+    monthAreaStats[area].total += s.total_items;
+  }
+
   const getGameIcon = (gameId: string) =>
     games.find((g) => g.id === gameId)?.icon || "?";
 
@@ -465,88 +459,43 @@ export default function StudentDetailPage() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <StatsCard
-          title="Level"
-          value={student.level}
-          subtitle={gamification?.level_info.title || "Beginner"}
-          color="blue"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          }
-        />
-        <StatsCard
-          title="Sessions"
-          value={completedSessions.length}
-          subtitle="Completed"
-          color="emerald"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          }
-        />
-        <StatsCard
-          title="Accuracy"
-          value={`${overallAccuracy}%`}
-          subtitle={`${totalCorrect}/${totalItems} correct`}
-          color={overallAccuracy >= 70 ? "emerald" : overallAccuracy >= 40 ? "amber" : "rose"}
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-        <StatsCard
-          title="Avg Time"
-          value={avgResponseTime > 0 ? `${(avgResponseTime / 1000).toFixed(1)}s` : "---"}
-          subtitle="Per answer"
-          color="purple"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-        <StatsCard
-          title="Points"
-          value={student.total_points.toLocaleString()}
-          subtitle={`Streak: ${student.current_streak}d`}
-          color="amber"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
-          }
-        />
-      </div>
-
-      {/* XP Progress */}
-      {gamification && (
-        <div className="bg-cream rounded-2xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-neutral-700">
-              Level {gamification.level_info.level} &mdash;{" "}
-              {gamification.level_info.title}
-            </span>
-            <span className="text-xs text-neutral-400">
-              {gamification.level_info.xp} / {gamification.level_info.xp_for_next_level} XP
-            </span>
-          </div>
-          <ProgressBar
-            value={gamification.level_info.progress_percent}
-            showPercentage={false}
-            size="lg"
-          />
+      {/* 3 Key Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-cream rounded-2xl p-5">
+          <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Sessions</p>
+          <p className="text-3xl font-bold text-neutral-900">{completedSessions.length}</p>
+          <p className="text-xs text-neutral-400 mt-1">Completed total</p>
         </div>
-      )}
+        <div className="bg-cream rounded-2xl p-5">
+          <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Accuracy</p>
+          <p
+            className="text-3xl font-bold"
+            style={{
+              color:
+                overallAccuracy >= 70 ? "#10b981"
+                  : overallAccuracy >= 40 ? "#f59e0b"
+                  : overallAccuracy > 0 ? "#ef4444"
+                  : "#cbd5e1",
+            }}
+          >
+            {overallAccuracy > 0 ? `${overallAccuracy}%` : "---"}
+          </p>
+          <p className="text-xs text-neutral-400 mt-1">
+            {totalItems > 0 ? `${totalCorrect} / ${totalItems} correct` : "No sessions yet"}
+          </p>
+        </div>
+        <div className="bg-cream rounded-2xl p-5">
+          <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Streak</p>
+          <p className="text-3xl font-bold text-neutral-900">{student.current_streak}</p>
+          <p className="text-xs text-neutral-400 mt-1">
+            {student.current_streak === 1 ? "day" : "days"} &middot; {student.total_points.toLocaleString()} pts
+          </p>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 mb-6 w-fit">
-        {(["overview", "adventure", "sessions", "badges"] as const).map((tab) => (
+        {(["overview", "adventure", "sessions"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -569,7 +518,8 @@ export default function StudentDetailPage() {
       {/* ─── Overview Tab ──────────────────────────────────────── */}
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Performance by Area */}
+
+          {/* Performance by Area (all time) */}
           <div className="bg-cream rounded-2xl p-6">
             <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Performance by Area
@@ -583,52 +533,27 @@ export default function StudentDetailPage() {
                 {Object.entries(areaStats)
                   .sort(([, a], [, b]) => b.sessions - a.sessions)
                   .map(([area, stats]) => {
-                    const label =
-                      DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] ||
-                      area;
-                    const color =
-                      DEFICIT_AREA_COLORS[area as keyof typeof DEFICIT_AREA_COLORS] ||
-                      "#6366f1";
-                    const acc =
-                      stats.total > 0
-                        ? Math.round((stats.correct / stats.total) * 100)
-                        : 0;
+                    const label = DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] || area;
+                    const color = DEFICIT_AREA_COLORS[area as keyof typeof DEFICIT_AREA_COLORS] || "#6366f1";
+                    const acc = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
                     return (
                       <div key={area}>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: color }}
-                            />
-                            <span className="text-sm font-medium text-neutral-700">
-                              {label}
-                            </span>
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="text-sm font-medium text-neutral-700">{label}</span>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-neutral-400">
                             <span>{stats.sessions} sessions</span>
                             <span
                               className="font-semibold"
-                              style={{
-                                color:
-                                  acc >= 70
-                                    ? "#10b981"
-                                    : acc >= 40
-                                    ? "#f59e0b"
-                                    : "#ef4444",
-                              }}
+                              style={{ color: acc >= 70 ? "#10b981" : acc >= 40 ? "#f59e0b" : "#ef4444" }}
                             >
                               {acc}%
                             </span>
                           </div>
                         </div>
-                        <ProgressBar
-                          value={acc}
-                          max={100}
-                          color={color}
-                          showPercentage={false}
-                          size="sm"
-                        />
+                        <ProgressBar value={acc} max={100} color={color} showPercentage={false} size="sm" />
                       </div>
                     );
                   })}
@@ -636,129 +561,98 @@ export default function StudentDetailPage() {
             )}
           </div>
 
-          {/* Deficit Area Levels */}
-          <div className="bg-cream rounded-2xl p-6">
-            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
-              Difficulty Levels
-            </h2>
-            {deficitAreas.length === 0 ? (
-              <p className="text-sm text-neutral-400 py-4">
-                No data yet. Levels update after playing games.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {deficitAreas.map((area) => {
-                  const label =
-                    DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] ||
-                    area;
-                  const color =
-                    DEFICIT_AREA_COLORS[area as keyof typeof DEFICIT_AREA_COLORS] ||
-                    "#6366f1";
-                  const level = student.current_levels[area] || 0;
-                  return (
-                    <ProgressBar
-                      key={area}
-                      value={level}
-                      max={10}
-                      label={`${label} — Lvl ${level}`}
-                      color={color}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Right column: Recent Sessions + Monthly Performance */}
+          <div className="space-y-6">
 
-          {/* Recommendations */}
-          <div className="bg-cream rounded-2xl p-6">
-            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
-              Recommended Next
-            </h2>
-            {recommendations.length === 0 ? (
-              <p className="text-sm text-neutral-400">No recommendations yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {recommendations.slice(0, 5).map((rec, idx) => {
-                  const color =
-                    DEFICIT_AREA_COLORS[rec.deficit_area] || "#6366f1";
-                  return (
-                    <div
-                      key={`${rec.game_id}-${idx}`}
-                      className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 hover:border-neutral-200 transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-neutral-800">
-                          {rec.game_name}
-                        </p>
-                        <p className="text-xs text-neutral-400">{rec.reason}</p>
-                      </div>
-                      <span
-                        className="text-[11px] font-medium px-2 py-1 rounded-full"
-                        style={{ backgroundColor: `${color}12`, color }}
-                      >
-                        Lvl {rec.suggested_difficulty}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-cream rounded-2xl p-6">
-            <h2 className="text-sm font-semibold text-neutral-900 mb-4">
-              Recent Activity
-            </h2>
-            {completedSessions.length === 0 ? (
-              <p className="text-sm text-neutral-400">No sessions yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {completedSessions.slice(0, 5).map((s) => {
-                  const accColor =
-                    s.accuracy >= 80
-                      ? "text-emerald-600"
-                      : s.accuracy >= 50
-                      ? "text-amber-600"
-                      : "text-red-500";
-                  return (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-neutral-50/80"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{getGameIcon(s.game_id)}</span>
-                        <div>
-                          <p className="text-sm font-medium text-neutral-800">
-                            {s.game_name}
-                          </p>
-                          <p className="text-[11px] text-neutral-400">
-                            {new Date(s.started_at).toLocaleDateString()} &middot; Lvl{" "}
-                            {s.difficulty_level}
-                          </p>
+            {/* Recent Sessions (last 3) */}
+            <div className="bg-cream rounded-2xl p-6">
+              <h2 className="text-sm font-semibold text-neutral-900 mb-4">Recent Sessions</h2>
+              {completedSessions.length === 0 ? (
+                <p className="text-sm text-neutral-400">No sessions yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {completedSessions.slice(0, 3).map((s) => {
+                    const acc = Math.round(s.accuracy);
+                    const accColor =
+                      acc >= 80 ? "bg-emerald-50 text-emerald-700"
+                        : acc >= 50 ? "bg-amber-50 text-amber-700"
+                        : "bg-red-50 text-red-700";
+                    const areaColor = DEFICIT_AREA_COLORS[s.deficit_area] || "#6366f1";
+                    return (
+                      <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50/80">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-neutral-800 truncate">{s.game_name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: `${areaColor}15`, color: areaColor }}
+                            >
+                              {DEFICIT_AREA_LABELS[s.deficit_area] || s.deficit_area}
+                            </span>
+                            <span className="text-[11px] text-neutral-400">
+                              {new Date(s.started_at).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-neutral-400">{s.correct_count}/{s.total_items}</span>
+                          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${accColor}`}>{acc}%</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${accColor}`}>
-                          {Math.round(s.accuracy)}%
-                        </p>
-                        <p className="text-[11px] text-neutral-400">
-                          {s.correct_count}/{s.total_items} &middot; +{s.points_earned}pts
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Monthly Performance */}
+            <div className="bg-cream rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-neutral-900">This Month</h2>
+                <span className="text-xs text-neutral-400">
+                  {now.toLocaleString("en", { month: "long", year: "numeric" })}
+                </span>
               </div>
-            )}
+              {Object.keys(monthAreaStats).length === 0 ? (
+                <p className="text-sm text-neutral-400">No sessions this month yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(monthAreaStats)
+                    .sort(([, a], [, b]) => b.sessions - a.sessions)
+                    .map(([area, stats]) => {
+                      const label = DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] || area;
+                      const color = DEFICIT_AREA_COLORS[area as keyof typeof DEFICIT_AREA_COLORS] || "#6366f1";
+                      const acc = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+                      return (
+                        <div key={area}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                              <span className="text-xs font-medium text-neutral-700">{label}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-neutral-400">{stats.sessions} sessions</span>
+                              <span
+                                className="font-semibold"
+                                style={{ color: acc >= 70 ? "#10b981" : acc >= 40 ? "#f59e0b" : "#ef4444" }}
+                              >
+                                {acc}%
+                              </span>
+                            </div>
+                          </div>
+                          <ProgressBar value={acc} max={100} color={color} showPercentage={false} size="sm" />
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Assessment Summary */}
+          {/* Assessment Summary - full width */}
           {student.assessment && (
             <div className="bg-cream rounded-2xl p-6 lg:col-span-2">
-              <h2 className="text-sm font-semibold text-neutral-900 mb-4">
-                Assessment Summary
-              </h2>
+              <h2 className="text-sm font-semibold text-neutral-900 mb-4">Assessment Summary</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="p-3 bg-neutral-50 rounded-xl text-center">
                   <p className="text-2xl font-bold text-neutral-900">
@@ -780,41 +674,24 @@ export default function StudentDetailPage() {
                 </div>
                 <div className="p-3 bg-neutral-50 rounded-xl text-center">
                   <p className="text-2xl font-bold text-neutral-900">
-                    {(
-                      student.assessment.reading_metrics.regression_rate * 100
-                    ).toFixed(0)}
-                    %
+                    {(student.assessment.reading_metrics.regression_rate * 100).toFixed(0)}%
                   </p>
                   <p className="text-[11px] text-neutral-400">Regression Rate</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Object.entries(student.assessment.deficits).map(
-                  ([area, info]) => {
-                    const label =
-                      DEFICIT_AREA_LABELS[
-                        area as keyof typeof DEFICIT_AREA_LABELS
-                      ] || area;
-                    return (
-                      <div
-                        key={area}
-                        className="p-3 border border-neutral-100 rounded-xl"
-                      >
-                        <p className="text-sm font-medium text-neutral-700">
-                          {label}
-                        </p>
-                        <div className="flex items-baseline gap-2 mt-1">
-                          <span className="text-lg font-bold text-neutral-900">
-                            {info.severity}/5
-                          </span>
-                          <span className="text-xs text-neutral-400">
-                            {info.percentile}th percentile
-                          </span>
-                        </div>
+                {Object.entries(student.assessment.deficits).map(([area, info]) => {
+                  const label = DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] || area;
+                  return (
+                    <div key={area} className="p-3 border border-neutral-100 rounded-xl">
+                      <p className="text-sm font-medium text-neutral-700">{label}</p>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-lg font-bold text-neutral-900">{info.severity}/5</span>
+                        <span className="text-xs text-neutral-400">{info.percentile}th percentile</span>
                       </div>
-                    );
-                  }
-                )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1098,9 +975,7 @@ export default function StudentDetailPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-neutral-900 mb-1">
-                No sessions yet
-              </h3>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-1">No sessions yet</h3>
               <p className="text-neutral-400 text-sm">
                 This student hasn&apos;t played any games yet.
               </p>
@@ -1119,14 +994,9 @@ export default function StudentDetailPage() {
                   DEFICIT_AREA_COLORS[session.deficit_area] || "#6366f1";
 
                 return (
-                  <div
-                    key={session.id}
-                    className="bg-cream rounded-2xl overflow-hidden"
-                  >
+                  <div key={session.id} className="bg-cream rounded-2xl overflow-hidden">
                     <button
-                      onClick={() =>
-                        setExpandedSession(isExpanded ? null : session.id)
-                      }
+                      onClick={() => setExpandedSession(isExpanded ? null : session.id)}
                       className="w-full p-4 flex items-center justify-between hover:bg-neutral-50/50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-4">
@@ -1138,13 +1008,9 @@ export default function StudentDetailPage() {
                             </p>
                             <span
                               className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: `${areaColor}12`,
-                                color: areaColor,
-                              }}
+                              style={{ backgroundColor: `${areaColor}12`, color: areaColor }}
                             >
-                              {DEFICIT_AREA_LABELS[session.deficit_area] ||
-                                session.deficit_area}
+                              {DEFICIT_AREA_LABELS[session.deficit_area] || session.deficit_area}
                             </span>
                             {session.status !== "completed" && (
                               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500">
@@ -1153,16 +1019,13 @@ export default function StudentDetailPage() {
                             )}
                           </div>
                           <p className="text-[11px] text-neutral-400 mt-0.5">
-                            {new Date(session.started_at).toLocaleString()} &middot;
-                            Difficulty {session.difficulty_level}
+                            {new Date(session.started_at).toLocaleString()} &middot; Difficulty {session.difficulty_level}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span
-                            className={`text-xs font-bold px-2.5 py-1 rounded-full ${accColor}`}
-                          >
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${accColor}`}>
                             {Math.round(session.accuracy)}%
                           </span>
                         </div>
@@ -1175,19 +1038,12 @@ export default function StudentDetailPage() {
                           </p>
                         </div>
                         <svg
-                          className={`w-4 h-4 text-neutral-400 transition-transform ${
-                            isExpanded ? "rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 text-neutral-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
                     </button>
@@ -1196,13 +1052,10 @@ export default function StudentDetailPage() {
                       <div className="border-t border-neutral-100 p-4 bg-neutral-50/40">
                         <div className="flex items-center gap-4 mb-4 text-xs text-neutral-400">
                           <span>
-                            Avg response:{" "}
-                            {(session.avg_response_time_ms / 1000).toFixed(1)}s
+                            Avg response: {(session.avg_response_time_ms / 1000).toFixed(1)}s
                           </span>
                           {session.badges_earned.length > 0 && (
-                            <span>
-                              Badges: {session.badges_earned.join(", ")}
-                            </span>
+                            <span>Badges: {session.badges_earned.join(", ")}</span>
                           )}
                         </div>
                         <div className="space-y-1.5">
@@ -1219,27 +1072,14 @@ export default function StudentDetailPage() {
                               <div
                                 key={idx}
                                 className={`grid grid-cols-12 gap-2 items-center px-3 py-2 rounded-lg text-sm ${
-                                  result.is_correct
-                                    ? "bg-emerald-50/50"
-                                    : "bg-red-50/50"
+                                  result.is_correct ? "bg-emerald-50/50" : "bg-red-50/50"
                                 }`}
                               >
-                                <div className="col-span-1 text-xs text-neutral-400">
-                                  {idx + 1}
-                                </div>
-                                <div
-                                  className="col-span-4 text-neutral-700 truncate"
-                                  title={item?.question}
-                                >
+                                <div className="col-span-1 text-xs text-neutral-400">{idx + 1}</div>
+                                <div className="col-span-4 text-neutral-700 truncate" title={item?.question}>
                                   {item?.question || "—"}
                                 </div>
-                                <div
-                                  className={`col-span-3 font-medium truncate ${
-                                    result.is_correct
-                                      ? "text-emerald-700"
-                                      : "text-red-600"
-                                  }`}
-                                >
+                                <div className={`col-span-3 font-medium truncate ${result.is_correct ? "text-emerald-700" : "text-red-600"}`}>
                                   {result.student_answer || "—"}
                                 </div>
                                 <div className="col-span-3 text-neutral-500 truncate">
@@ -1267,15 +1107,6 @@ export default function StudentDetailPage() {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ─── Badges Tab ────────────────────────────────────────── */}
-      {activeTab === "badges" && gamification && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {gamification.badges.map((badge) => (
-            <BadgeCard key={badge.id} badge={badge} />
-          ))}
         </div>
       )}
     </div>
