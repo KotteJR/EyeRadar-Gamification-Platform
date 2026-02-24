@@ -96,13 +96,10 @@ async def import_assessment(student_id: str, assessment: EyeRadarAssessment):
 
 @router.delete("/{student_id}")
 async def delete_student(student_id: str):
-    """Delete a student."""
+    """Delete a student and all their data (sessions, maps, purchases cascade automatically)."""
     existing = await db.get_student(student_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    d = await db.get_db()
-    await d.execute("DELETE FROM exercise_sessions WHERE student_id = ?", (student_id,))
-    await d.execute("DELETE FROM students WHERE id = ?", (student_id,))
-    await d.commit()
+    await db.delete_student(student_id)
     return {"message": "Student deleted"}

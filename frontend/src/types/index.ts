@@ -167,7 +167,8 @@ export type GameType =
   | "memory_recall"
   | "castle_boss"
   | "castle_dungeon"
-  | "castle_dungeon_3stage";
+  | "castle_dungeon_3stage" 
+  | "wizard_test";
 
 export interface GameDefinition {
   id: string;
@@ -366,3 +367,4 @@ export interface AvailableGameForArea {
   age_range_max: number;
   icon: string;
 }
+// adding WIZARD_TEST to GameType

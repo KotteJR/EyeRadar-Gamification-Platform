@@ -1,5 +1,24 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Asset Structure (GitHub-Optimized)
+
+### Game Card Images
+- **Location**: `public/game-assets/game-card-images/`
+- **Contents**: Static PNG images for game cards (included in git)
+- **Source**: `src/lib/game-assets.ts` references these via `/game-assets/game-card-images/`
+- **Files included**: `backward_spell.png`, `category_comprehension.png`, `category_phonological.png`, etc.
+
+### Generated Game Images (Not Tracked)
+- **Location**: `public/game-images/` (**excluded from git**)
+- **Contents**: Dynamic/generated images created at runtime
+- **Why excluded**: Large, generated dynamically, not needed in repository
+- **Git rule**: Added to `.gitignore` to prevent bloating the repository
+
+### How It Works
+1. Card images are **committed to git** and deployed with the app
+2. Generated images are created locally/at runtime and **never pushed to GitHub**
+3. All asset references use `/game-assets/game-card-images/` for tracked images
+
 ## Getting Started
 
 First, run the development server:

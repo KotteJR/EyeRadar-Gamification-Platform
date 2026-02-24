@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
-from app.database import init_db
+from app.database import init_db, close_db
 from app.routers import students, exercises, games, gamification, analytics, adventures, tts
 from app.services.ollama_client import check_ollama
 
@@ -70,6 +70,8 @@ async def lifespan(app: FastAPI):
 
     logger.info("EyeRadar API ready on port %s", os.getenv("PORT", "8000"))
     yield
+    await close_db()
+    logger.info("Database pool closed.")
 
 
 app = FastAPI(

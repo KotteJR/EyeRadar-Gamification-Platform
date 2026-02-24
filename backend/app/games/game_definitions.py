@@ -446,6 +446,19 @@ _register(GameDefinition(
 ))
 
 
+
+_register(GameDefinition(
+    id="wizard_test",
+    name="Wizard Test Flight",
+    description="Test the newly generated high-resolution 8-direction wizard sprite and the 16:9 mountain landscape background!",
+    deficit_area=DeficitArea.PHONOLOGICAL_AWARENESS,
+    game_type=GameType.CASTLE_DUNGEON,
+    age_range_min=5, age_range_max=14,
+    mechanics="Top-down adventure test with 8-direction movement",
+    instructions="Use WASD to experience the new 8-direction wizard sprite over the updated 16:9 scenic background!",
+    icon="🧙‍♂️",
+))
+
 # ─── Castle Boss Challenge ──────────────────────────────────────────────────
 
 _register(GameDefinition(

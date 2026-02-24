@@ -11,6 +11,24 @@ node_modules/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
+
+# Generated analysis docs
+ANALYSIS_INDEX.md
+CODEBASE_ANALYSIS.md
+DATA_FLOW_DIAGRAMS.md
+GITHUB_RESTRUCTURE_SUMMARY.md
+IMAGE_FALLBACK_STRATEGY.md
+QUICK_REFERENCE.md
+VISUAL_SUMMARY.md
+
+# TTS cache
+backend/.tts_cache/
+
+# Dev scripts
+test-dev.sh
+mcp.json
 
 # OS
 .DS_Store

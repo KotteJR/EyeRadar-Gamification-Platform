@@ -119,6 +119,7 @@ class GameType(str, Enum):
     CASTLE_BOSS = "castle_boss"          # Castle boss fight: questions between boss phases
     CASTLE_DUNGEON = "castle_dungeon"    # Top-down dungeon: explore, fight, solve
     CASTLE_DUNGEON_3STAGE = "castle_dungeon_3stage"  # 3-zone dungeon: gates, shrines, boss phases
+    WIZARD_TEST = "wizard_test"
 
 
 class GameDefinition(BaseModel):
