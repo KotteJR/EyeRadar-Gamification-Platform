@@ -8,7 +8,7 @@ import Sidebar from "@/components/Sidebar";
 // Pages that don't need auth or sidebar
 const PUBLIC_PATHS = ["/login"];
 // Pages that are full-screen (no sidebar)
-const FULLSCREEN_PATHS = ["/login", "/wizard", "/student/map"];
+const FULLSCREEN_PATHS = ["/login", "/student/map"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn } = useAuth();
@@ -28,17 +28,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // Logged in but on login page -> redirect to home
     if (isLoggedIn && pathname === "/login") {
       router.replace("/");
-      return;
-    }
-
-    // Student who hasn't completed wizard -> force wizard
-    if (
-      isLoggedIn &&
-      user?.role === "student" &&
-      !user.wizardCompleted &&
-      pathname !== "/wizard"
-    ) {
-      router.replace("/wizard");
       return;
     }
 
@@ -71,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // Full-screen pages (login, wizard)
+  // Full-screen pages (login, student map)
   if (isFullscreen) {
     return <>{children}</>;
   }

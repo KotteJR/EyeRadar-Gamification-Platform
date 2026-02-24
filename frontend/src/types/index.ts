@@ -96,6 +96,7 @@ export const SEVERITY_DESCRIPTIONS: Record<SeverityLevel, string> = {
 
 export interface DiagnosticInfo {
   dyslexia_type: DyslexiaType;
+  dyslexia_types?: DyslexiaType[];
   severity_level: SeverityLevel;
   phonological_severity: number;
   rapid_naming_severity: number;

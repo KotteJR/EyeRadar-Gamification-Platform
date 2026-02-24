@@ -355,12 +355,19 @@ def suggest_adventure(
     age = age_override or student.get("age", 8)
     interests = student.get("interests", [])
 
-    dyslexia_type = DyslexiaType(
-        dyslexia_type_override or diag.get("dyslexia_type", "unspecified")
-    )
-    severity = SeverityLevel(
-        severity_override or diag.get("severity_level", "moderate")
-    )
+    try:
+        dyslexia_type = DyslexiaType(
+            dyslexia_type_override or diag.get("dyslexia_type") or "unspecified"
+        )
+    except ValueError:
+        dyslexia_type = DyslexiaType.UNSPECIFIED
+
+    try:
+        severity = SeverityLevel(
+            severity_override or diag.get("severity_level") or "moderate"
+        )
+    except ValueError:
+        severity = SeverityLevel.MODERATE
 
     all_games = get_all_games()
     reasoning: List[str] = []

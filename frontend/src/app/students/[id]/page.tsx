@@ -48,7 +48,7 @@ export default function StudentDetailPage() {
   const [sessions, setSessions] = useState<ExerciseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAssessment, setShowAssessment] = useState(false);
-  const [assessmentJson, setAssessmentJson] = useState("");
+  const [assessmentText, setAssessmentText] = useState("");
   const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [assessmentFileName, setAssessmentFileName] = useState<string | null>(null);
@@ -105,22 +105,23 @@ export default function StudentDetailPage() {
     try {
       let updated: import("@/types").Student;
 
-      // Non-JSON file → send to AI extraction endpoint
-      if (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json")) {
+      if (assessmentFile) {
+        // File selected → send to AI extraction endpoint
         updated = await api.uploadAssessmentFile(studentId, assessmentFile);
-      } else if (assessmentJson.trim()) {
-        // JSON text (pasted or .json upload)
-        const data = JSON.parse(assessmentJson);
-        updated = await api.importAssessment(studentId, data as Record<string, unknown>);
+      } else if (assessmentText.trim()) {
+        // Plain text typed/pasted → wrap as a .txt file and send to AI
+        const blob = new Blob([assessmentText], { type: "text/plain" });
+        const textFile = new File([blob], "assessment_notes.txt", { type: "text/plain" });
+        updated = await api.uploadAssessmentFile(studentId, textFile);
       } else {
-        alert("Please select a file or paste JSON.");
+        alert("Please upload a file or type/paste assessment notes.");
         setImporting(false);
         return;
       }
 
       setStudent(updated);
       setShowAssessment(false);
-      setAssessmentJson("");
+      setAssessmentText("");
       setAssessmentFile(null);
       setAssessmentFileName(null);
     } catch (err) {
@@ -136,18 +137,7 @@ export default function StudentDetailPage() {
     if (!file) return;
     setAssessmentFileName(file.name);
     setAssessmentFile(file);
-
-    // For JSON files, also read the text so the textarea preview works
-    if (file.name.toLowerCase().endsWith(".json")) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setAssessmentJson(ev.target?.result as string);
-      };
-      reader.readAsText(file);
-    } else {
-      // Non-JSON — clear any stale JSON text
-      setAssessmentJson("");
-    }
+    setAssessmentText("");
     // Reset so the same file can be re-selected
     e.target.value = "";
   };
@@ -478,7 +468,7 @@ export default function StudentDetailPage() {
             </div>
           </div>
 
-          {/* File upload area */}
+          {/* File upload button */}
           <label className="flex items-center gap-3 w-full cursor-pointer border-2 border-dashed border-neutral-200 rounded-xl px-4 py-3 mb-3 hover:border-[#FF5A39]/50 hover:bg-neutral-50 transition-colors group">
             <div className="w-8 h-8 rounded-lg bg-[#FF5A39]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#FF5A39]/15">
               <svg className="w-4 h-4 text-[#FF5A39]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -489,21 +479,19 @@ export default function StudentDetailPage() {
               {assessmentFileName ? (
                 <div>
                   <p className="text-sm font-medium text-neutral-700 truncate">{assessmentFileName}</p>
-                  {assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json") && (
-                    <p className="text-[11px] text-[#475093] mt-0.5">AI will extract assessment data from this file</p>
-                  )}
+                  <p className="text-[11px] text-[#475093] mt-0.5">AI will extract assessment data from this file</p>
                 </div>
               ) : (
                 <p className="text-sm text-neutral-400">
                   <span className="font-medium text-[#FF5A39]">Upload any report</span>
-                  <span className="text-neutral-400"> — PDF, image, DOCX, JSON, TXT</span>
+                  <span className="text-neutral-400"> — PDF, image, DOCX, or any file</span>
                 </p>
               )}
             </div>
             {assessmentFileName && (
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); setAssessmentFileName(null); setAssessmentFile(null); setAssessmentJson(""); }}
+                onClick={(e) => { e.preventDefault(); setAssessmentFileName(null); setAssessmentFile(null); setAssessmentText(""); }}
                 className="text-neutral-400 hover:text-neutral-600 flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,29 +507,27 @@ export default function StudentDetailPage() {
             />
           </label>
 
-          {/* JSON paste area — only shown when no non-JSON file is selected */}
-          {(!assessmentFile || assessmentFile.name.toLowerCase().endsWith(".json")) && (
+          {/* Plain text notes — hidden once a file is selected */}
+          {!assessmentFile && (
             <textarea
-              value={assessmentJson}
-              onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) { setAssessmentFileName(null); setAssessmentFile(null); } }}
-              placeholder={`Or paste JSON directly:\n{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { "phonological_awareness": { "severity": 4, "percentile": 12 }, ... },\n  "reading_metrics": { "words_per_minute": 65, "fixation_duration_ms": 280, ... }\n}`}
-              rows={6}
-              className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
+              value={assessmentText}
+              onChange={(e) => setAssessmentText(e.target.value)}
+              placeholder="Or type / paste any notes about the assessment here. Any format works — AI will extract the data. E.g., 'Student scored 25th percentile in phonological awareness, reads 65 WPM, fixation avg 300ms, moderate severity dyslexia, age 9...'"
+              rows={5}
+              className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm bg-neutral-50/50 resize-none placeholder:text-neutral-300"
             />
           )}
 
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleImportAssessment}
-              disabled={importing || (!assessmentFile && !assessmentJson.trim())}
+              disabled={importing || (!assessmentFile && !assessmentText.trim())}
               className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {importing
-                ? (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json") ? "Extracting with AI..." : "Importing...")
-                : student.assessment ? "Replace Assessment" : "Import Assessment"}
+              {importing ? "Extracting with AI..." : student.assessment ? "Replace Assessment" : "Import Assessment"}
             </button>
             <button
-              onClick={() => { setShowAssessment(false); setAssessmentJson(""); setAssessmentFile(null); setAssessmentFileName(null); }}
+              onClick={() => { setShowAssessment(false); setAssessmentText(""); setAssessmentFile(null); setAssessmentFileName(null); }}
               className="px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-xl hover:bg-neutral-200 transition-colors"
             >
               Cancel

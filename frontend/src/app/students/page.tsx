@@ -17,6 +17,7 @@ import { Map, Sparkles } from "lucide-react";
 
 const DEFAULT_DIAGNOSTIC: DiagnosticInfo = {
   dyslexia_type: "unspecified",
+  dyslexia_types: [],
   severity_level: "moderate",
   phonological_severity: 3,
   rapid_naming_severity: 3,
@@ -53,7 +54,7 @@ export default function StudentsPage() {
   const [interestInput, setInterestInput] = useState("");
   const [creating, setCreating] = useState(false);
   const [diagExpanded, setDiagExpanded] = useState(false);
-  const [assessmentJson, setAssessmentJson] = useState("");
+  const [assessmentText, setAssessmentText] = useState("");
   const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
   const [assessmentFileName, setAssessmentFileName] = useState<string | null>(null);
 
@@ -97,13 +98,14 @@ export default function StudentsPage() {
       // Optionally import the EyeRadar assessment right away
       if (result?.id) {
         try {
-          if (assessmentFile && !assessmentFile.name.toLowerCase().endsWith(".json")) {
-            // Non-JSON file → AI extraction endpoint
+          if (assessmentFile) {
+            // File selected → AI extraction endpoint
             await api.uploadAssessmentFile(result.id, assessmentFile);
-          } else if (assessmentJson.trim()) {
-            // JSON text (pasted or .json file)
-            const assessmentData = JSON.parse(assessmentJson);
-            await api.importAssessment(result.id, assessmentData);
+          } else if (assessmentText.trim()) {
+            // Plain text typed/pasted → wrap as a .txt file and send to AI
+            const blob = new Blob([assessmentText], { type: "text/plain" });
+            const textFile = new File([blob], "assessment_notes.txt", { type: "text/plain" });
+            await api.uploadAssessmentFile(result.id, textFile);
           }
         } catch (err) {
           console.warn("Assessment import failed — student was still created:", err);
@@ -134,7 +136,7 @@ export default function StudentsPage() {
       setStudentUsername("");
       setInterestInput("");
       setDiagExpanded(false);
-      setAssessmentJson("");
+      setAssessmentText("");
       setAssessmentFile(null);
       setAssessmentFileName(null);
       fetchStudents();
@@ -326,30 +328,59 @@ export default function StudentsPage() {
 
               {diagExpanded && (
                 <div className="p-4 space-y-5">
-                  {/* Dyslexia Type */}
+                  {/* Dyslexia Type — multi-select */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#303030] mb-2">Dyslexia Type</label>
+                    <label className="block text-xs font-semibold text-[#303030] mb-1">Dyslexia Type(s)</label>
+                    <p className="text-[11px] text-[#999] mb-2">Select all that apply — multiple selections set the primary type to &quot;Mixed&quot;</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {(Object.keys(DYSLEXIA_TYPE_LABELS) as DyslexiaType[]).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setDiag({ dyslexia_type: type })}
-                          className={`text-left p-3 rounded-xl border-2 transition-all ${
-                            diag.dyslexia_type === type
-                              ? "border-[#475093] bg-[#475093]/5"
-                              : "border-[#E3E3E3] hover:border-[#ABABAB]"
-                          }`}
-                        >
-                          <span className={`text-sm font-semibold ${diag.dyslexia_type === type ? "text-[#475093]" : "text-[#303030]"}`}>
-                            {DYSLEXIA_TYPE_LABELS[type]}
-                          </span>
-                          <p className="text-[11px] text-[#999] mt-0.5 leading-snug">
-                            {DYSLEXIA_TYPE_DESCRIPTIONS[type]}
-                          </p>
-                        </button>
-                      ))}
+                      {(Object.keys(DYSLEXIA_TYPE_LABELS) as DyslexiaType[]).filter((t) => t !== "unspecified").map((type) => {
+                        const selected = (diag.dyslexia_types || []).includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => {
+                              const current = diag.dyslexia_types || [];
+                              const updated = selected
+                                ? current.filter((t) => t !== type)
+                                : [...current, type];
+                              const primary =
+                                updated.length === 0 ? "unspecified"
+                                : updated.length === 1 ? updated[0]
+                                : "mixed";
+                              setDiag({ dyslexia_types: updated, dyslexia_type: primary });
+                            }}
+                            className={`text-left p-3 rounded-xl border-2 transition-all ${
+                              selected
+                                ? "border-[#475093] bg-[#475093]/5"
+                                : "border-[#E3E3E3] hover:border-[#ABABAB]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected ? "border-[#475093] bg-[#475093]" : "border-[#CDCDCD]"}`}>
+                                {selected && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className={`text-sm font-semibold ${selected ? "text-[#475093]" : "text-[#303030]"}`}>
+                                {DYSLEXIA_TYPE_LABELS[type]}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#999] leading-snug pl-6">
+                              {DYSLEXIA_TYPE_DESCRIPTIONS[type]}
+                            </p>
+                          </button>
+                        );
+                      })}
                     </div>
+                    {(diag.dyslexia_types || []).length > 0 && (
+                      <p className="text-[11px] text-[#475093] mt-2 font-medium">
+                        Primary type set to: <strong>{DYSLEXIA_TYPE_LABELS[diag.dyslexia_type]}</strong>
+                        {(diag.dyslexia_types || []).length > 1 && " (multiple selected)"}
+                      </p>
+                    )}
                   </div>
 
                   {/* Severity Level */}
@@ -497,25 +528,19 @@ export default function StudentsPage() {
                       if (!file) return;
                       setAssessmentFileName(file.name);
                       setAssessmentFile(file);
-                      if (file.name.toLowerCase().endsWith(".json")) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => setAssessmentJson(ev.target?.result as string);
-                        reader.readAsText(file);
-                      } else {
-                        setAssessmentJson("");
-                      }
+                      setAssessmentText("");
                       e.target.value = "";
                     }}
                   />
                 </label>
-                {/* JSON paste — hidden when a non-JSON file is selected */}
-                {(!assessmentFile || assessmentFile.name.toLowerCase().endsWith(".json")) && (
+                {/* Plain text notes — hidden once a file is selected */}
+                {!assessmentFile && (
                   <textarea
-                    value={assessmentJson}
-                    onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) { setAssessmentFileName(null); setAssessmentFile(null); } }}
-                    placeholder={`Or paste JSON directly (optional):\n{\n  "assessment_date": "...",\n  "overall_severity": 3,\n  "deficits": { ... },\n  "reading_metrics": { ... }\n}`}
+                    value={assessmentText}
+                    onChange={(e) => setAssessmentText(e.target.value)}
+                    placeholder="Or type / paste any notes about the assessment here. Any format works — AI will extract the data. E.g., 'Student scored 25th percentile in phonological awareness, reads 65 WPM, moderate severity dyslexia...'"
                     rows={4}
-                    className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-xs font-mono bg-[#F8F8F8] placeholder:text-[#ABABAB] resize-none"
+                    className="w-full px-3 py-2.5 border border-[#E3E3E3] rounded-xl text-sm bg-[#F8F8F8] placeholder:text-[#ABABAB] resize-none"
                   />
                 )}
               </div>

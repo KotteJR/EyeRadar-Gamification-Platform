@@ -156,12 +156,22 @@ async def suggest_adventure_map(data: AdventureSuggestRequest):
             "GPT-4o unavailable for student %s — using template-based selection",
             data.student_id,
         )
-        suggestion = suggest_adventure(
-            student=student,
-            dyslexia_type_override=data.dyslexia_type,
-            severity_override=data.severity_level,
-            age_override=data.age,
-        )
+        try:
+            suggestion = suggest_adventure(
+                student=student,
+                dyslexia_type_override=data.dyslexia_type,
+                severity_override=data.severity_level,
+                age_override=data.age,
+            )
+        except Exception as exc:
+            logger.error(
+                "Template adventure suggestion failed for student %s: %s",
+                data.student_id, exc,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Adventure suggestion failed: {exc}",
+            )
 
     return AdventureSuggestResponse(
         suggested_worlds=suggestion["suggested_worlds"],
