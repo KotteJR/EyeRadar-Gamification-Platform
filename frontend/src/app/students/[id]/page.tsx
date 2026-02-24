@@ -50,6 +50,7 @@ export default function StudentDetailPage() {
   const [showAssessment, setShowAssessment] = useState(false);
   const [assessmentJson, setAssessmentJson] = useState("");
   const [importing, setImporting] = useState(false);
+  const [assessmentFileName, setAssessmentFileName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "sessions" | "adventure">(initialTab || "overview");
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
@@ -109,11 +110,26 @@ export default function StudentDetailPage() {
       setStudent(updated);
       setShowAssessment(false);
       setAssessmentJson("");
+      setAssessmentFileName(null);
     } catch {
       alert("Invalid JSON. Please check the format.");
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleAssessmentFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAssessmentFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setAssessmentJson(text);
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-selected
+    e.target.value = "";
   };
 
   // ─── Adventure Builder Handlers ─────────────────────────────────────
@@ -428,29 +444,73 @@ export default function StudentDetailPage() {
       {/* Assessment Import */}
       {showAssessment && (
         <div className="bg-cream rounded-2xl p-6 mb-6">
-          <h2 className="text-sm font-semibold text-neutral-900 mb-3">
-            Import EyeRadar Assessment
-          </h2>
-          <p className="text-xs text-neutral-400 mb-3">
-            Paste the JSON assessment data from EyeRadar:
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {student.assessment ? "Replace EyeRadar Assessment" : "Import EyeRadar Assessment"}
+              </h2>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Upload a .json file exported from EyeRadar, or paste the JSON directly.
+                {student.assessment && (
+                  <span className="ml-1 text-amber-600 font-medium">This will replace the existing assessment.</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* File upload area */}
+          <label className="flex items-center gap-3 w-full cursor-pointer border-2 border-dashed border-neutral-200 rounded-xl px-4 py-3 mb-3 hover:border-[#FF5A39]/50 hover:bg-neutral-50 transition-colors group">
+            <div className="w-8 h-8 rounded-lg bg-[#FF5A39]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#FF5A39]/15">
+              <svg className="w-4 h-4 text-[#FF5A39]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              {assessmentFileName ? (
+                <p className="text-sm font-medium text-neutral-700 truncate">{assessmentFileName}</p>
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  <span className="font-medium text-[#FF5A39]">Upload .json file</span> — or paste below
+                </p>
+              )}
+            </div>
+            {assessmentFileName && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setAssessmentFileName(null); setAssessmentJson(""); }}
+                className="text-neutral-400 hover:text-neutral-600 flex-shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleAssessmentFileUpload}
+              className="sr-only"
+            />
+          </label>
+
           <textarea
             value={assessmentJson}
-            onChange={(e) => setAssessmentJson(e.target.value)}
-            placeholder={`{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { ... },\n  "reading_metrics": { ... }\n}`}
-            rows={8}
-            className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-sm font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
+            onChange={(e) => { setAssessmentJson(e.target.value); if (!e.target.value) setAssessmentFileName(null); }}
+            placeholder={`{\n  "assessment_date": "2026-02-12T10:00:00Z",\n  "overall_severity": 3,\n  "deficits": { "phonological_awareness": { "severity": 4, "percentile": 12 }, ... },\n  "reading_metrics": { "words_per_minute": 65, "fixation_duration_ms": 280, ... }\n}`}
+            rows={7}
+            className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl text-xs font-mono bg-neutral-50/50 resize-none placeholder:text-neutral-300"
           />
+
           <div className="flex gap-3 mt-3">
             <button
               onClick={handleImportAssessment}
               disabled={importing || !assessmentJson.trim()}
               className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {importing ? "Importing..." : "Import"}
+              {importing ? "Importing..." : student.assessment ? "Replace Assessment" : "Import Assessment"}
             </button>
             <button
-              onClick={() => setShowAssessment(false)}
+              onClick={() => { setShowAssessment(false); setAssessmentJson(""); setAssessmentFileName(null); }}
               className="px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-xl hover:bg-neutral-200 transition-colors"
             >
               Cancel

@@ -7,9 +7,12 @@ Manages per-student personalized adventure maps:
 - Available games listing for the adventure builder
 """
 
+import logging
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from app.models import (
     AdventureMap,
@@ -30,6 +33,7 @@ from app.database import (
 )
 from app.services.adventure_builder import (
     suggest_adventure,
+    suggest_adventure_ai,
     get_available_games_for_area,
 )
 
@@ -131,17 +135,33 @@ async def delete_adventure(adventure_id: str):
 
 @router.post("/suggest", response_model=AdventureSuggestResponse)
 async def suggest_adventure_map(data: AdventureSuggestRequest):
-    """AI-assisted adventure suggestion based on student diagnostic profile."""
+    """
+    Generate a personalized adventure map for a student.
+    Uses GPT-4o when OPENAI_API_KEY is set, falls back to template-based selection.
+    """
     student = await get_student(data.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    suggestion = suggest_adventure(
+    # Try GPT-4o first
+    suggestion = await suggest_adventure_ai(
         student=student,
         dyslexia_type_override=data.dyslexia_type,
         severity_override=data.severity_level,
         age_override=data.age,
     )
+
+    if suggestion is None:
+        logger.info(
+            "GPT-4o unavailable for student %s — using template-based selection",
+            data.student_id,
+        )
+        suggestion = suggest_adventure(
+            student=student,
+            dyslexia_type_override=data.dyslexia_type,
+            severity_override=data.severity_level,
+            age_override=data.age,
+        )
 
     return AdventureSuggestResponse(
         suggested_worlds=suggestion["suggested_worlds"],
