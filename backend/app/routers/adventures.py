@@ -10,7 +10,8 @@ Manages per-student personalized adventure maps:
 import logging
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -36,20 +37,52 @@ from app.services.adventure_builder import (
     suggest_adventure_ai,
     get_available_games_for_area,
 )
+from app.games.game_definitions import get_all_games
+from app.auth import verify_token, require_role, verify_student_access
 
 router = APIRouter()
 
 
+def _normalize_worlds_input(worlds: list) -> list:
+    """Keep only worlds with valid, unique game IDs and reindex world numbers."""
+    valid_game_ids = {g.id for g in get_all_games()}
+    disallowed_game_ids = {"castle_challenge", "dungeon_forest", "dungeon_beach", "dungeon_3stage"}
+    normalized = []
+    for idx, world in enumerate(worlds):
+        # Accept both pydantic model and dict-like values
+        raw = world.model_dump() if hasattr(world, "model_dump") else dict(world)
+        unique_ids = []
+        seen = set()
+        for gid in raw.get("game_ids", []) or []:
+            if gid in disallowed_game_ids:
+                continue
+            if gid in valid_game_ids and gid not in seen:
+                unique_ids.append(gid)
+                seen.add(gid)
+        if not unique_ids:
+            continue
+        raw["game_ids"] = unique_ids
+        raw["world_number"] = len(normalized) + 1
+        normalized.append(raw)
+    return normalized
+
+
 @router.get("/status/all")
-async def get_all_adventure_status():
-    """Get adventure status for all students (batch). Returns {student_id: {has_adventure, world_count, title}}."""
+async def get_all_adventure_status(
+    _claims: Dict[str, Any] = Depends(require_role("teacher")),
+):
+    """Get adventure status for all students (batch). Teacher-only."""
     statuses = await get_all_adventure_statuses()
     return statuses
 
 
 @router.post("", response_model=AdventureMap)
-async def create_adventure(data: AdventureMapCreate):
+async def create_adventure(
+    data: AdventureMapCreate,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Create a new adventure map for a student."""
+    await verify_student_access(_claims, data.student_id)
     student = await get_student(data.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -61,12 +94,15 @@ async def create_adventure(data: AdventureMapCreate):
             await update_adventure_map(adv["id"], {"status": "archived"})
 
     now = datetime.utcnow().isoformat()
+    normalized_worlds = _normalize_worlds_input(data.worlds)
+    if not normalized_worlds:
+        raise HTTPException(status_code=400, detail="Adventure must include at least one world with selected games")
     adventure_data = {
         "id": str(uuid.uuid4()),
         "student_id": data.student_id,
         "created_by": data.created_by,
         "title": data.title,
-        "worlds": [w.model_dump() for w in data.worlds],
+        "worlds": normalized_worlds,
         "theme_config": data.theme_config.model_dump(),
         "status": "active",
         "created_at": now,
@@ -78,8 +114,12 @@ async def create_adventure(data: AdventureMapCreate):
 
 
 @router.get("/student/{student_id}", response_model=AdventureMap | None)
-async def get_student_active_adventure(student_id: str):
+async def get_student_active_adventure(
+    student_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get the active adventure map for a student."""
+    await verify_student_access(_claims, student_id)
     result = await get_student_adventure(student_id)
     if not result:
         return None
@@ -87,33 +127,49 @@ async def get_student_active_adventure(student_id: str):
 
 
 @router.get("/student/{student_id}/all", response_model=list[AdventureMap])
-async def get_all_student_adventures(student_id: str):
+async def get_all_student_adventures(
+    student_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get all adventure maps for a student (including archived)."""
+    await verify_student_access(_claims, student_id)
     results = await get_student_adventures(student_id)
     return [_to_response(r) for r in results]
 
 
 @router.get("/{adventure_id}", response_model=AdventureMap)
-async def get_adventure(adventure_id: str):
+async def get_adventure(
+    adventure_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get an adventure map by ID."""
     result = await get_adventure_map(adventure_id)
     if not result:
         raise HTTPException(status_code=404, detail="Adventure not found")
+    await verify_student_access(_claims, result["student_id"])
     return _to_response(result)
 
 
 @router.put("/{adventure_id}", response_model=AdventureMap)
-async def update_adventure(adventure_id: str, data: AdventureMapUpdate):
+async def update_adventure(
+    adventure_id: str,
+    data: AdventureMapUpdate,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Update an adventure map."""
     existing = await get_adventure_map(adventure_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Adventure not found")
+    await verify_student_access(_claims, existing["student_id"])
 
     update_data = {}
     if data.title is not None:
         update_data["title"] = data.title
     if data.worlds is not None:
-        update_data["worlds"] = [w.model_dump() for w in data.worlds]
+        normalized_worlds = _normalize_worlds_input(data.worlds)
+        if not normalized_worlds:
+            raise HTTPException(status_code=400, detail="Adventure must include at least one world with selected games")
+        update_data["worlds"] = normalized_worlds
     if data.theme_config is not None:
         update_data["theme_config"] = data.theme_config.model_dump()
     if data.status is not None:
@@ -125,20 +181,29 @@ async def update_adventure(adventure_id: str, data: AdventureMapUpdate):
 
 
 @router.delete("/{adventure_id}")
-async def delete_adventure(adventure_id: str):
+async def delete_adventure(
+    adventure_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Delete an adventure map."""
-    deleted = await delete_adventure_map(adventure_id)
-    if not deleted:
+    existing = await get_adventure_map(adventure_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="Adventure not found")
+    await verify_student_access(_claims, existing["student_id"])
+    await delete_adventure_map(adventure_id)
     return {"message": "Adventure deleted"}
 
 
 @router.post("/suggest", response_model=AdventureSuggestResponse)
-async def suggest_adventure_map(data: AdventureSuggestRequest):
+async def suggest_adventure_map(
+    data: AdventureSuggestRequest,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """
     Generate a personalized adventure map for a student.
     Uses GPT-4o when OPENAI_API_KEY is set, falls back to template-based selection.
     """
+    await verify_student_access(_claims, data.student_id)
     student = await get_student(data.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -170,7 +235,7 @@ async def suggest_adventure_map(data: AdventureSuggestRequest):
             )
             raise HTTPException(
                 status_code=500,
-                detail=f"Adventure suggestion failed: {exc}",
+                detail="Adventure suggestion failed",
             )
 
     return AdventureSuggestResponse(

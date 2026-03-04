@@ -15,16 +15,33 @@ Version: 1.2.0
 
 import logging
 import os
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
 from app.database import init_db, close_db
-from app.routers import students, exercises, games, gamification, analytics, adventures, tts
+from app.routers import (
+    account,
+    adventures,
+    analytics,
+    auth_public,
+    billing,
+    exercises,
+    games,
+    gamification,
+    students,
+    tts,
+)
 from app.services.ollama_client import check_ollama
 
-logging.basicConfig(level=logging.INFO)
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, _log_level, logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -86,14 +103,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration
+# CORS configuration — restrict to known frontend origins in production
+_cors_origins_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_cors_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    if request.url.path not in ("/health", "/"):
+        logger.info(
+            "%s %s %d %.0fms",
+            request.method, request.url.path, response.status_code, elapsed_ms,
+        )
+    return response
+
 
 # Include routers
 app.include_router(students.router, prefix="/api/v1/students", tags=["Students"])
@@ -107,6 +139,9 @@ app.include_router(
     adventures.router, prefix="/api/v1/adventures", tags=["Adventures"]
 )
 app.include_router(tts.router, prefix="/api/v1/tts", tags=["TTS"])
+app.include_router(account.router, prefix="/api/v1/account", tags=["Account"])
+app.include_router(billing.router, prefix="/api/v1/billing", tags=["Billing"])
+app.include_router(auth_public.router, prefix="/api/v1/auth", tags=["Auth"])
 
 
 @app.get("/")

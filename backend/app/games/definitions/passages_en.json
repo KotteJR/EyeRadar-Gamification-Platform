@@ -1,0 +1,3535 @@
+{
+  "STORY_PASSAGES": {
+    "easy": [
+      {
+        "text": "Lena packed a small blue bag for school. She put in a notebook, a pencil, and an apple. At lunch, she shared the apple with her friend Mia.",
+        "questions": [
+          {
+            "q": "What color was Lena's bag?",
+            "options": [
+              "Red",
+              "Blue",
+              "Green",
+              "Black"
+            ],
+            "answer": "Blue"
+          },
+          {
+            "q": "What did Lena share at lunch?",
+            "options": [
+              "A sandwich",
+              "An apple",
+              "A cookie",
+              "A juice"
+            ],
+            "answer": "An apple"
+          },
+          {
+            "q": "Who did Lena share with?",
+            "options": [
+              "Her brother",
+              "Her teacher",
+              "Her friend Mia",
+              "Her dad"
+            ],
+            "answer": "Her friend Mia"
+          }
+        ]
+      },
+      {
+        "text": "Noah planted three seeds in the garden. He watered them every morning. After two weeks, tiny green sprouts appeared.",
+        "questions": [
+          {
+            "q": "How many seeds did Noah plant?",
+            "options": [
+              "One",
+              "Two",
+              "Three",
+              "Four"
+            ],
+            "answer": "Three"
+          },
+          {
+            "q": "When did Noah water the seeds?",
+            "options": [
+              "At night",
+              "Every morning",
+              "Only once",
+              "On weekends"
+            ],
+            "answer": "Every morning"
+          },
+          {
+            "q": "What appeared after two weeks?",
+            "options": [
+              "Flowers",
+              "Birds",
+              "Green sprouts",
+              "Big trees"
+            ],
+            "answer": "Green sprouts"
+          }
+        ]
+      },
+      {
+        "text": "A small turtle crossed the path after the rain. Ava waited quietly until it reached the grass. Then she continued her walk.",
+        "questions": [
+          {
+            "q": "What animal crossed the path?",
+            "options": [
+              "A rabbit",
+              "A turtle",
+              "A cat",
+              "A duck"
+            ],
+            "answer": "A turtle"
+          },
+          {
+            "q": "What did Ava do?",
+            "options": [
+              "She ran away",
+              "She picked it up",
+              "She waited quietly",
+              "She shouted"
+            ],
+            "answer": "She waited quietly"
+          },
+          {
+            "q": "Where did the turtle go?",
+            "options": [
+              "Into a house",
+              "To the grass",
+              "Into a river",
+              "Up a tree"
+            ],
+            "answer": "To the grass"
+          }
+        ]
+      },
+      {
+        "text": "The class built paper kites in art time. Ben chose yellow paper and long green ribbon tails. Outside, his kite flew the highest.",
+        "questions": [
+          {
+            "q": "What did the class build?",
+            "options": [
+              "Boats",
+              "Kites",
+              "Robots",
+              "Masks"
+            ],
+            "answer": "Kites"
+          },
+          {
+            "q": "What color paper did Ben choose?",
+            "options": [
+              "Yellow",
+              "Blue",
+              "Purple",
+              "Orange"
+            ],
+            "answer": "Yellow"
+          },
+          {
+            "q": "Whose kite flew highest?",
+            "options": [
+              "Mia's",
+              "The teacher's",
+              "Ben's",
+              "Tom's"
+            ],
+            "answer": "Ben's"
+          }
+        ]
+      },
+      {
+        "text": "Grandpa told a story by the fireplace. The dog curled at his feet while rain tapped the windows. Everyone listened until the very end.",
+        "questions": [
+          {
+            "q": "Where did Grandpa tell the story?",
+            "options": [
+              "In the garden",
+              "By the fireplace",
+              "In the car",
+              "At school"
+            ],
+            "answer": "By the fireplace"
+          },
+          {
+            "q": "Where was the dog?",
+            "options": [
+              "Outside",
+              "At his feet",
+              "On the table",
+              "In the kitchen"
+            ],
+            "answer": "At his feet"
+          },
+          {
+            "q": "What was tapping the windows?",
+            "options": [
+              "Birds",
+              "Rain",
+              "Leaves",
+              "Snow"
+            ],
+            "answer": "Rain"
+          }
+        ]
+      },
+      {
+        "text": "Milo borrowed a library book about planets. He learned that Mars is called the red planet. At home, he drew Mars in his notebook.",
+        "questions": [
+          {
+            "q": "What kind of book did Milo borrow?",
+            "options": [
+              "About pirates",
+              "About planets",
+              "About cooking",
+              "About trains"
+            ],
+            "answer": "About planets"
+          },
+          {
+            "q": "Which planet is called the red planet?",
+            "options": [
+              "Earth",
+              "Venus",
+              "Mars",
+              "Jupiter"
+            ],
+            "answer": "Mars"
+          },
+          {
+            "q": "What did Milo draw at home?",
+            "options": [
+              "A rocket",
+              "Mars",
+              "The moon",
+              "A spaceship"
+            ],
+            "answer": "Mars"
+          }
+        ]
+      },
+      {
+        "text": "At the beach, Sofia collected smooth shells in a bucket. She found one shell with pink stripes and showed it to her brother.",
+        "questions": [
+          {
+            "q": "Where was Sofia?",
+            "options": [
+              "At the park",
+              "At the beach",
+              "At school",
+              "At home"
+            ],
+            "answer": "At the beach"
+          },
+          {
+            "q": "What did she collect?",
+            "options": [
+              "Stones",
+              "Leaves",
+              "Shells",
+              "Coins"
+            ],
+            "answer": "Shells"
+          },
+          {
+            "q": "What was special about one shell?",
+            "options": [
+              "It was broken",
+              "It had pink stripes",
+              "It was very big",
+              "It was blue"
+            ],
+            "answer": "It had pink stripes"
+          }
+        ]
+      },
+      {
+        "text": "Ethan fed the chickens before breakfast. One chicken escaped and hid behind the water barrel. Ethan gently guided it back.",
+        "questions": [
+          {
+            "q": "When did Ethan feed the chickens?",
+            "options": [
+              "After school",
+              "Before breakfast",
+              "At noon",
+              "At night"
+            ],
+            "answer": "Before breakfast"
+          },
+          {
+            "q": "Where did the chicken hide?",
+            "options": [
+              "Under the table",
+              "Behind the water barrel",
+              "In the tree",
+              "In the barn"
+            ],
+            "answer": "Behind the water barrel"
+          },
+          {
+            "q": "How did Ethan bring it back?",
+            "options": [
+              "He shouted",
+              "He chased it fast",
+              "He gently guided it",
+              "He asked his sister"
+            ],
+            "answer": "He gently guided it"
+          }
+        ]
+      },
+      {
+        "text": "The bus arrived early because traffic was light. Nora used the extra time to review spelling words with her friend.",
+        "questions": [
+          {
+            "q": "Why did the bus arrive early?",
+            "options": [
+              "It was late",
+              "Traffic was light",
+              "It skipped stops",
+              "It was a holiday"
+            ],
+            "answer": "Traffic was light"
+          },
+          {
+            "q": "What did Nora review?",
+            "options": [
+              "Math facts",
+              "Spelling words",
+              "Science notes",
+              "A poem"
+            ],
+            "answer": "Spelling words"
+          },
+          {
+            "q": "Who did Nora study with?",
+            "options": [
+              "Her teacher",
+              "Her friend",
+              "Her brother",
+              "No one"
+            ],
+            "answer": "Her friend"
+          }
+        ]
+      },
+      {
+        "text": "During music class, Leo tapped a steady beat on a drum. The class clapped in time and sang together.",
+        "questions": [
+          {
+            "q": "What did Leo play?",
+            "options": [
+              "A flute",
+              "A drum",
+              "A piano",
+              "A guitar"
+            ],
+            "answer": "A drum"
+          },
+          {
+            "q": "How did the class clap?",
+            "options": [
+              "Randomly",
+              "In time",
+              "Very softly",
+              "Only once"
+            ],
+            "answer": "In time"
+          },
+          {
+            "q": "What else did the class do?",
+            "options": [
+              "They painted",
+              "They sang",
+              "They danced outside",
+              "They read"
+            ],
+            "answer": "They sang"
+          }
+        ]
+      },
+      {
+        "text": "Ava visited the park after class. They carried a bucket and saw a fox near the gate. Later, Ava ate bread before going home.",
+        "questions": [
+          {
+            "q": "Where did Ava go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the park"
+          },
+          {
+            "q": "What animal did Ava see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a fox"
+          },
+          {
+            "q": "What did Ava eat later?",
+            "options": [
+              "bread",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "bread"
+          }
+        ]
+      },
+      {
+        "text": "Ethan visited the library after class. They carried a camera and saw a rabbit near the gate. Later, Ethan ate cookie before going home.",
+        "questions": [
+          {
+            "q": "Where did Ethan go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the library"
+          },
+          {
+            "q": "What animal did Ethan see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a rabbit"
+          },
+          {
+            "q": "What did Ethan eat later?",
+            "options": [
+              "cookie",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "cookie"
+          }
+        ]
+      },
+      {
+        "text": "Kai visited the park after class. They carried a backpack and saw a rabbit near the gate. Later, Kai ate bread before going home.",
+        "questions": [
+          {
+            "q": "Where did Kai go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the park"
+          },
+          {
+            "q": "What animal did Kai see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a rabbit"
+          },
+          {
+            "q": "What did Kai eat later?",
+            "options": [
+              "bread",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "bread"
+          }
+        ]
+      },
+      {
+        "text": "Emma visited the riverbank after class. They carried a helmet and saw a turtle near the gate. Later, Emma ate rice before going home.",
+        "questions": [
+          {
+            "q": "Where did Emma go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Emma see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a turtle"
+          },
+          {
+            "q": "What did Emma eat later?",
+            "options": [
+              "rice",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "rice"
+          }
+        ]
+      },
+      {
+        "text": "Lucas visited the riverbank after class. They carried a kite and saw a fox near the gate. Later, Lucas ate salad before going home.",
+        "questions": [
+          {
+            "q": "Where did Lucas go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Lucas see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a fox"
+          },
+          {
+            "q": "What did Lucas eat later?",
+            "options": [
+              "salad",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "salad"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the park after class. They carried a lantern and saw a otter near the gate. Later, Milo ate yogurt before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the park"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a otter"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "yogurt",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "yogurt"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the garden after class. They carried a compass and saw a duck near the gate. Later, Milo ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the garden"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a duck"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      },
+      {
+        "text": "Noah visited the school after class. They carried a notebook and saw a duck near the gate. Later, Noah ate yogurt before going home.",
+        "questions": [
+          {
+            "q": "Where did Noah go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the school"
+          },
+          {
+            "q": "What animal did Noah see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a duck"
+          },
+          {
+            "q": "What did Noah eat later?",
+            "options": [
+              "yogurt",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "yogurt"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the park after class. They carried a map and saw a cat near the gate. Later, Milo ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the park"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a cat"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      },
+      {
+        "text": "Zoe visited the library after class. They carried a camera and saw a goat near the gate. Later, Zoe ate cookie before going home.",
+        "questions": [
+          {
+            "q": "Where did Zoe go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the library"
+          },
+          {
+            "q": "What animal did Zoe see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a goat"
+          },
+          {
+            "q": "What did Zoe eat later?",
+            "options": [
+              "cookie",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "cookie"
+          }
+        ]
+      },
+      {
+        "text": "Iris visited the playground after class. They carried a compass and saw a rabbit near the gate. Later, Iris ate apple before going home.",
+        "questions": [
+          {
+            "q": "Where did Iris go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the playground"
+          },
+          {
+            "q": "What animal did Iris see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a rabbit"
+          },
+          {
+            "q": "What did Iris eat later?",
+            "options": [
+              "apple",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "apple"
+          }
+        ]
+      },
+      {
+        "text": "Emma visited the museum after class. They carried a notebook and saw a fox near the gate. Later, Emma ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Emma go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the museum"
+          },
+          {
+            "q": "What animal did Emma see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a fox"
+          },
+          {
+            "q": "What did Emma eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      },
+      {
+        "text": "Zoe visited the museum after class. They carried a map and saw a duck near the gate. Later, Zoe ate soup before going home.",
+        "questions": [
+          {
+            "q": "Where did Zoe go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the museum"
+          },
+          {
+            "q": "What animal did Zoe see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a duck"
+          },
+          {
+            "q": "What did Zoe eat later?",
+            "options": [
+              "soup",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "soup"
+          }
+        ]
+      },
+      {
+        "text": "Iris visited the beach after class. They carried a compass and saw a goat near the gate. Later, Iris ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Iris go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the beach"
+          },
+          {
+            "q": "What animal did Iris see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a goat"
+          },
+          {
+            "q": "What did Iris eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      },
+      {
+        "text": "Sofia visited the riverbank after class. They carried a compass and saw a sparrow near the gate. Later, Sofia ate salad before going home.",
+        "questions": [
+          {
+            "q": "Where did Sofia go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Sofia see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a sparrow"
+          },
+          {
+            "q": "What did Sofia eat later?",
+            "options": [
+              "salad",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "salad"
+          }
+        ]
+      },
+      {
+        "text": "Zoe visited the museum after class. They carried a camera and saw a fox near the gate. Later, Zoe ate yogurt before going home.",
+        "questions": [
+          {
+            "q": "Where did Zoe go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the museum"
+          },
+          {
+            "q": "What animal did Zoe see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a fox"
+          },
+          {
+            "q": "What did Zoe eat later?",
+            "options": [
+              "yogurt",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "yogurt"
+          }
+        ]
+      },
+      {
+        "text": "Maya visited the market after class. They carried a backpack and saw a duck near the gate. Later, Maya ate pasta before going home.",
+        "questions": [
+          {
+            "q": "Where did Maya go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the market"
+          },
+          {
+            "q": "What animal did Maya see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a duck"
+          },
+          {
+            "q": "What did Maya eat later?",
+            "options": [
+              "pasta",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "pasta"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the library after class. They carried a compass and saw a dog near the gate. Later, Milo ate yogurt before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the library"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a dog"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "yogurt",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "yogurt"
+          }
+        ]
+      },
+      {
+        "text": "Lucas visited the farm after class. They carried a kite and saw a owl near the gate. Later, Lucas ate soup before going home.",
+        "questions": [
+          {
+            "q": "Where did Lucas go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the farm"
+          },
+          {
+            "q": "What animal did Lucas see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a owl"
+          },
+          {
+            "q": "What did Lucas eat later?",
+            "options": [
+              "soup",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "soup"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the garden after class. They carried a compass and saw a cat near the gate. Later, Milo ate rice before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the garden"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a cat"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "rice",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "rice"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the playground after class. They carried a kite and saw a dog near the gate. Later, Milo ate pasta before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the playground"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a dog"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "pasta",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "pasta"
+          }
+        ]
+      },
+      {
+        "text": "Iris visited the market after class. They carried a lantern and saw a cat near the gate. Later, Iris ate salad before going home.",
+        "questions": [
+          {
+            "q": "Where did Iris go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the market"
+          },
+          {
+            "q": "What animal did Iris see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a cat"
+          },
+          {
+            "q": "What did Iris eat later?",
+            "options": [
+              "salad",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "salad"
+          }
+        ]
+      },
+      {
+        "text": "Noah visited the park after class. They carried a notebook and saw a sparrow near the gate. Later, Noah ate soup before going home.",
+        "questions": [
+          {
+            "q": "Where did Noah go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the park"
+          },
+          {
+            "q": "What animal did Noah see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a sparrow"
+          },
+          {
+            "q": "What did Noah eat later?",
+            "options": [
+              "soup",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "soup"
+          }
+        ]
+      },
+      {
+        "text": "Kai visited the playground after class. They carried a notebook and saw a otter near the gate. Later, Kai ate pasta before going home.",
+        "questions": [
+          {
+            "q": "Where did Kai go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the playground"
+          },
+          {
+            "q": "What animal did Kai see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a otter"
+          },
+          {
+            "q": "What did Kai eat later?",
+            "options": [
+              "pasta",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "pasta"
+          }
+        ]
+      },
+      {
+        "text": "Aria visited the riverbank after class. They carried a bucket and saw a cat near the gate. Later, Aria ate apple before going home.",
+        "questions": [
+          {
+            "q": "Where did Aria go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Aria see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a cat"
+          },
+          {
+            "q": "What did Aria eat later?",
+            "options": [
+              "apple",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "apple"
+          }
+        ]
+      },
+      {
+        "text": "Ava visited the riverbank after class. They carried a bucket and saw a duck near the gate. Later, Ava ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Ava go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Ava see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a duck"
+          },
+          {
+            "q": "What did Ava eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      },
+      {
+        "text": "Nora visited the school after class. They carried a lantern and saw a owl near the gate. Later, Nora ate apple before going home.",
+        "questions": [
+          {
+            "q": "Where did Nora go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the school"
+          },
+          {
+            "q": "What animal did Nora see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a owl"
+          },
+          {
+            "q": "What did Nora eat later?",
+            "options": [
+              "apple",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "apple"
+          }
+        ]
+      },
+      {
+        "text": "Milo visited the riverbank after class. They carried a lantern and saw a cat near the gate. Later, Milo ate sandwich before going home.",
+        "questions": [
+          {
+            "q": "Where did Milo go?",
+            "options": [
+              "the hospital",
+              "the {place}",
+              "the airport",
+              "the mountain"
+            ],
+            "answer": "the riverbank"
+          },
+          {
+            "q": "What animal did Milo see?",
+            "options": [
+              "a {animal}",
+              "a horse",
+              "a shark",
+              "a lizard"
+            ],
+            "answer": "a cat"
+          },
+          {
+            "q": "What did Milo eat later?",
+            "options": [
+              "sandwich",
+              "water",
+              "nothing",
+              "tea"
+            ],
+            "answer": "sandwich"
+          }
+        ]
+      }
+    ],
+    "medium": [
+      {
+        "text": "Maya loved rainy days. She would put on her yellow boots and splash in every puddle she could find. Her mother always had hot chocolate ready when she came inside. It was their special tradition.",
+        "questions": [
+          {
+            "q": "What did Maya do on rainy days?",
+            "options": [
+              "Read books",
+              "Splashed in puddles",
+              "Watched TV",
+              "Drew pictures"
+            ],
+            "answer": "Splashed in puddles"
+          },
+          {
+            "q": "What color were Maya's boots?",
+            "options": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green"
+            ],
+            "answer": "Yellow"
+          },
+          {
+            "q": "What did Maya's mother have ready?",
+            "options": [
+              "Tea",
+              "Cookies",
+              "Hot chocolate",
+              "Soup"
+            ],
+            "answer": "Hot chocolate"
+          }
+        ]
+      },
+      {
+        "text": "The old lighthouse keeper climbed the stairs every evening to light the great lamp. Ships far out at sea depended on that light to find their way safely to the harbor. He never missed a single night in forty years.",
+        "questions": [
+          {
+            "q": "What did the keeper do every evening?",
+            "options": [
+              "Read a book",
+              "Light the lamp",
+              "Cook dinner",
+              "Go fishing"
+            ],
+            "answer": "Light the lamp"
+          },
+          {
+            "q": "Who depended on the light?",
+            "options": [
+              "Birds",
+              "Ships at sea",
+              "Airplanes",
+              "Trains"
+            ],
+            "answer": "Ships at sea"
+          },
+          {
+            "q": "How long did he keep the light burning?",
+            "options": [
+              "Ten years",
+              "Twenty years",
+              "Forty years",
+              "One year"
+            ],
+            "answer": "Forty years"
+          }
+        ]
+      },
+      {
+        "text": "When the power went out during dinner, the family lit candles and continued talking. Without phones or television, they noticed how much they enjoyed the quiet evening together.",
+        "questions": [
+          {
+            "q": "What happened during dinner?",
+            "options": [
+              "A guest arrived",
+              "The power went out",
+              "The dog barked",
+              "It started snowing"
+            ],
+            "answer": "The power went out"
+          },
+          {
+            "q": "What did the family use for light?",
+            "options": [
+              "Flashlights only",
+              "Candles",
+              "A fireplace",
+              "Streetlights"
+            ],
+            "answer": "Candles"
+          },
+          {
+            "q": "What did they realize?",
+            "options": [
+              "Dinner was too short",
+              "They enjoyed the quiet evening",
+              "They missed dessert",
+              "They needed more chairs"
+            ],
+            "answer": "They enjoyed the quiet evening"
+          }
+        ]
+      },
+      {
+        "text": "A community team cleaned the riverbank on Saturday morning. They sorted plastic, glass, and paper into separate bags. By noon, the path looked clear and safe again.",
+        "questions": [
+          {
+            "q": "What did the team clean?",
+            "options": [
+              "A playground",
+              "A riverbank",
+              "A library",
+              "A school bus"
+            ],
+            "answer": "A riverbank"
+          },
+          {
+            "q": "How did they organize the trash?",
+            "options": [
+              "By color",
+              "By size",
+              "By material",
+              "They did not sort"
+            ],
+            "answer": "By material"
+          },
+          {
+            "q": "What changed by noon?",
+            "options": [
+              "It started raining",
+              "The path looked clear and safe",
+              "More trash appeared",
+              "The event was canceled"
+            ],
+            "answer": "The path looked clear and safe"
+          }
+        ]
+      },
+      {
+        "text": "Iris practiced free throws every afternoon for two weeks. At first she missed most shots, but she adjusted her stance and focus. In the next game, she scored the winning basket.",
+        "questions": [
+          {
+            "q": "What skill did Iris practice?",
+            "options": [
+              "Swimming",
+              "Free throws",
+              "Piano",
+              "Spelling"
+            ],
+            "answer": "Free throws"
+          },
+          {
+            "q": "What did Iris change while practicing?",
+            "options": [
+              "Her shoes",
+              "Her stance and focus",
+              "Her team",
+              "Her schedule"
+            ],
+            "answer": "Her stance and focus"
+          },
+          {
+            "q": "What happened in the next game?",
+            "options": [
+              "She stayed on the bench",
+              "She scored the winning basket",
+              "She forgot to play",
+              "The game was canceled"
+            ],
+            "answer": "She scored the winning basket"
+          }
+        ]
+      },
+      {
+        "text": "The science club built a small weather station on the school roof. They recorded wind speed, rainfall, and temperature each day. After a month, they found that rainy days were usually cooler.",
+        "questions": [
+          {
+            "q": "Where did the science club build the station?",
+            "options": [
+              "In the gym",
+              "On the school roof",
+              "In the cafeteria",
+              "At the park"
+            ],
+            "answer": "On the school roof"
+          },
+          {
+            "q": "Which data did they record?",
+            "options": [
+              "Only temperature",
+              "Wind, rainfall, and temperature",
+              "Only rainfall",
+              "Sunrise times"
+            ],
+            "answer": "Wind, rainfall, and temperature"
+          },
+          {
+            "q": "What pattern did they find?",
+            "options": [
+              "Rainy days were warmer",
+              "Rainy days were cooler",
+              "Wind speed never changed",
+              "Temperature stayed constant"
+            ],
+            "answer": "Rainy days were cooler"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Nora's community garden met near the riverbank each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Ethan's robotics team met near the beach each week to build a line-following robot. They tracked sensor calibration and discussed what changed after every practice round. By the final week, they concluded that small adjustments improved accuracy.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A line-following robot",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A line-following robot"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "sensor calibration",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "sensor calibration"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "small adjustments improved accuracy",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "small adjustments improved accuracy"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Liam's music class met near the playground each week to build a rhythm practice. They tracked tempo and timing and discussed what changed after every practice round. By the final week, they concluded that steady counting improved performance.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A rhythm practice",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A rhythm practice"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "tempo and timing",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "tempo and timing"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "steady counting improved performance",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "steady counting improved performance"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Finn's reading group met near the park each week to build a chapter summaries. They tracked main ideas and details and discussed what changed after every practice round. By the final week, they concluded that short summaries improved recall.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A chapter summaries",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A chapter summaries"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "main ideas and details",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "main ideas and details"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "short summaries improved recall",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "short summaries improved recall"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Iris's community garden met near the museum each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Maya's reading group met near the market each week to build a chapter summaries. They tracked main ideas and details and discussed what changed after every practice round. By the final week, they concluded that short summaries improved recall.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A chapter summaries",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A chapter summaries"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "main ideas and details",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "main ideas and details"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "short summaries improved recall",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "short summaries improved recall"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Noah's reading group met near the farm each week to build a chapter summaries. They tracked main ideas and details and discussed what changed after every practice round. By the final week, they concluded that short summaries improved recall.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A chapter summaries",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A chapter summaries"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "main ideas and details",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "main ideas and details"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "short summaries improved recall",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "short summaries improved recall"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Ethan's art workshop met near the garden each week to build a color studies. They tracked contrast and balance and discussed what changed after every practice round. By the final week, they concluded that planned palettes improved clarity.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A color studies",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A color studies"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "contrast and balance",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "contrast and balance"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "planned palettes improved clarity",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "planned palettes improved clarity"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Sofia's coding club met near the museum each week to build a debug sessions. They tracked test cases and discussed what changed after every practice round. By the final week, they concluded that writing tests found bugs faster.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A debug sessions",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A debug sessions"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "test cases",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "test cases"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "writing tests found bugs faster",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "writing tests found bugs faster"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Lucas's community garden met near the riverbank each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Nora's music class met near the school each week to build a rhythm practice. They tracked tempo and timing and discussed what changed after every practice round. By the final week, they concluded that steady counting improved performance.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A rhythm practice",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A rhythm practice"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "tempo and timing",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "tempo and timing"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "steady counting improved performance",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "steady counting improved performance"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Aria's art workshop met near the riverbank each week to build a color studies. They tracked contrast and balance and discussed what changed after every practice round. By the final week, they concluded that planned palettes improved clarity.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A color studies",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A color studies"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "contrast and balance",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "contrast and balance"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "planned palettes improved clarity",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "planned palettes improved clarity"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Ava's community garden met near the market each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Noah's science club met near the beach each week to build a weather station. They tracked temperature and rainfall and discussed what changed after every practice round. By the final week, they concluded that rainy days were cooler.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A weather station",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A weather station"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "temperature and rainfall",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "temperature and rainfall"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "rainy days were cooler",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "rainy days were cooler"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Emma's community garden met near the playground each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Liam's science club met near the library each week to build a weather station. They tracked temperature and rainfall and discussed what changed after every practice round. By the final week, they concluded that rainy days were cooler.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A weather station",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A weather station"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "temperature and rainfall",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "temperature and rainfall"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "rainy days were cooler",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "rainy days were cooler"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Emma's science club met near the library each week to build a weather station. They tracked temperature and rainfall and discussed what changed after every practice round. By the final week, they concluded that rainy days were cooler.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A weather station",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A weather station"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "temperature and rainfall",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "temperature and rainfall"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "rainy days were cooler",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "rainy days were cooler"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Leo's community garden met near the library each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Milo's community garden met near the farm each week to build a watering schedule. They tracked plant growth and discussed what changed after every practice round. By the final week, they concluded that consistent watering increased yield.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A watering schedule",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A watering schedule"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "plant growth",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "plant growth"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "consistent watering increased yield",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "consistent watering increased yield"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Ethan's art workshop met near the playground each week to build a color studies. They tracked contrast and balance and discussed what changed after every practice round. By the final week, they concluded that planned palettes improved clarity.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A color studies",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A color studies"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "contrast and balance",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "contrast and balance"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "planned palettes improved clarity",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "planned palettes improved clarity"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Emma's coding club met near the farm each week to build a debug sessions. They tracked test cases and discussed what changed after every practice round. By the final week, they concluded that writing tests found bugs faster.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A debug sessions",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A debug sessions"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "test cases",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "test cases"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "writing tests found bugs faster",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "writing tests found bugs faster"
+          }
+        ]
+      },
+      {
+        "text": "During a month-long project, Lucas's reading group met near the library each week to build a chapter summaries. They tracked main ideas and details and discussed what changed after every practice round. By the final week, they concluded that short summaries improved recall.",
+        "questions": [
+          {
+            "q": "What kind of project did the group run?",
+            "options": [
+              "A chapter summaries",
+              "A dance recital",
+              "A food sale",
+              "A sports league"
+            ],
+            "answer": "A chapter summaries"
+          },
+          {
+            "q": "What did they track each week?",
+            "options": [
+              "main ideas and details",
+              "movie ratings",
+              "bus schedules",
+              "shoe sizes"
+            ],
+            "answer": "main ideas and details"
+          },
+          {
+            "q": "What did the group conclude?",
+            "options": [
+              "short summaries improved recall",
+              "nothing changed",
+              "practice made results worse",
+              "they canceled the project"
+            ],
+            "answer": "short summaries improved recall"
+          }
+        ]
+      }
+    ],
+    "hard": [
+      {
+        "text": "The ancient lighthouse had stood on the cliff for over two hundred years, guiding ships safely through the treacherous waters below. When the government announced plans to replace it with a modern navigation system, the townspeople organized a campaign to save it. They argued that the lighthouse was not just a tool for navigation — it was a symbol of their community's history and resilience.",
+        "questions": [
+          {
+            "q": "How long had the lighthouse been standing?",
+            "options": [
+              "50 years",
+              "100 years",
+              "Over 200 years",
+              "500 years"
+            ],
+            "answer": "Over 200 years"
+          },
+          {
+            "q": "Why did the government want to replace it?",
+            "options": [
+              "It was dangerous",
+              "To use modern navigation",
+              "It was too expensive",
+              "It was too small"
+            ],
+            "answer": "To use modern navigation"
+          },
+          {
+            "q": "What did the townspeople do?",
+            "options": [
+              "Agreed with the government",
+              "Organized a campaign to save it",
+              "Moved away",
+              "Built a new lighthouse"
+            ],
+            "answer": "Organized a campaign to save it"
+          },
+          {
+            "q": "What can you infer about the townspeople?",
+            "options": [
+              "They don't care about history",
+              "They value their community heritage",
+              "They dislike technology",
+              "They want a new lighthouse"
+            ],
+            "answer": "They value their community heritage"
+          }
+        ]
+      },
+      {
+        "text": "Although the city planned to replace its historic tramline with buses, residents argued that the tram connected neighborhoods in ways that improved both commerce and community identity. A pilot study later showed that areas near tram stops had higher foot traffic for local shops.",
+        "questions": [
+          {
+            "q": "Why did residents oppose replacing the tramline?",
+            "options": [
+              "Buses were unsafe",
+              "The tram supported commerce and identity",
+              "Tickets were free",
+              "The tram was faster than trains"
+            ],
+            "answer": "The tram supported commerce and identity"
+          },
+          {
+            "q": "What did the pilot study measure?",
+            "options": [
+              "Airplane delays",
+              "Foot traffic near tram stops",
+              "Factory output",
+              "School attendance"
+            ],
+            "answer": "Foot traffic near tram stops"
+          },
+          {
+            "q": "What conclusion is most supported?",
+            "options": [
+              "Transport has no effect on neighborhoods",
+              "The tram may help local businesses",
+              "Only tourists use trams",
+              "Buses always reduce traffic"
+            ],
+            "answer": "The tram may help local businesses"
+          },
+          {
+            "q": "Which word best describes the residents' argument?",
+            "options": [
+              "Emotional and unsupported",
+              "Community-focused and practical",
+              "Unrelated to transport",
+              "Purely historical"
+            ],
+            "answer": "Community-focused and practical"
+          }
+        ]
+      },
+      {
+        "text": "A startup introduced reusable shipping containers that could be folded and returned after delivery. Initial costs were higher than disposable packaging, but long-term analysis showed reduced waste fees and lower material spending after six months.",
+        "questions": [
+          {
+            "q": "What innovation did the startup introduce?",
+            "options": [
+              "Faster trucks",
+              "Foldable reusable containers",
+              "Cheaper disposable boxes",
+              "Drone delivery"
+            ],
+            "answer": "Foldable reusable containers"
+          },
+          {
+            "q": "How did early costs compare?",
+            "options": [
+              "They were lower",
+              "They were the same",
+              "They were higher",
+              "There were no costs"
+            ],
+            "answer": "They were higher"
+          },
+          {
+            "q": "What happened after six months?",
+            "options": [
+              "Costs increased further",
+              "Waste fees and material spending dropped",
+              "The project stopped",
+              "Customers rejected it"
+            ],
+            "answer": "Waste fees and material spending dropped"
+          },
+          {
+            "q": "What is the central trade-off described?",
+            "options": [
+              "Speed vs safety",
+              "Higher upfront cost vs long-term savings",
+              "Quality vs quantity",
+              "Marketing vs design"
+            ],
+            "answer": "Higher upfront cost vs long-term savings"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined waste management after introducing reusable container system. Analysts compared baseline figures with quarterly data on collection volume and replacement cost, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that upfront investment produced long-term savings.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "reusable container system",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "reusable container system"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "collection volume and replacement cost",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "collection volume and replacement cost"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "upfront investment produced long-term savings",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "upfront investment produced long-term savings"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined energy planning after introducing smart lighting controls. Analysts compared baseline figures with quarterly data on consumption peaks and maintenance logs, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that data-informed scheduling lowered operating costs.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "smart lighting controls",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "smart lighting controls"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "consumption peaks and maintenance logs",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "consumption peaks and maintenance logs"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "data-informed scheduling lowered operating costs",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "data-informed scheduling lowered operating costs"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined local economy after introducing weekend street market. Analysts compared baseline figures with quarterly data on foot traffic and small-business sales, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that accessible events supported local vendors.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "weekend street market",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "weekend street market"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "foot traffic and small-business sales",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "foot traffic and small-business sales"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "accessible events supported local vendors",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "accessible events supported local vendors"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined public transit after introducing protected bike lanes. Analysts compared baseline figures with quarterly data on modal split and commute time, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that multimodal planning can reduce congestion.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "protected bike lanes",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "protected bike lanes"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "modal split and commute time",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "modal split and commute time"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "multimodal planning can reduce congestion",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "multimodal planning can reduce congestion"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined school policy after introducing extended project blocks. Analysts compared baseline figures with quarterly data on completion rates and revision quality, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that longer focused time improved complex work.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "extended project blocks",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "extended project blocks"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "completion rates and revision quality",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "completion rates and revision quality"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "longer focused time improved complex work",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "longer focused time improved complex work"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A municipal report examined library services after introducing digital lending program. Analysts compared baseline figures with quarterly data on wait times and circulation rates, while controlling for seasonal variation. Although implementation required additional training, the findings suggested that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "What intervention did the report analyze?",
+            "options": [
+              "digital lending program",
+              "new taxes",
+              "airport expansion",
+              "school closure"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "Which data were compared?",
+            "options": [
+              "wait times and circulation rates",
+              "movie ticket sales",
+              "sports scores",
+              "weather forecasts only"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "What is the strongest supported inference?",
+            "options": [
+              "flexible access increased participation",
+              "training made everything worse",
+              "seasonal variation caused all changes",
+              "no conclusion was possible"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Which phrase best characterizes the report's method?",
+            "options": [
+              "Baseline-to-quarterly comparison with controls",
+              "Purely anecdotal stories",
+              "Single-day observation",
+              "Unverified social media polling"
+            ],
+            "answer": "Baseline-to-quarterly comparison with controls"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated local economy after introducing weekend street market using anonymized administrative data. The team compared baseline benchmarks with quarterly indicators for foot traffic and small-business sales, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that accessible events supported local vendors.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "weekend street market",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "weekend street market"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "foot traffic and small-business sales",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "foot traffic and small-business sales"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "accessible events supported local vendors",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "accessible events supported local vendors"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated waste management after introducing reusable container system across multiple districts. The team compared baseline benchmarks with quarterly indicators for collection volume and replacement cost, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that upfront investment produced long-term savings.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "reusable container system",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "reusable container system"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "collection volume and replacement cost",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "collection volume and replacement cost"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "upfront investment produced long-term savings",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "upfront investment produced long-term savings"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated library services after introducing digital lending program with neighborhood-level granularity. The team compared baseline benchmarks with quarterly indicators for wait times and circulation rates, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "digital lending program",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "wait times and circulation rates",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "flexible access increased participation",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated library services after introducing digital lending program after a phased rollout. The team compared baseline benchmarks with quarterly indicators for wait times and circulation rates, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "digital lending program",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "wait times and circulation rates",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "flexible access increased participation",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated school policy after introducing extended project blocks across multiple districts. The team compared baseline benchmarks with quarterly indicators for completion rates and revision quality, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that longer focused time improved complex work.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "extended project blocks",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "extended project blocks"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "completion rates and revision quality",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "completion rates and revision quality"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "longer focused time improved complex work",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "longer focused time improved complex work"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A policy institute evaluated energy planning after introducing smart lighting controls across multiple districts. The team compared baseline benchmarks with quarterly indicators for consumption peaks and maintenance logs, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that data-informed scheduling lowered operating costs.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "smart lighting controls",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "smart lighting controls"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "consumption peaks and maintenance logs",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "consumption peaks and maintenance logs"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "data-informed scheduling lowered operating costs",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "data-informed scheduling lowered operating costs"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated school policy after introducing extended project blocks after a phased rollout. The team compared baseline benchmarks with quarterly indicators for completion rates and revision quality, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that longer focused time improved complex work.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "extended project blocks",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "extended project blocks"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "completion rates and revision quality",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "completion rates and revision quality"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "longer focused time improved complex work",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "longer focused time improved complex work"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An independent panel evaluated energy planning after introducing smart lighting controls after a phased rollout. The team compared baseline benchmarks with quarterly indicators for consumption peaks and maintenance logs, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that data-informed scheduling lowered operating costs.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "smart lighting controls",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "smart lighting controls"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "consumption peaks and maintenance logs",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "consumption peaks and maintenance logs"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "data-informed scheduling lowered operating costs",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "data-informed scheduling lowered operating costs"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated public transit after introducing protected bike lanes under constrained budgets. The team compared baseline benchmarks with quarterly indicators for modal split and commute time, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that multimodal planning can reduce congestion.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "protected bike lanes",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "protected bike lanes"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "modal split and commute time",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "modal split and commute time"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "multimodal planning can reduce congestion",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "multimodal planning can reduce congestion"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An oversight committee evaluated waste management after introducing reusable container system across multiple districts. The team compared baseline benchmarks with quarterly indicators for collection volume and replacement cost, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that upfront investment produced long-term savings.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "reusable container system",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "reusable container system"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "collection volume and replacement cost",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "collection volume and replacement cost"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "upfront investment produced long-term savings",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "upfront investment produced long-term savings"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An oversight committee evaluated library services after introducing digital lending program using anonymized administrative data. The team compared baseline benchmarks with quarterly indicators for wait times and circulation rates, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "digital lending program",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "wait times and circulation rates",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "flexible access increased participation",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated public transit after introducing protected bike lanes across multiple districts. The team compared baseline benchmarks with quarterly indicators for modal split and commute time, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that multimodal planning can reduce congestion.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "protected bike lanes",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "protected bike lanes"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "modal split and commute time",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "modal split and commute time"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "multimodal planning can reduce congestion",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "multimodal planning can reduce congestion"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated library services after introducing digital lending program with neighborhood-level granularity. The team compared baseline benchmarks with quarterly indicators for wait times and circulation rates, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "digital lending program",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "wait times and circulation rates",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "flexible access increased participation",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated energy planning after introducing smart lighting controls after a phased rollout. The team compared baseline benchmarks with quarterly indicators for consumption peaks and maintenance logs, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that data-informed scheduling lowered operating costs.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "smart lighting controls",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "smart lighting controls"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "consumption peaks and maintenance logs",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "consumption peaks and maintenance logs"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "data-informed scheduling lowered operating costs",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "data-informed scheduling lowered operating costs"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An oversight committee evaluated public transit after introducing protected bike lanes with neighborhood-level granularity. The team compared baseline benchmarks with quarterly indicators for modal split and commute time, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that multimodal planning can reduce congestion.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "protected bike lanes",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "protected bike lanes"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "modal split and commute time",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "modal split and commute time"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "multimodal planning can reduce congestion",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "multimodal planning can reduce congestion"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A university lab evaluated library services after introducing digital lending program over three reporting cycles. The team compared baseline benchmarks with quarterly indicators for wait times and circulation rates, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that flexible access increased participation.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "digital lending program",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "digital lending program"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "wait times and circulation rates",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "wait times and circulation rates"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "flexible access increased participation",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "flexible access increased participation"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "An oversight committee evaluated public transit after introducing protected bike lanes after a phased rollout. The team compared baseline benchmarks with quarterly indicators for modal split and commute time, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that multimodal planning can reduce congestion.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "protected bike lanes",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "protected bike lanes"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "modal split and commute time",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "modal split and commute time"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "multimodal planning can reduce congestion",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "multimodal planning can reduce congestion"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      },
+      {
+        "text": "A regional task force evaluated waste management after introducing reusable container system with neighborhood-level granularity. The team compared baseline benchmarks with quarterly indicators for collection volume and replacement cost, and adjusted models for seasonal effects. Despite short-term implementation friction, the evidence indicated that upfront investment produced long-term savings.",
+        "questions": [
+          {
+            "q": "Which intervention is central to the evaluation?",
+            "options": [
+              "reusable container system",
+              "new airport security",
+              "mandatory uniforms",
+              "daily road closures"
+            ],
+            "answer": "reusable container system"
+          },
+          {
+            "q": "What outcomes were tracked?",
+            "options": [
+              "collection volume and replacement cost",
+              "movie attendance",
+              "restaurant menus",
+              "sports injuries"
+            ],
+            "answer": "collection volume and replacement cost"
+          },
+          {
+            "q": "Which conclusion is best supported by the passage?",
+            "options": [
+              "upfront investment produced long-term savings",
+              "implementation friction invalidated all results",
+              "seasonal effects were ignored",
+              "no trend was identified"
+            ],
+            "answer": "upfront investment produced long-term savings"
+          },
+          {
+            "q": "Why mention seasonal effects in the analysis?",
+            "options": [
+              "To improve causal interpretation",
+              "To make the report longer",
+              "To remove all uncertainty",
+              "To avoid collecting data"
+            ],
+            "answer": "To improve causal interpretation"
+          }
+        ]
+      }
+    ]
+  }
+}

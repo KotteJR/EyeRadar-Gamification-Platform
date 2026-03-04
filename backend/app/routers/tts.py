@@ -7,11 +7,13 @@ import io
 import hashlib
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import edge_tts
-from fastapi import APIRouter, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
+
+from app.auth import verify_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -38,6 +40,7 @@ async def synthesize_speech(
     text: str = Query(..., min_length=1, max_length=500),
     lang: str = Query("el", description="Language code: en, el, en-US, el-GR"),
     rate: Optional[str] = Query(None, description="Speed adjustment e.g. -10% or +20%"),
+    _claims: Dict[str, Any] = Depends(verify_token),
 ):
     """Generate speech audio from text using Microsoft Edge neural voices."""
     voice = VOICE_MAP.get(lang, VOICE_MAP.get(lang.split("-")[0], "en-US-AriaNeural"))
@@ -45,8 +48,8 @@ async def synthesize_speech(
 
     cache_file = CACHE_DIR / f"{_cache_key(text, voice, speed)}.mp3"
     if cache_file.exists():
-        return StreamingResponse(
-            open(cache_file, "rb"),
+        return FileResponse(
+            path=str(cache_file),
             media_type="audio/mpeg",
             headers={"Cache-Control": "public, max-age=86400"},
         )
@@ -65,6 +68,7 @@ async def synthesize_speech(
         except Exception:
             pass
 
+        from fastapi.responses import StreamingResponse
         return StreamingResponse(
             io.BytesIO(audio_bytes),
             media_type="audio/mpeg",
@@ -75,5 +79,5 @@ async def synthesize_speech(
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
-            content={"detail": f"TTS generation failed: {str(exc)}"},
+            content={"detail": "TTS generation failed"},
         )

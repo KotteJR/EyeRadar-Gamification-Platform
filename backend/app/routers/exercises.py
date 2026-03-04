@@ -3,10 +3,12 @@ Exercise session management endpoints.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime
 import uuid
+from typing import Any, Dict
 
+from app.auth import verify_token, get_keycloak_user_id, get_keycloak_roles, verify_student_access
 from app.models import (
     ExerciseSession,
     ExerciseSessionCreate,
@@ -36,8 +38,12 @@ router = APIRouter()
 
 
 @router.post("/start", response_model=ExerciseSession)
-async def start_session(data: ExerciseSessionCreate):
+async def start_session(
+    data: ExerciseSessionCreate,
+    claims: Dict[str, Any] = Depends(verify_token),
+):
     """Start a new exercise session — uses exercise agent for personalization."""
+    await verify_student_access(claims, data.student_id)
     student = await db.get_student(data.student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -106,6 +112,8 @@ async def start_session(data: ExerciseSessionCreate):
         item_count=item_count,
         student_interests=student.get("interests"),
         lang=student_lang,
+        student_age=student.get("age"),
+        student_id=data.student_id,
     )
 
     session_data = {
@@ -126,7 +134,10 @@ async def start_session(data: ExerciseSessionCreate):
 
 
 @router.get("/{session_id}", response_model=ExerciseSession)
-async def get_session(session_id: str):
+async def get_session(
+    session_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get an exercise session by ID."""
     session = await db.get_session(session_id)
     if not session:
@@ -135,7 +146,11 @@ async def get_session(session_id: str):
 
 
 @router.post("/{session_id}/submit", response_model=ExerciseItemResult)
-async def submit_item(session_id: str, submission: ExerciseItemSubmission):
+async def submit_item(
+    session_id: str,
+    submission: ExerciseItemSubmission,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Submit a response for an exercise item."""
     session = await db.get_session(session_id)
     if not session:
@@ -181,7 +196,10 @@ async def submit_item(session_id: str, submission: ExerciseItemSubmission):
 
 
 @router.post("/{session_id}/complete", response_model=ExerciseSession)
-async def complete_session(session_id: str):
+async def complete_session(
+    session_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Complete an exercise session and calculate final scores."""
     session = await db.get_session(session_id)
     if not session:
@@ -249,14 +267,23 @@ async def complete_session(session_id: str):
 
 
 @router.get("/student/{student_id}", response_model=list[ExerciseSession])
-async def get_student_sessions(student_id: str, deficit_area: str | None = None):
+async def get_student_sessions(
+    student_id: str,
+    deficit_area: str | None = None,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get all sessions for a student."""
+    await verify_student_access(_claims, student_id)
     return await db.get_student_sessions(student_id, deficit_area=deficit_area)
 
 
 @router.get("/recommendations/{student_id}", response_model=list[ExerciseRecommendation])
-async def get_recommendations(student_id: str):
+async def get_recommendations(
+    student_id: str,
+    _claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get exercise recommendations — agent-powered when diagnostic exists."""
+    await verify_student_access(_claims, student_id)
     student = await db.get_student(student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")

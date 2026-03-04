@@ -2,9 +2,11 @@
 Analytics and reporting endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import Optional
+from typing import Any, Dict, Optional
 
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.auth import verify_token, verify_student_access
 from app.models import AnalyticsOverview, DeficitProgress, DeficitArea
 from app import database as db
 
@@ -12,8 +14,12 @@ router = APIRouter()
 
 
 @router.get("/{student_id}/overview", response_model=AnalyticsOverview)
-async def get_overview(student_id: str):
+async def get_overview(
+    student_id: str,
+    claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get analytics overview for a student."""
+    await verify_student_access(claims, student_id)
     student = await db.get_student(student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -93,8 +99,12 @@ async def get_overview(student_id: str):
 
 
 @router.get("/{student_id}/report")
-async def get_report(student_id: str):
+async def get_report(
+    student_id: str,
+    claims: Dict[str, Any] = Depends(verify_token),
+):
     """Get a detailed report suitable for educators/parents."""
+    await verify_student_access(claims, student_id)
     student = await db.get_student(student_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")

@@ -9,11 +9,15 @@ Each generator produces items with `extra_data` for interactive game types.
 
 import logging
 import random
+import json
+from contextvars import ContextVar
 from typing import List, Dict, Any
+from pathlib import Path
 from app.models import ExerciseItem
 from app.services import ai_content as ai
 
 logger = logging.getLogger(__name__)
+_STUDENT_AGE_CTX: ContextVar[int | None] = ContextVar("student_age", default=None)
 
 # ─── Bilingual strings ────────────────────────────────────────────────────────
 
@@ -186,8 +190,48 @@ PSEUDO_WORDS_EL = [
     "γρόμφα",
 ]
 
+WORD_BANKS_BY_AGE: Dict[str, Dict[str, Dict[str, List[str]]]] = {}
 
-def get_word_bank(difficulty: int, lang: str = "en") -> List[str]:
+def _difficulty_tier(difficulty: int) -> str:
+    if difficulty <= 2:
+        return "simple"
+    if difficulty <= 4:
+        return "medium"
+    if difficulty <= 7:
+        return "hard"
+    return "advanced"
+
+
+def _age_bucket(student_age: int | None) -> str | None:
+    if student_age is None:
+        return None
+    if student_age <= 7:
+        return "5-7"
+    if student_age <= 12:
+        return "8-12"
+    return "13-18"
+
+
+def get_word_bank(difficulty: int, lang: str = "en", student_age: int | None = None) -> List[str]:
+    # Use explicit age first, then request-context age.
+    age = student_age if student_age is not None else _STUDENT_AGE_CTX.get()
+    tier = _difficulty_tier(difficulty)
+    bucket = _age_bucket(age)
+
+    # Prevent overly childish vocabulary for teens even at lower difficulty.
+    if age is not None and age >= 13 and tier == "simple":
+        tier = "medium"
+
+    if isinstance(WORD_BANKS_BY_AGE, dict):
+        lang_banks = WORD_BANKS_BY_AGE.get(lang, {})
+        if bucket and isinstance(lang_banks, dict):
+            bucket_banks = lang_banks.get(bucket, {})
+            if isinstance(bucket_banks, dict):
+                bank = bucket_banks.get(tier)
+                if isinstance(bank, list) and bank:
+                    return bank
+
+    # Fallback to static banks.
     if lang == "el":
         if difficulty <= 2:
             return SIMPLE_WORDS_EL
@@ -205,6 +249,57 @@ def get_word_bank(difficulty: int, lang: str = "en") -> List[str]:
         return HARD_WORDS
     else:
         return ADVANCED_WORDS
+
+
+import hashlib as _hashlib
+
+_STUDENT_ID_CTX: ContextVar[str | None] = ContextVar("student_id", default=None)
+
+
+def _passage_hash(passage: dict) -> str:
+    return _hashlib.md5(passage.get("text", "").encode()).hexdigest()
+
+
+async def _pick_passage(passages: list[dict], student_id: str | None = None) -> dict:
+    """Select a passage, avoiding recently used ones for the given student."""
+    sid = student_id or _STUDENT_ID_CTX.get()
+    if not sid or not passages:
+        return random.choice(passages) if passages else {}
+
+    try:
+        from app import database as _db
+        recent_hashes = await _db.get_recent_content_hashes(sid, "passage", limit=50)
+        recent_set = set(recent_hashes)
+        unseen = [p for p in passages if _passage_hash(p) not in recent_set]
+        chosen = random.choice(unseen) if unseen else random.choice(passages)
+        await _db.record_content_usage(sid, "passage", _passage_hash(chosen))
+        return chosen
+    except Exception:
+        return random.choice(passages)
+
+
+def _pick_passage_sync(passages: list[dict]) -> dict:
+    """Synchronous fallback when async is not available."""
+    return random.choice(passages) if passages else {}
+
+
+def _age_adjusted_passage_level(difficulty: int) -> str:
+    """Choose passage difficulty, nudged by student age for age-appropriate content."""
+    age = _STUDENT_AGE_CTX.get()
+    if difficulty <= 3:
+        base = "easy"
+    elif difficulty <= 6:
+        base = "medium"
+    else:
+        base = "hard"
+
+    if age is not None:
+        if age >= 13 and base == "easy":
+            base = "medium"
+        elif age <= 7 and base == "hard":
+            base = "medium"
+    return base
+
 
 STORY_PASSAGES = {
     "easy": [
@@ -267,12 +362,67 @@ PHRASES_BY_LEVEL = {
 LETTERS_COMMONLY_REVERSED = ["b", "d", "p", "q", "m", "w", "n", "u"]
 
 
+def _load_content_pools_from_json() -> None:
+    """
+    Load content pools from per-domain JSON files in the definitions directory.
+    Falls back to the monolithic content_pools.json if the split files don't exist.
+    """
+    defs_dir = Path(__file__).resolve().parents[1] / "games" / "definitions"
+
+    split_files = [
+        "words_en.json", "words_el.json", "words_by_age.json",
+        "passages_en.json", "passages_el.json",
+        "phrases_en.json", "phrases_el.json",
+        "rhymes.json",
+    ]
+    monolith = defs_dir / "content_pools.json"
+
+    sources: list[Path] = []
+    if all((defs_dir / f).exists() for f in split_files):
+        sources = [defs_dir / f for f in split_files]
+    elif monolith.exists():
+        sources = [monolith]
+    else:
+        logger.warning("No content pool files found, using in-code defaults")
+        return
+
+    for src in sources:
+        try:
+            payload = json.loads(src.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Failed to parse %s: %s", src.name, exc)
+            continue
+
+        for key, val in payload.items():
+            if key in {
+                "SIMPLE_WORDS", "MEDIUM_WORDS", "HARD_WORDS", "ADVANCED_WORDS", "SIGHT_WORDS",
+                "SIMPLE_WORDS_EL", "MEDIUM_WORDS_EL", "HARD_WORDS_EL", "ADVANCED_WORDS_EL", "SIGHT_WORDS_EL",
+                "RHYME_PAIRS", "RHYME_PAIRS_EL",
+                "STORY_PASSAGES", "STORY_PASSAGES_EL",
+                "PHRASES_BY_LEVEL", "PHRASES_BY_LEVEL_EL",
+                "WORD_BANKS_BY_AGE",
+            }:
+                globals()[key] = val
+
+    if isinstance(PHRASES_BY_LEVEL, dict):
+        globals()["PHRASES_BY_LEVEL"] = {int(k): v for k, v in PHRASES_BY_LEVEL.items()}
+    if isinstance(PHRASES_BY_LEVEL_EL, dict):
+        globals()["PHRASES_BY_LEVEL_EL"] = {int(k): v for k, v in PHRASES_BY_LEVEL_EL.items()}
+
+    logger.info("Loaded content pools from %s (%d files)", defs_dir, len(sources))
+
+
+_load_content_pools_from_json()
+
+
 async def generate_exercise_items(
     game_id: str,
     difficulty_level: int,
     item_count: int,
     student_interests: List[str] | None = None,
     lang: str = "en",
+    student_age: int | None = None,
+    student_id: str | None = None,
 ) -> List[ExerciseItem]:
     """
     Generate exercise items — tries AI first, falls back to templates.
@@ -284,6 +434,9 @@ async def generate_exercise_items(
 
     Template generators are always available as fallback.
     """
+    _STUDENT_AGE_CTX.set(student_age)
+    _STUDENT_ID_CTX.set(student_id)
+
     # Mapping of game_id -> (AI generator, template fallback)
     # AI generators return None when LLM is unavailable
     ai_generators = {
@@ -346,6 +499,15 @@ async def generate_exercise_items(
         "castle_challenge": _gen_castle_challenge,
     }
 
+    import asyncio as _aio
+    import inspect as _inspect
+
+    async def _call_gen(fn, diff, cnt, lng):
+        result = fn(diff, cnt, lang=lng)
+        if _inspect.isawaitable(result):
+            return await result
+        return result
+
     # For Greek, skip AI generators (they produce English) and go straight to templates
     if lang != "el" and game_id in ai_generators:
         try:
@@ -358,16 +520,15 @@ async def generate_exercise_items(
                            len(items), item_count, game_id)
                 remaining = item_count - len(items)
                 template_gen = template_generators.get(game_id, _gen_default)
-                template_items = template_gen(difficulty_level, remaining, lang=lang)
+                template_items = await _call_gen(template_gen, difficulty_level, remaining, lang)
                 for j, ti in enumerate(template_items):
                     ti.index = len(items) + j
                 return items + template_items
         except Exception as exc:
             logger.warning("AI generation failed for %s: %s", game_id, exc)
 
-    # Fall back to template generation
     generator = template_generators.get(game_id, _gen_default)
-    return generator(difficulty_level, item_count, lang=lang)
+    return await _call_gen(generator, difficulty_level, item_count, lang)
 
 
 # =============================================================================
@@ -534,17 +695,12 @@ def _gen_inference_detective(difficulty: int, count: int, lang: str = "en") -> L
     return items
 
 
-def _gen_story_recall_mc(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
+async def _gen_story_recall_mc(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
     """Multiple choice: standard story comprehension (passage always visible)."""
-    if difficulty <= 3:
-        level = "easy"
-    elif difficulty <= 6:
-        level = "medium"
-    else:
-        level = "hard"
+    level = _age_adjusted_passage_level(difficulty)
     story_src = STORY_PASSAGES_EL if lang == "el" else STORY_PASSAGES
     passages = story_src.get(level, story_src["easy"])
-    passage = random.choice(passages)
+    passage = await _pick_passage(passages)
     items = []
     for i, q in enumerate(passage["questions"][:count]):
         items.append(ExerciseItem(
@@ -1036,17 +1192,12 @@ def _gen_word_ladder(difficulty: int, count: int, lang: str = "en") -> List[Exer
 # TIMED READING GENERATORS
 # =============================================================================
 
-def _gen_story_recall(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
+async def _gen_story_recall(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
     """Timed reading: read passage under time pressure, then answer from memory."""
-    if difficulty <= 3:
-        level = "easy"
-    elif difficulty <= 6:
-        level = "medium"
-    else:
-        level = "hard"
+    level = _age_adjusted_passage_level(difficulty)
     story_source = STORY_PASSAGES_EL if lang == "el" else STORY_PASSAGES
     passages = story_source.get(level, story_source["easy"])
-    passage = random.choice(passages)
+    passage = await _pick_passage(passages)
     text = passage["text"]
     # Reading time based on word count and difficulty
     word_count = len(text.split())
@@ -1188,17 +1339,12 @@ def _gen_phrase_flash(difficulty: int, count: int, lang: str = "en") -> List[Exe
     return items
 
 
-def _gen_repeated_reader(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
+async def _gen_repeated_reader(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem]:
     """Timed reading: passage stays visible, focus on comprehension."""
-    if difficulty <= 3:
-        level = "easy"
-    elif difficulty <= 6:
-        level = "medium"
-    else:
-        level = "hard"
+    level = _age_adjusted_passage_level(difficulty)
     story_src = STORY_PASSAGES_EL if lang == "el" else STORY_PASSAGES
     passages = story_src.get(level, story_src["easy"])
-    passage = random.choice(passages)
+    passage = await _pick_passage(passages)
     text = passage["text"]
     items = []
     for i, q in enumerate(passage["questions"][:count]):
@@ -1212,7 +1358,7 @@ def _gen_repeated_reader(difficulty: int, count: int, lang: str = "en") -> List[
                 "passage": text,
                 "reading_time_seconds": 30,
                 "word_count": len(text.split()),
-                "passage_visible_during_questions": True,  # not memory, fluency focus
+                "passage_visible_during_questions": False,
             },
         ))
     return items
@@ -1876,7 +2022,7 @@ async def _gen_rhyme_time_ai(difficulty: int, count: int) -> List[ExerciseItem] 
     return items if items else None
 
 
-async def _gen_syllable_stomper_ai(difficulty: int, count: int) -> List[ExerciseItem] | None:
+async def _gen_syllable_stomper_ai(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem] | None:
     """AI syllable counting (light model)."""
     data = await ai.generate_syllable_words(difficulty, count=max(count, 10))
     if not data or len(data) < 2:
@@ -1905,7 +2051,7 @@ async def _gen_syllable_stomper_ai(difficulty: int, count: int) -> List[Exercise
     return items if items else None
 
 
-async def _gen_phoneme_blender_ai(difficulty: int, count: int) -> List[ExerciseItem] | None:
+async def _gen_phoneme_blender_ai(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem] | None:
     """AI phoneme blending (light model)."""
     data = await ai.generate_phoneme_blends(difficulty, count=max(count, 8))
     if not data or len(data) < 2:
@@ -1938,7 +2084,7 @@ async def _gen_phoneme_blender_ai(difficulty: int, count: int) -> List[ExerciseI
     return items if items else None
 
 
-async def _gen_sound_swap_ai(difficulty: int, count: int) -> List[ExerciseItem] | None:
+async def _gen_sound_swap_ai(difficulty: int, count: int, lang: str = "en") -> List[ExerciseItem] | None:
     """AI sound swap exercises (light model)."""
     data = await ai.generate_sound_swap_items(difficulty, count=max(count, 8))
     if not data or len(data) < 2:

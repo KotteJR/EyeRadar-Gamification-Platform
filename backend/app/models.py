@@ -71,6 +71,8 @@ class StudentUpdate(BaseModel):
 
 class Student(BaseModel):
     id: str
+    keycloak_id: Optional[str] = None
+    login_username: Optional[str] = None
     name: str
     age: int
     grade: int

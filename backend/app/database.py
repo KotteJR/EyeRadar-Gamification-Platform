@@ -83,6 +83,8 @@ async def _run_migrations() -> None:
             CREATE TABLE IF NOT EXISTS students (
                 id                TEXT PRIMARY KEY,
                 created_by        UUID REFERENCES users(id) ON DELETE SET NULL,
+                keycloak_id       TEXT UNIQUE,
+                login_username    TEXT,
                 name              TEXT NOT NULL,
                 age               INTEGER NOT NULL,
                 grade             INTEGER NOT NULL,
@@ -196,6 +198,10 @@ async def _run_migrations() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_ledger_student ON points_ledger(student_id);
 
+            -- Add new student identity columns on existing databases.
+            ALTER TABLE students ADD COLUMN IF NOT EXISTS keycloak_id TEXT UNIQUE;
+            ALTER TABLE students ADD COLUMN IF NOT EXISTS login_username TEXT;
+
             -- ── Subscriptions (Stripe) ────────────────────────────────────────
             CREATE TABLE IF NOT EXISTS subscriptions (
                 id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -209,6 +215,53 @@ async def _run_migrations() -> None:
                 created_at             TIMESTAMPTZ DEFAULT NOW(),
                 updated_at             TIMESTAMPTZ DEFAULT NOW()
             );
+
+            -- ── Pre-payment onboarding sessions ────────────────────────────────
+            CREATE TABLE IF NOT EXISTS onboarding_sessions (
+                id                     TEXT PRIMARY KEY,
+                status                 TEXT NOT NULL DEFAULT 'pending_payment',
+                username               TEXT NOT NULL,
+                email                  TEXT NOT NULL,
+                first_name             TEXT NOT NULL,
+                last_name              TEXT NOT NULL,
+                encrypted_password     TEXT NOT NULL,
+                children               JSONB NOT NULL DEFAULT '[]',
+                child_count            INTEGER NOT NULL DEFAULT 1,
+                stripe_checkout_session_id TEXT UNIQUE,
+                stripe_customer_id     TEXT,
+                stripe_subscription_id TEXT,
+                keycloak_user_id       TEXT,
+                db_user_id             UUID REFERENCES users(id) ON DELETE SET NULL,
+                error_message          TEXT,
+                created_at             TIMESTAMPTZ DEFAULT NOW(),
+                updated_at             TIMESTAMPTZ DEFAULT NOW(),
+                completed_at           TIMESTAMPTZ
+            );
+
+            -- ── Password reset tokens (custom in-app reset flow) ─────────────
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id              TEXT PRIMARY KEY,
+                user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                code_hash       TEXT NOT NULL,
+                expires_at      TIMESTAMPTZ NOT NULL,
+                consumed_at     TIMESTAMPTZ,
+                created_at      TIMESTAMPTZ DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_pwd_reset_user ON password_reset_tokens(user_id);
+            CREATE INDEX IF NOT EXISTS idx_pwd_reset_expires ON password_reset_tokens(expires_at);
+
+            -- ── Content history (anti-repetition) ──────────────────────────────
+            CREATE TABLE IF NOT EXISTS content_history (
+                id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                student_id    TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                content_type  TEXT NOT NULL,
+                content_hash  TEXT NOT NULL,
+                used_at       TIMESTAMPTZ DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_content_history_student
+                ON content_history(student_id, content_type);
         """)
 
 
@@ -248,10 +301,13 @@ async def create_student(student_data: Dict[str, Any]) -> Dict[str, Any]:
         await conn.execute(
             """
             INSERT INTO students
-                (id, name, age, grade, language, interests, diagnostic, current_levels, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                (id, created_by, keycloak_id, login_username, name, age, grade, language, interests, diagnostic, current_levels, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             """,
             student_data["id"],
+            student_data.get("created_by"),
+            student_data.get("keycloak_id"),
+            student_data.get("login_username"),
             student_data["name"],
             student_data["age"],
             student_data["grade"],
@@ -268,6 +324,16 @@ async def get_student(student_id: str) -> Optional[Dict[str, Any]]:
     pool = await get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM students WHERE id = $1", student_id)
+    return _row_to_dict(row) if row else None
+
+
+async def get_student_by_keycloak_id(keycloak_id: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM students WHERE keycloak_id = $1",
+            keycloak_id,
+        )
     return _row_to_dict(row) if row else None
 
 
@@ -714,6 +780,18 @@ async def get_or_create_user(
             "SELECT * FROM users WHERE keycloak_id = $1", keycloak_id
         )
         if row:
+            # Keep profile data in sync with IdP on login.
+            await conn.execute(
+                """UPDATE users
+                   SET email = $1, full_name = $2
+                   WHERE keycloak_id = $3""",
+                email,
+                full_name,
+                keycloak_id,
+            )
+            row = await conn.fetchrow(
+                "SELECT * FROM users WHERE keycloak_id = $1", keycloak_id
+            )
             return _row_to_dict(row)
         row = await conn.fetchrow(
             """INSERT INTO users (keycloak_id, email, full_name)
@@ -723,6 +801,35 @@ async def get_or_create_user(
             full_name,
         )
     return _row_to_dict(row)
+
+
+async def get_user_by_keycloak_id(keycloak_id: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE keycloak_id = $1", keycloak_id
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE LOWER(email) = LOWER($1)",
+            email,
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM users WHERE id = $1",
+            user_id,
+        )
+    return _row_to_dict(row) if row else None
 
 
 async def link_parent_student(parent_id: str, student_id: str) -> None:
@@ -749,6 +856,28 @@ async def get_parent_students(parent_id: str) -> List[Dict[str, Any]]:
     return [_row_to_dict(r) for r in rows]
 
 
+async def get_parent_student_count(parent_id: str) -> int:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        count = await conn.fetchval(
+            "SELECT COUNT(*) FROM parent_student WHERE parent_id = $1",
+            parent_id,
+        )
+    return int(count or 0)
+
+
+async def parent_has_student(parent_id: str, student_id: str) -> bool:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """SELECT 1 FROM parent_student
+               WHERE parent_id = $1 AND student_id = $2""",
+            parent_id,
+            student_id,
+        )
+    return row is not None
+
+
 # ─── Subscriptions ────────────────────────────────────────────────────────────
 
 
@@ -757,6 +886,18 @@ async def get_user_subscription(user_id: str) -> Optional[Dict[str, Any]]:
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT * FROM subscriptions WHERE user_id = $1", user_id
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def get_subscription_by_stripe_subscription_id(
+    stripe_subscription_id: str,
+) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM subscriptions WHERE stripe_subscription_id = $1",
+            stripe_subscription_id,
         )
     return _row_to_dict(row) if row else None
 
@@ -790,3 +931,176 @@ async def upsert_subscription(user_id: str, data: Dict[str, Any]) -> Dict[str, A
             "SELECT * FROM subscriptions WHERE user_id = $1", user_id
         )
     return _row_to_dict(row)
+
+
+async def increment_child_slots(user_id: str, increment: int = 1) -> Dict[str, Any]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """UPDATE subscriptions
+               SET child_slots = GREATEST(1, COALESCE(child_slots, 1) + $2),
+                   updated_at = NOW()
+               WHERE user_id = $1""",
+            user_id,
+            increment,
+        )
+        row = await conn.fetchrow(
+            "SELECT * FROM subscriptions WHERE user_id = $1",
+            user_id,
+        )
+    return _row_to_dict(row) if row else {}
+
+
+# ─── Onboarding Sessions ──────────────────────────────────────────────────────
+
+
+async def create_onboarding_session(data: Dict[str, Any]) -> Dict[str, Any]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO onboarding_sessions (
+                id, status, username, email, first_name, last_name,
+                encrypted_password, children, child_count,
+                stripe_checkout_session_id, stripe_customer_id, stripe_subscription_id,
+                keycloak_user_id, db_user_id, error_message, updated_at
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6,
+                $7, $8, $9,
+                $10, $11, $12,
+                $13, $14, $15, NOW()
+            )
+            RETURNING *
+            """,
+            data["id"],
+            data.get("status", "pending_payment"),
+            data["username"],
+            data["email"],
+            data["first_name"],
+            data["last_name"],
+            data["encrypted_password"],
+            data.get("children", []),
+            int(data.get("child_count", 1)),
+            data.get("stripe_checkout_session_id"),
+            data.get("stripe_customer_id"),
+            data.get("stripe_subscription_id"),
+            data.get("keycloak_user_id"),
+            data.get("db_user_id"),
+            data.get("error_message"),
+        )
+    return _row_to_dict(row)
+
+
+async def get_onboarding_session(onboarding_id: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM onboarding_sessions WHERE id = $1",
+            onboarding_id,
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def get_onboarding_by_checkout_session_id(
+    checkout_session_id: str,
+) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM onboarding_sessions WHERE stripe_checkout_session_id = $1",
+            checkout_session_id,
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def update_onboarding_session(
+    onboarding_id: str,
+    data: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    if not data:
+        return await get_onboarding_session(onboarding_id)
+
+    filtered = {}
+    for key, value in data.items():
+        if key in _TIMESTAMP_FIELDS and isinstance(value, str):
+            value = _to_dt(value) or value
+        filtered[key] = value
+    filtered["updated_at"] = datetime.utcnow()
+
+    set_clauses = [f"{k} = ${i + 1}" for i, k in enumerate(filtered)]
+    params = list(filtered.values()) + [onboarding_id]
+    query = (
+        f"UPDATE onboarding_sessions SET {', '.join(set_clauses)} "
+        f"WHERE id = ${len(params)}"
+    )
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(query, *params)
+    return await get_onboarding_session(onboarding_id)
+
+
+async def create_password_reset_token(data: Dict[str, Any]) -> Dict[str, Any]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO password_reset_tokens
+                (id, user_id, code_hash, expires_at)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+            """,
+            data["id"],
+            data["user_id"],
+            data["code_hash"],
+            _to_dt(data["expires_at"]),
+        )
+    return _row_to_dict(row)
+
+
+async def get_password_reset_token(token_id: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM password_reset_tokens WHERE id = $1",
+            token_id,
+        )
+    return _row_to_dict(row) if row else None
+
+
+async def consume_password_reset_token(token_id: str) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE password_reset_tokens SET consumed_at = NOW() WHERE id = $1",
+            token_id,
+        )
+
+
+# ─── Content History (anti-repetition) ──────────────────────────────────────
+
+
+async def get_recent_content_hashes(
+    student_id: str, content_type: str, limit: int = 50
+) -> List[str]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """SELECT content_hash FROM content_history
+               WHERE student_id = $1 AND content_type = $2
+               ORDER BY used_at DESC LIMIT $3""",
+            student_id, content_type, limit,
+        )
+    return [r["content_hash"] for r in rows]
+
+
+async def record_content_usage(
+    student_id: str, content_type: str, content_hash: str
+) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """INSERT INTO content_history (student_id, content_type, content_hash)
+               VALUES ($1, $2, $3)""",
+            student_id, content_type, content_hash,
+        )
