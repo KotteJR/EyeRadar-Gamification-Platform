@@ -24,7 +24,22 @@ export function createGameConfig(
     height: GAME_HEIGHT,
     pixelArt: true,
     roundPixels: true,
+    antialias: false,
+    antialiasGL: false,
     backgroundColor: "#000000",
+    render: {
+      pixelArt: true,
+      antialias: false,
+      antialiasGL: false,
+      roundPixels: true,
+      powerPreference: "high-performance",
+    },
+    fps: {
+      target: 60,
+      min: 30,
+      forceSetTimeOut: false,
+      deltaHistory: 10,
+    },
     scale: {
       mode: Phaser.Scale.ENVELOP,
       autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -34,6 +49,8 @@ export function createGameConfig(
       arcade: {
         gravity: { x: 0, y: 800 },
         debug: false,
+        fps: 60,
+        fixedStep: true,
       },
     },
     scene: [BootScene, PreloadScene, BattleScene, DragonBattleScene, RunnerScene, MemoryScene, WorldMapScene, CastleBossScene, CastleDungeonScene, CastleDungeon3StageScene],

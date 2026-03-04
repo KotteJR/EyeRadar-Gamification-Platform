@@ -115,6 +115,8 @@ export class CastleDungeonScene extends Phaser.Scene {
   private collectibles: Collectible[] = [];
   private enemiesDefeated = 0;
   private totalEnemies = 5;
+  private uiTickAccumulatorMs = 0;
+  private readonly uiTickIntervalMs = 33; // 30 FPS for expensive HUD drawings
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -149,6 +151,7 @@ export class CastleDungeonScene extends Phaser.Scene {
     this.obstacles = [];
     this.enemiesDefeated = 0;
     this.destroyed = false;
+    this.uiTickAccumulatorMs = 0;
   }
 
   preload(): void {
@@ -262,7 +265,7 @@ export class CastleDungeonScene extends Phaser.Scene {
     this.load.json("custom-terrain-map", `${base}/maps/terrain.json?t=${Date.now()}`);
     this.load.on("loaderror", (file: { key: string }) => {
       if (file.key === "custom-terrain-map") {
-        console.log("[Dungeon] No custom map file found, will use procedural");
+        // Expected when no designer map exists; procedural generation will be used
       }
     });
 
@@ -303,9 +306,13 @@ export class CastleDungeonScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (!this.alive) return;
-    
-    // Always update health bars even during questions
-    this.updateHealthBars();
+
+    // Throttle expensive graphics redraws to keep movement smooth.
+    this.uiTickAccumulatorMs += delta;
+    if (this.uiTickAccumulatorMs >= this.uiTickIntervalMs) {
+      this.updateHealthBars();
+      this.uiTickAccumulatorMs = 0;
+    }
     
     // Stop player movement when not playing
     if (this.gameState !== "playing") {
@@ -323,7 +330,7 @@ export class CastleDungeonScene extends Phaser.Scene {
       return;
     }
     
-    const dt = delta / 1000;
+    const dt = Math.min(delta, 50) / 1000;
 
     this.updatePlayer(dt);
     this.updateBullets(dt);
@@ -354,10 +361,8 @@ export class CastleDungeonScene extends Phaser.Scene {
     } catch { /* file not found */ }
 
     if (customMap?.grid && Array.isArray(customMap.grid) && customMap.grid.length > 0) {
-      console.log("[Dungeon] Loaded custom map from terrain.json", customMap.grid.length, "rows");
       this.terrainGrid = customMap.grid;
     } else {
-      console.log("[Dungeon] No custom map found, generating procedurally");
       this.generateTerrainGrid();
     }
 
@@ -464,7 +469,6 @@ export class CastleDungeonScene extends Phaser.Scene {
   private buildTileFrameMap(): void {
     const meta = this.cache.json.get("grass-forest-meta");
     if (!meta || !meta.tileset_data) {
-      console.warn("No tileset metadata found");
       return;
     }
     this.tilesetData = meta.tileset_data;

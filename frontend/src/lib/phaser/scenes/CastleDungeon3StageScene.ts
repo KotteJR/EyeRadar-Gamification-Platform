@@ -125,6 +125,9 @@ interface ShrineObj {
 export class CastleDungeon3StageScene extends Phaser.Scene {
   private gameState: GameState = "playing";
   private levelIndex = 0;
+  private dungeonMapName = "terrain";
+  private terrainPreset = "cloud_kingdom";
+  private mapCacheKey = "custom-terrain-map";
 
   // Player
   private player!: Phaser.GameObjects.Sprite;
@@ -165,6 +168,9 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
   private questionSource: QuestionSource = "enemy";
   private activeShrine: ShrineObj | null = null;
   private shieldBoss: Enemy | null = null;
+  private pendingEnemyForQuestion: Enemy | null = null;
+  private uiTickAccumulatorMs = 0;
+  private readonly uiTickIntervalMs = 33; // 30 FPS for expensive HUD drawings
 
   // Controls
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -185,8 +191,11 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
     return !this.destroyed && !!this.scene;
   }
 
-  init(data?: { level?: number }): void {
+  init(data?: { level?: number; dungeonMapName?: string; dungeonTerrainPreset?: string }): void {
     this.levelIndex = data?.level ?? 0;
+    this.dungeonMapName = (data?.dungeonMapName || "terrain").trim() || "terrain";
+    this.terrainPreset = (data?.dungeonTerrainPreset || "cloud_kingdom").trim() || "cloud_kingdom";
+    this.mapCacheKey = `custom-terrain-map-${this.dungeonMapName}`;
     this.gameState = "playing";
     this.playerHp = PLAYER_MAX_HP;
     this.playerDirection = "south";
@@ -207,6 +216,8 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
     this.questionSource = "enemy";
     this.activeShrine = null;
     this.shieldBoss = null;
+    this.pendingEnemyForQuestion = null;
+    this.uiTickAccumulatorMs = 0;
   }
 
   // ===========================================================================
@@ -321,11 +332,11 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
       }
     }
 
-    // Custom terrain map
-    this.load.json("custom-terrain-map", `${base}/maps/terrain.json?t=${Date.now()}`);
+    // Optional custom terrain map (from map editor or theme defaults)
+    this.load.json(this.mapCacheKey, `${base}/maps/${this.dungeonMapName}.json?t=${Date.now()}`);
     this.load.on("loaderror", (file: { key: string }) => {
-      if (file.key === "custom-terrain-map") {
-        console.log("[Dungeon3Stage] No custom map file, using procedural");
+      if (file.key === this.mapCacheKey) {
+        // Expected when no designer map exists
       }
     });
 
@@ -366,8 +377,13 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (!this.alive) return;
-    this.updateHealthBars();
-    this.updateShrineGlow();
+    this.uiTickAccumulatorMs += delta;
+    if (this.uiTickAccumulatorMs >= this.uiTickIntervalMs) {
+      // Throttle expensive graphics redraws to keep movement smooth.
+      this.updateHealthBars();
+      this.updateShrineGlow();
+      this.uiTickAccumulatorMs = 0;
+    }
 
     if (this.gameState !== "playing") {
       if (this.player?.body) {
@@ -381,7 +397,7 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
       return;
     }
 
-    const dt = delta / 1000;
+    const dt = Math.min(delta, 50) / 1000;
     this.updatePlayer(dt);
     this.updateBullets(dt);
     this.updateEnemies(dt);
@@ -405,7 +421,7 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldW, worldH);
 
     let customMap: { grid?: number[][]; objects?: Array<{ type: string; x: number; y: number }> } | null = null;
-    try { customMap = this.cache.json.get("custom-terrain-map"); } catch { /* */ }
+    try { customMap = this.cache.json.get(this.mapCacheKey); } catch { /* */ }
 
     if (customMap?.grid && Array.isArray(customMap.grid) && customMap.grid.length > 0) {
       this.terrainGrid = customMap.grid;
@@ -468,6 +484,16 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
     const safeRadius = 8;
     const pathWidth = 4;
 
+    const terrainProfileByPreset: Record<string, { primary: number; secondary: number; water: number; accents: number[] }> = {
+      grassland: { primary: 1, secondary: 3, water: 2, accents: [6, 5] },
+      forest: { primary: 1, secondary: 4, water: 2, accents: [10, 6] },
+      mountain: { primary: 5, secondary: 9, water: 2, accents: [6, 8] },
+      sunset: { primary: 7, secondary: 6, water: 2, accents: [8, 5] },
+      night: { primary: 10, secondary: 9, water: 2, accents: [8, 5] },
+      cloud_kingdom: { primary: 9, secondary: 5, water: 2, accents: [6, 10] },
+    };
+    const preset = terrainProfileByPreset[this.terrainPreset] || terrainProfileByPreset.cloud_kingdom;
+
     for (let y = 0; y < gridH; y++) {
       for (let x = 0; x < gridW; x++) {
         const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
@@ -480,20 +506,20 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
         const forestChance = 0.6 - edgeFactor * 0.3;
         const noise = Math.sin(x * 0.5) * Math.cos(y * 0.5) * 0.5 + 0.5;
         if (noise > forestChance || distFromCenter > gridW * 0.35) {
-          this.terrainGrid[y][x] = Math.sin(x * 0.2 + y * 0.3) > 0 ? 1 : 3;
+          this.terrainGrid[y][x] = Math.sin(x * 0.2 + y * 0.3) > 0 ? preset.primary : preset.secondary;
         }
       }
     }
 
     const clusters = [
-      { cx: gridW * 0.15, cy: gridH * 0.15, r: 8, t: 1 },
-      { cx: gridW * 0.85, cy: gridH * 0.15, r: 8, t: 3 },
-      { cx: gridW * 0.15, cy: gridH * 0.85, r: 8, t: 3 },
-      { cx: gridW * 0.85, cy: gridH * 0.85, r: 8, t: 1 },
-      { cx: gridW * 0.25, cy: gridH * 0.3, r: 5, t: 1 },
-      { cx: gridW * 0.75, cy: gridH * 0.3, r: 5, t: 3 },
-      { cx: gridW * 0.25, cy: gridH * 0.7, r: 5, t: 3 },
-      { cx: gridW * 0.75, cy: gridH * 0.7, r: 5, t: 1 },
+      { cx: gridW * 0.15, cy: gridH * 0.15, r: 8, t: preset.primary },
+      { cx: gridW * 0.85, cy: gridH * 0.15, r: 8, t: preset.secondary },
+      { cx: gridW * 0.15, cy: gridH * 0.85, r: 8, t: preset.secondary },
+      { cx: gridW * 0.85, cy: gridH * 0.85, r: 8, t: preset.primary },
+      { cx: gridW * 0.25, cy: gridH * 0.3, r: 5, t: preset.accents[0] ?? preset.primary },
+      { cx: gridW * 0.75, cy: gridH * 0.3, r: 5, t: preset.accents[1] ?? preset.secondary },
+      { cx: gridW * 0.25, cy: gridH * 0.7, r: 5, t: preset.secondary },
+      { cx: gridW * 0.75, cy: gridH * 0.7, r: 5, t: preset.primary },
     ];
     for (const cluster of clusters) {
       for (let y = 0; y < gridH; y++) {
@@ -516,7 +542,7 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
           const dx = (x - pond.cx) / pond.rx;
           const dy = (y - pond.cy) / pond.ry;
           if (dx * dx + dy * dy < 1 && this.terrainGrid[y][x] === 0) {
-            this.terrainGrid[y][x] = 2;
+            this.terrainGrid[y][x] = preset.water;
           }
         }
       }
@@ -711,7 +737,7 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
   }
 
   private placeMapObjects(): void {
-    const customMap = this.cache.json.get("custom-terrain-map");
+    const customMap = this.cache.json.get(this.mapCacheKey);
     if (!customMap?.objects) return;
     for (const obj of customMap.objects as Array<{ type: string; x: number; y: number }>) {
       if (!this.textures.exists(obj.type)) continue;
@@ -1688,15 +1714,38 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
         this.tweens.add({ targets: p, x: enemy.sprite.x + (Math.random() - 0.5) * 60, y: enemy.sprite.y + (Math.random() - 0.5) * 60, alpha: 0, duration: 400, onComplete: () => p.destroy() });
       }
 
-      this.enemiesDefeated++;
-      const zoneKills = (this.zoneEnemiesKilled.get(enemy.zone) ?? 0) + 1;
-      this.zoneEnemiesKilled.set(enemy.zone, zoneKills);
-      this.emitPhaseUpdate();
-
-      // Trigger question for this kill
+      // Keep this kill pending until question is answered correctly.
+      this.pendingEnemyForQuestion = enemy;
       this.questionSource = "enemy";
       this.gameState = "question";
       eventBus.emit(GameEvents.CASTLE_QUESTION, { bossPhase: this.levelIndex + 1, source: "enemy" });
+    }
+  }
+
+  private confirmPendingEnemyDefeat(): void {
+    const enemy = this.pendingEnemyForQuestion;
+    if (!enemy) return;
+    this.pendingEnemyForQuestion = null;
+
+    this.enemiesDefeated++;
+    const zoneKills = (this.zoneEnemiesKilled.get(enemy.zone) ?? 0) + 1;
+    this.zoneEnemiesKilled.set(enemy.zone, zoneKills);
+    this.emitPhaseUpdate();
+  }
+
+  private revivePendingEnemy(): void {
+    const enemy = this.pendingEnemyForQuestion;
+    if (!enemy) return;
+    this.pendingEnemyForQuestion = null;
+
+    enemy.hp = enemy.maxHp;
+    enemy.state = "patrol";
+    enemy.sprite.setVisible(true).setActive(true);
+    if (enemy.isBoss && !enemy.bossTypeKey) enemy.sprite.setTint(0xff6666);
+    const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | undefined;
+    if (body) {
+      body.enable = true;
+      body.setVelocity(0, 0);
     }
   }
 
@@ -1762,10 +1811,25 @@ export class CastleDungeon3StageScene extends Phaser.Scene {
     }
 
     // Regular enemy question
-    if (correct) {
+    if (this.pendingEnemyForQuestion) {
+      if (correct) {
+        this.confirmPendingEnemyDefeat();
+      } else {
+        // Wrong answer means the just-defeated enemy comes back.
+        this.revivePendingEnemy();
+      }
       if (this.enemiesDefeated >= this.totalEnemies) {
         this.triggerVictory();
       } else {
+        this.checkZoneProgress(this.currentZone);
+        this.gameState = "playing";
+      }
+      return;
+    }
+
+    if (correct) {
+      if (this.enemiesDefeated >= this.totalEnemies) this.triggerVictory();
+      else {
         this.checkZoneProgress(this.currentZone);
         this.gameState = "playing";
       }

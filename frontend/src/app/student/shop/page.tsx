@@ -28,19 +28,41 @@ import {
 } from "lucide-react";
 
 export default function ShopPage() {
-  const { user, purchaseItem } = useAuth();
+  const { user, purchaseItem: localPurchase } = useAuth();
   const [student, setStudent] = useState<Student | null>(null);
   const [activeCategory, setActiveCategory] = useState<ShopCategory | "all">("characters");
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+  const [ownedItems, setOwnedItems] = useState<Set<string>>(new Set());
+  const [buying, setBuying] = useState(false);
 
   useEffect(() => {
     if (!user?.studentId) return;
-    api.getStudent(user.studentId).then(setStudent).catch(() => {});
-  }, [user]);
+    let mounted = true;
+
+    Promise.all([
+      api.getStudent(user.studentId),
+      api.getStudentPurchases(user.studentId).catch(() => [] as string[]),
+    ]).then(([s, purchases]) => {
+      if (!mounted) return;
+      setStudent(s);
+      setOwnedItems(new Set(purchases));
+    }).catch(() => {});
+
+    return () => { mounted = false; };
+  }, [user?.studentId]);
 
   const points = student?.total_points ?? 0;
-  const owned = user?.ownedItems ?? [];
+
+  const defaultItemIds = useMemo(
+    () => new Set(ALL_SHOP_ITEMS.filter((i) => i.isDefault).map((i) => i.id)),
+    []
+  );
+
+  const isOwned = useCallback(
+    (itemId: string) => defaultItemIds.has(itemId) || ownedItems.has(itemId),
+    [defaultItemIds, ownedItems]
+  );
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return ALL_SHOP_ITEMS;
@@ -55,16 +77,27 @@ export default function ShopPage() {
   );
 
   const handleBuy = useCallback(
-    (item: ShopItem) => {
-      if (owned.includes(item.id) || item.isDefault || points < item.cost) return;
-      purchaseItem(item.id);
-      setSelectedItem(null);
+    async (item: ShopItem) => {
+      if (!user?.studentId || isOwned(item.id) || points < item.cost || buying) return;
+      setBuying(true);
+      try {
+        const result = await api.purchaseShopItem(user.studentId, item.id);
+        setOwnedItems((prev) => new Set(prev).add(item.id));
+        setStudent((prev) => prev ? { ...prev, total_points: result.remaining_points } : prev);
+        localPurchase(item.id);
+        UISounds.purchase();
+      } catch {
+        UISounds.click();
+      } finally {
+        setBuying(false);
+        setSelectedItem(null);
+      }
     },
-    [owned, points, purchaseItem]
+    [user?.studentId, isOwned, points, buying, localPurchase]
   );
 
   const handleEquip = useCallback(
-    (item: ShopItem) => {
+    (_item: ShopItem) => {
       setSelectedItem(null);
     },
     []
@@ -130,7 +163,7 @@ export default function ShopPage() {
 
       {/* Selected Item Detail Panel */}
       {selectedItemData && (() => {
-        const isOwned = owned.includes(selectedItemData.id) || selectedItemData.isDefault;
+        const owned = isOwned(selectedItemData.id);
         const canAfford = points >= selectedItemData.cost;
         const rarityColor = RARITY_COLORS[selectedItemData.rarity];
         return (
@@ -171,13 +204,17 @@ export default function ShopPage() {
                   </span>
                 </div>
                 <p className="text-neutral-400 text-[13px] mb-4 leading-relaxed">{selectedItemData.description}</p>
-                {isOwned ? (
+                {owned ? (
                   <button onClick={() => { UISounds.click(); handleEquip(selectedItemData); }} className="flex items-center gap-1.5 px-5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-semibold rounded-xl text-[13px] transition-colors">
                     <Check size={14} /> Equip
                   </button>
                 ) : canAfford ? (
-                  <button onClick={() => { UISounds.purchase(); handleBuy(selectedItemData); }} className="flex items-center gap-1.5 px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold rounded-xl text-[13px] transition-colors">
-                    <Star size={13} fill="currentColor" /> Buy for {selectedItemData.cost} pts
+                  <button
+                    disabled={buying}
+                    onClick={() => handleBuy(selectedItemData)}
+                    className="flex items-center gap-1.5 px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white font-semibold rounded-xl text-[13px] transition-colors disabled:opacity-50"
+                  >
+                    <Star size={13} fill="currentColor" /> {buying ? "Buying..." : `Buy for ${selectedItemData.cost} pts`}
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 px-5 py-2 bg-neutral-50 text-neutral-400 font-medium rounded-xl text-[13px]">
@@ -197,7 +234,7 @@ export default function ShopPage() {
           : "grid-cols-3 sm:grid-cols-4 md:grid-cols-5"
       }`}>
         {filtered.map((item) => {
-          const isOwned = owned.includes(item.id) || item.isDefault;
+          const owned = isOwned(item.id);
           const canAfford = points >= item.cost;
           const isSelected = selectedItem === item.id;
           const rarityColor = RARITY_COLORS[item.rarity];
@@ -210,7 +247,7 @@ export default function ShopPage() {
                 isSelected
                   ? "border-neutral-300 shadow-md"
                   : "border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-md hover:border-neutral-200"
-              } ${!canAfford && !isOwned ? "opacity-55" : ""}`}
+              } ${!canAfford && !owned ? "opacity-55" : ""}`}
             >
               {/* Image area */}
               <div className={`relative flex items-center justify-center bg-[#fafaf9] ${
@@ -235,7 +272,7 @@ export default function ShopPage() {
                 )}
 
                 {/* Owned badge */}
-                {isOwned && (
+                {owned && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
                     <Check size={10} className="text-white" strokeWidth={3} />
                   </div>
@@ -249,7 +286,7 @@ export default function ShopPage() {
                   <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: rarityColor }}>
                     {item.rarity}
                   </span>
-                  {isOwned ? (
+                  {owned ? (
                     <span className="text-[10px] font-medium text-emerald-500">Owned</span>
                   ) : (
                     <span className="text-[11px] font-semibold text-neutral-500 flex items-center gap-0.5">

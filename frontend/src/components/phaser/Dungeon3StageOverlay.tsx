@@ -21,6 +21,33 @@ interface Dungeon3StageOverlayProps {
   onVictory: () => void;
 }
 
+function getPassageAndQuestion(item: ExerciseItem): { passage: string | null; question: string } {
+  const ed = item.extra_data || {};
+  const directPassage =
+    typeof ed.passage === "string"
+      ? ed.passage.trim()
+      : typeof ed.sentence === "string"
+      ? ed.sentence.trim()
+      : "";
+
+  const rawQuestion = (item.question || "").trim();
+  const inlinePassageMatch = rawQuestion.match(/\[Passage:\s*([\s\S]*?)\]\s*([\s\S]*)/i);
+
+  if (inlinePassageMatch) {
+    const inlinePassage = (inlinePassageMatch[1] || "").trim();
+    const cleanedQuestion = (inlinePassageMatch[2] || "").trim();
+    return {
+      passage: inlinePassage || directPassage || null,
+      question: cleanedQuestion || "What do you remember from the passage?",
+    };
+  }
+
+  return {
+    passage: directPassage || null,
+    question: rawQuestion,
+  };
+}
+
 export default function Dungeon3StageOverlay({
   sessionId,
   items,
@@ -49,6 +76,7 @@ export default function Dungeon3StageOverlay({
   const [enemiesDefeated, setEnemiesDefeated] = useState(0);
   const [showGameOver, setShowGameOver] = useState(false);
   const [gateNotification, setGateNotification] = useState<string | null>(null);
+  const [showPassageStep, setShowPassageStep] = useState(false);
 
   useEffect(() => {
     const u1 = eventBus.on(GameEvents.CASTLE_PHASE_UPDATE, (d) => {
@@ -84,7 +112,9 @@ export default function Dungeon3StageOverlay({
         return;
       }
       const idx = questionIdx % items.length;
-      setCurrentQuestion(items[idx]);
+      const nextQuestion = items[idx];
+      setCurrentQuestion(nextQuestion);
+      setShowPassageStep(!!getPassageAndQuestion(nextQuestion).passage);
       setShowQuestion(true);
       setLastResult(null);
     });
@@ -266,30 +296,62 @@ export default function Dungeon3StageOverlay({
                 </div>
               </div>
 
-              <p className="text-white text-center text-base font-bold mb-5 leading-relaxed" style={{ fontFamily: "'Fredoka', sans-serif" }}>
-                {currentQuestion.question}
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                {currentQuestion.options.map((option, idx) => {
-                  const isC = lastResult && option === lastResult.correct_answer;
-                  const isW = lastResult && option === lastResult.student_answer && !lastResult.is_correct;
-                  let cls = "bg-white/10 border-white/20 text-white hover:bg-white/20";
-                  if (isC) cls = "bg-emerald-500/30 border-emerald-400 text-emerald-300";
-                  if (isW) cls = "bg-red-500/30 border-red-400 text-red-300";
+              {(() => {
+                const parsed = getPassageAndQuestion(currentQuestion);
+                if (showPassageStep && parsed.passage) {
                   return (
-                    <button
-                      key={idx}
-                      onClick={() => handleAnswer(option)}
-                      disabled={submitting || !!lastResult}
-                      className={`${cls} border-2 rounded-xl px-4 py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-60`}
-                      style={{ fontFamily: "'Fredoka', sans-serif" }}
-                    >
-                      {option}
-                    </button>
+                    <>
+                      <p className="text-white/80 text-center text-sm font-bold mb-3" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                        Read the passage carefully.
+                      </p>
+                      <div className="bg-white/10 border border-white/20 rounded-2xl p-4 mb-4">
+                        <p className="text-white text-[15px] leading-relaxed font-semibold" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                          {parsed.passage}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          UISounds.select();
+                          setShowPassageStep(false);
+                        }}
+                        disabled={submitting}
+                        className="w-full border-2 border-amber-300/60 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded-xl px-4 py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-60"
+                        style={{ fontFamily: "'Fredoka', sans-serif" }}
+                      >
+                        I&apos;m ready
+                      </button>
+                    </>
                   );
-                })}
-              </div>
+                }
+
+                return (
+                  <>
+                    <p className="text-white text-center text-base font-bold mb-5 leading-relaxed" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                      {parsed.question}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {currentQuestion.options.map((option, idx) => {
+                        const isC = lastResult && option === lastResult.correct_answer;
+                        const isW = lastResult && option === lastResult.student_answer && !lastResult.is_correct;
+                        let cls = "bg-white/10 border-white/20 text-white hover:bg-white/20";
+                        if (isC) cls = "bg-emerald-500/30 border-emerald-400 text-emerald-300";
+                        if (isW) cls = "bg-red-500/30 border-red-400 text-red-300";
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleAnswer(option)}
+                            disabled={submitting || !!lastResult}
+                            className={`${cls} border-2 rounded-xl px-4 py-3 text-sm font-bold transition-all active:scale-95 disabled:opacity-60`}
+                            style={{ fontFamily: "'Fredoka', sans-serif" }}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
 
               {lastResult && (
                 <div className={`mt-4 text-center text-sm font-bold ${lastResult.is_correct ? "text-emerald-400" : "text-red-400"}`}>

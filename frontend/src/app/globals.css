@@ -387,18 +387,7 @@ main {
   transform: scale(0.98);
 }
 
-/* ─── Game card ────────────────────────────────────────── */
-.game-card-kids {
-  border-radius: 16px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  border: none;
-  background: var(--color-cream);
-}
-.game-card-kids:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.06);
-}
+/* ─── Game card (legacy) ───────────────────────────────── */
 
 /* ─── Pill tab ────────────────────────────────────────── */
 .pill-tab {

@@ -298,6 +298,12 @@ function WorldBiomeNode({
 // ═════════════════════════════════════════════════════════════════════
 export default function AdventureMapPage() {
   const { user } = useAuth();
+  const HIDDEN_GAME_IDS = new Set([
+    "castle_challenge",
+    "dungeon_forest",
+    "dungeon_beach",
+    "dungeon_3stage",
+  ]);
   const [games, setGames] = useState<GameDefinition[]>([]);
   const [sessions, setSessions] = useState<ExerciseSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -322,7 +328,7 @@ export default function AdventureMapPage() {
         api.getStudentAdventure(user!.studentId).catch(() => null),
         api.getStudent(user!.studentId).catch(() => null),
       ]);
-      setGames(g);
+      setGames(g.filter((game) => !HIDDEN_GAME_IDS.has(game.id)));
       setSessions(s);
       if (gamification) setTotalPoints(gamification.total_points);
       if (stu) setStudent(stu);
@@ -378,7 +384,7 @@ export default function AdventureMapPage() {
 
   const worlds = useMemo(() => {
     if (!user) return [];
-    if (adventure && adventure.worlds.length > 0) {
+    if (adventure) {
       return computeCustomWorldsSummary(adventure.worlds, games, sessions);
     }
     return computeAllWorldsSummary(games, sessions, user.age);
@@ -447,8 +453,8 @@ export default function AdventureMapPage() {
   if (selectedWorld) {
     // If adventure exists, only show the games assigned to this world
     const adventureWorld = adventure?.worlds.find((w) => w.deficit_area === selectedWorld);
-    const worldGames = adventureWorld
-      ? games.filter((g) => adventureWorld.game_ids.includes(g.id))
+    const worldGames = adventure
+      ? games.filter((g) => (adventureWorld?.game_ids || []).includes(g.id))
       : games.filter(
           (g) =>
             g.deficit_area === selectedWorld &&

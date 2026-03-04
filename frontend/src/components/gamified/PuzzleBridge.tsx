@@ -46,7 +46,8 @@ export default function PuzzleBridge({
     setShowExplosion(false);
     setShowDamageFlash(false);
     setIsRunning(false);
-    setTimeout(() => setPhase("challenge"), 600);
+    const timer = setTimeout(() => setPhase("challenge"), 600);
+    return () => clearTimeout(timer);
   }, [item]);
 
   useEffect(() => {

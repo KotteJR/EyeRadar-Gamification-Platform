@@ -116,6 +116,9 @@ export interface LevelStartPayload {
   maxProgress: number;
   streak: number;
   points: number;
+  level?: number;
+  dungeonMapName?: string;
+  dungeonTerrainPreset?: string;
 }
 
 export interface CastlePhasePayload {

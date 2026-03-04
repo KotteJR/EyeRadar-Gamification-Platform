@@ -18,6 +18,33 @@ interface AnswerOverlayProps {
   onSelectAnswer: (answer: string) => void;
 }
 
+function getPassageAndQuestion(item: ExerciseItem): { passage: string | null; question: string } {
+  const ed = item.extra_data || {};
+  const directPassage =
+    typeof ed.passage === "string"
+      ? ed.passage.trim()
+      : typeof ed.sentence === "string"
+      ? ed.sentence.trim()
+      : "";
+
+  const rawQuestion = (item.question || "").trim();
+  const inlinePassageMatch = rawQuestion.match(/\[Passage:\s*([\s\S]*?)\]\s*([\s\S]*)/i);
+
+  if (inlinePassageMatch) {
+    const inlinePassage = (inlinePassageMatch[1] || "").trim();
+    const cleanedQuestion = (inlinePassageMatch[2] || "").trim();
+    return {
+      passage: inlinePassage || directPassage || null,
+      question: cleanedQuestion || "What do you remember from the passage?",
+    };
+  }
+
+  return {
+    passage: directPassage || null,
+    question: rawQuestion,
+  };
+}
+
 // ─── Interactive grid for spot_target — tap cells to select them ────────
 function InteractiveGridAnswer({
   item,
@@ -124,11 +151,11 @@ function InteractiveGridAnswer({
 }
 
 // ─── Render the problem content that the question references ─────────────
-function ProblemDisplay({ item }: { item: ExerciseItem }) {
+function ProblemDisplay({ item, hidePassage = false }: { item: ExerciseItem; hidePassage?: boolean }) {
   const ed = item.extra_data || {};
   const type = item.item_type;
 
-  if (type === "timed_reading" && typeof ed.passage === "string") {
+  if (!hidePassage && type === "timed_reading" && typeof ed.passage === "string") {
     return (
       <div className="qa-problem-block">
         <p className="qa-passage">{ed.passage}</p>
@@ -251,7 +278,7 @@ function ProblemDisplay({ item }: { item: ExerciseItem }) {
   const target = ed.target;
   const passage = ed.passage ?? ed.sentence;
 
-  if (typeof passage === "string") {
+  if (!hidePassage && typeof passage === "string") {
     return (
       <div className="qa-problem-block">
         <p className="qa-passage">{passage}</p>
@@ -287,14 +314,20 @@ export default function AnswerOverlay({
   onSelectAnswer,
 }: AnswerOverlayProps) {
   const [animating, setAnimating] = useState(false);
+  const [showPassageStep, setShowPassageStep] = useState(false);
   const prevItemRef = useRef(item);
 
   useEffect(() => {
     if (prevItemRef.current !== item) {
       prevItemRef.current = item;
       setAnimating(false);
+      setShowPassageStep(!!getPassageAndQuestion(item).passage);
     }
   }, [item]);
+
+  useEffect(() => {
+    setShowPassageStep(!!getPassageAndQuestion(item).passage);
+  }, []);
 
   useEffect(() => {
     const unsub = eventBus.on(GameEvents.PHASE_CHANGE, (detail) => {
@@ -330,6 +363,8 @@ export default function AnswerOverlay({
 
   const showQuestion = !lastResult && !animating && !submitting;
   const showResult = !!lastResult;
+  const { passage, question } = getPassageAndQuestion(item);
+  const isPassageQuestion = !!passage;
 
   const options = item.options || [];
   const needsTextInput = ["text_input", "fill_blank"].includes(item.item_type);
@@ -343,21 +378,39 @@ export default function AnswerOverlay({
         <div className="pointer-events-auto max-w-lg w-full px-4 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* ══ Question panel — uses dialog-question.png as CSS background ══ */}
           <div className="qa-dialog">
-            <p className="qa-question">{item.question}</p>
+            <p className="qa-question">
+              {showPassageStep && isPassageQuestion ? "Read the passage carefully." : question}
+            </p>
 
-            {isGridType ? (
+            {showPassageStep && passage ? (
+              <div className="qa-problem-block">
+                <p className="qa-passage">{passage}</p>
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => {
+                      UISounds.select();
+                      setShowPassageStep(false);
+                    }}
+                    disabled={submitting}
+                    className="qa-btn-submit disabled:opacity-40"
+                  >
+                    I&apos;m ready
+                  </button>
+                </div>
+              </div>
+            ) : isGridType ? (
               <InteractiveGridAnswer
                 item={item}
                 onSubmit={handleAnswer}
                 disabled={submitting}
               />
             ) : (
-              <ProblemDisplay item={item} />
+              <ProblemDisplay item={item} hidePassage={isPassageQuestion} />
             )}
           </div>
 
           {/* ══ Answer buttons ══ */}
-          {!isGridType && (
+          {!isGridType && !showPassageStep && (
             <div className="mt-3">
               {needsTextInput ? (
                 <TextInputAnswer

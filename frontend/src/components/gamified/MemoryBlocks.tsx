@@ -59,26 +59,27 @@ export default function MemoryBlocks({
   }, [item]);
 
   useEffect(() => {
-    if (lastResult) {
-      setPhase("result");
-      if (lastResult.is_correct) {
-        setMonsterHurt(true);
-        setTimeout(() => {
-          setMonsterHurt(false);
-          setMonsterDefeated(true);
-          setShowExplosion(true);
-        }, 500);
-        setTimeout(() => {
-          setIsRunning(true);
-          worldOffset.current += 900;
-          setOffset(worldOffset.current);
-        }, 1000);
-        setTimeout(() => setIsRunning(false), 1800);
-      } else {
-        setShowDamageFlash(true);
-        setTimeout(() => setShowDamageFlash(false), 600);
-      }
+    if (!lastResult) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    setPhase("result");
+    if (lastResult.is_correct) {
+      setMonsterHurt(true);
+      timers.push(setTimeout(() => {
+        setMonsterHurt(false);
+        setMonsterDefeated(true);
+        setShowExplosion(true);
+      }, 500));
+      timers.push(setTimeout(() => {
+        setIsRunning(true);
+        worldOffset.current += 900;
+        setOffset(worldOffset.current);
+      }, 1000));
+      timers.push(setTimeout(() => setIsRunning(false), 1800));
+    } else {
+      setShowDamageFlash(true);
+      timers.push(setTimeout(() => setShowDamageFlash(false), 600));
     }
+    return () => timers.forEach(clearTimeout);
   }, [lastResult]);
 
   const handleCellClick = (index: number) => {

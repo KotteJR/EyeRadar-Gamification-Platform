@@ -41,14 +41,63 @@ export default function GameRenderer(props: GameRendererProps) {
   }
 }
 
+function getPassageAndQuestion(item: ExerciseItem): { passage: string | null; question: string } {
+  const ed = item.extra_data || {};
+  const directPassage =
+    typeof ed.passage === "string"
+      ? ed.passage.trim()
+      : typeof ed.sentence === "string"
+      ? ed.sentence.trim()
+      : "";
+
+  const rawQuestion = (item.question || "").trim();
+  const inlinePassageMatch = rawQuestion.match(/\[Passage:\s*([\s\S]*?)\]\s*([\s\S]*)/i);
+
+  if (inlinePassageMatch) {
+    const inlinePassage = (inlinePassageMatch[1] || "").trim();
+    const cleanedQuestion = (inlinePassageMatch[2] || "").trim();
+    return {
+      passage: inlinePassage || directPassage || null,
+      question: cleanedQuestion || "What do you remember from the passage?",
+    };
+  }
+
+  return {
+    passage: directPassage || null,
+    question: rawQuestion,
+  };
+}
+
 // =============================================================================
 // MULTIPLE CHOICE GAME
 // =============================================================================
 
 function MultipleChoiceGame({ item, lastResult, submitting, selectedAnswer, areaColor, onSelectAnswer, onSubmit }: GameRendererProps) {
+  const [showPassageStep, setShowPassageStep] = useState(false);
+  const parsed = getPassageAndQuestion(item);
+
+  useEffect(() => {
+    setShowPassageStep(!!parsed.passage);
+  }, [item.index, parsed.passage]);
+
+  if (showPassageStep && parsed.passage) {
+    return (
+      <div className="game-card">
+        <p className="text-sm font-bold text-gray-500 mb-2 text-center">Read the passage carefully.</p>
+        <p className="text-lg text-gray-900 mb-5 leading-relaxed whitespace-pre-line font-semibold">{parsed.passage}</p>
+        <button
+          onClick={() => setShowPassageStep(false)}
+          className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-bold rounded-2xl hover:bg-gray-200 flex items-center justify-center gap-2"
+        >
+          I&apos;m ready <ArrowRight size={16} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="game-card">
-      <p className="text-lg text-gray-900 mb-5 leading-relaxed whitespace-pre-line font-semibold">{item.question}</p>
+      <p className="text-lg text-gray-900 mb-5 leading-relaxed whitespace-pre-line font-semibold">{parsed.question}</p>
       <div className="space-y-2.5">
         {item.options.map((option, idx) => (
           <AnswerOption
@@ -535,7 +584,13 @@ function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSele
     setPhase("reading");
     setTimeLeft(readingTime);
     const timer = setInterval(() => {
-      setTimeLeft(prev => { if (prev <= 100) { clearInterval(timer); setPhase("answering"); return 0; } return prev - 100; });
+      setTimeLeft((prev) => {
+        if (prev <= 100) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 100;
+      });
     }, 100);
     return () => clearInterval(timer);
   }, [item.index, readingTime]);
@@ -552,8 +607,13 @@ function TimedReadingGame({ item, lastResult, submitting, selectedAnswer, onSele
           <p className="flex items-center gap-1 text-xs text-gray-400 mt-1 text-right font-bold"><Clock size={12} /> {Math.ceil(timeLeft / 1000)}s</p>
         </div>
         <p className="text-xl text-gray-900 leading-relaxed mb-6 font-bold text-center tracking-wide">{passage}</p>
+        <p className="text-xs text-gray-500 font-semibold mb-3 text-center">
+          {timeLeft > 0
+            ? "Take your time reading, then continue when ready."
+            : "Reading timer ended. Continue when ready."}
+        </p>
         <button onClick={() => setPhase("answering")} className="w-full py-3 bg-gray-100 text-gray-700 text-sm font-bold rounded-2xl hover:bg-gray-200 flex items-center justify-center gap-2">
-          Ready! <ArrowRight size={16} />
+          I&apos;m ready <ArrowRight size={16} />
         </button>
       </div>
     );

@@ -1,13 +1,33 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+/**
+ * Auth context — wraps next-auth session with localStorage preferences.
+ *
+ * Authentication is handled by Keycloak via next-auth.
+ * User preferences (avatar, items, etc.) are persisted in localStorage keyed
+ * by the Keycloak subject (sub).
+ *
+ * Public interface is intentionally identical to the previous localStorage-only
+ * implementation so that all existing consumers continue to work unchanged.
+ */
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+  useMemo,
+} from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { api } from "@/lib/api";
 import type { AvatarConfig } from "@/components/Avatar";
 import { DEFAULT_AVATAR } from "@/components/Avatar";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "teacher" | "student";
+export type UserRole = "teacher" | "student" | "guardian";
 
 export interface User {
   username: string;
@@ -17,14 +37,14 @@ export interface User {
   studentId: string;
   interests: string[];
   wizardCompleted: boolean;
-  ownedItems: string[];       // purchased shop item IDs
-  avatarConfig: AvatarConfig; // current avatar look (DiceBear options)
+  ownedItems: string[];
+  avatarConfig: AvatarConfig;
 }
 
-/** Dynamic student account created by teacher (stored in localStorage) */
+/** Legacy type kept for teacher-UI backward compatibility */
 export interface DynamicAccount {
   username: string;
-  password: string | null;  // null = no password required
+  password: string | null;
   displayName: string;
   age: number;
   studentId: string;
@@ -32,8 +52,8 @@ export interface DynamicAccount {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
+  login: () => void;
+  logout: () => Promise<void>;
   updateInterests: (interests: string[]) => void;
   completeWizard: () => void;
   purchaseItem: (itemId: string) => void;
@@ -42,68 +62,46 @@ interface AuthContextType {
   isLoggedIn: boolean;
 }
 
-// ─── Hardcoded Demo Users ────────────────────────────────────────────────────
+// ─── User Preferences (localStorage) ─────────────────────────────────────────
 
-const DEMO_USERS: Record<string, { password: string; user: User }> = {
-  teacher: {
-    password: "teacher",
-    user: {
-      username: "teacher",
-      role: "teacher",
-      displayName: "Ms. Johnson",
-      age: 35,
-      studentId: "",
-      interests: [],
-      wizardCompleted: true,
-      ownedItems: [],
-      avatarConfig: DEFAULT_AVATAR,
-    },
-  },
-  student5yrs: {
-    password: "student5yrs",
-    user: {
-      username: "student5yrs",
-      role: "student",
-      displayName: "Alex",
-      age: 5,
-      studentId: "student-5",
-      interests: [],
-      wizardCompleted: false,
-      ownedItems: [],
-      avatarConfig: { ...DEFAULT_AVATAR },
-    },
-  },
-  student10yrs: {
-    password: "student10yrs",
-    user: {
-      username: "student10yrs",
-      role: "student",
-      displayName: "Jordan",
-      age: 10,
-      studentId: "student-10",
-      interests: [],
-      wizardCompleted: false,
-      ownedItems: [],
-      avatarConfig: { ...DEFAULT_AVATAR },
-    },
-  },
-  student15yrs: {
-    password: "student15yrs",
-    user: {
-      username: "student15yrs",
-      role: "student",
-      displayName: "Sam",
-      age: 15,
-      studentId: "student-15",
-      interests: [],
-      wizardCompleted: false,
-      ownedItems: [],
-      avatarConfig: { ...DEFAULT_AVATAR },
-    },
-  },
-};
+interface UserPrefs {
+  age: number;
+  interests: string[];
+  wizardCompleted: boolean;
+  ownedItems: string[];
+  avatarConfig: AvatarConfig;
+}
 
-// ─── Dynamic Accounts Helpers ────────────────────────────────────────────────
+function prefsKey(sub: string) {
+  return `eyeradar_prefs_${sub}`;
+}
+
+function loadPrefs(sub: string): Partial<UserPrefs> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(prefsKey(sub)) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function savePrefs(sub: string, updates: Partial<UserPrefs>) {
+  if (typeof window === "undefined") return;
+  const existing = loadPrefs(sub);
+  localStorage.setItem(prefsKey(sub), JSON.stringify({ ...existing, ...updates }));
+}
+
+// ─── Role derivation ──────────────────────────────────────────────────────────
+
+function deriveRole(roles: string[] = []): UserRole {
+  if (roles.includes("teacher")) return "teacher";
+  if (roles.includes("guardian") || roles.includes("parent")) return "guardian";
+  return "student";
+}
+
+// ─── Legacy dynamic accounts (teacher-created, stored locally) ───────────────
+// These are kept for backward compat with the students UI.
+// Keycloak is the source of truth for auth; these only store display metadata.
 
 const ACCOUNTS_KEY = "eyeradar_accounts";
 
@@ -116,11 +114,6 @@ export function getDynamicAccounts(): DynamicAccount[] {
   }
 }
 
-function saveDynamicAccounts(accounts: DynamicAccount[]) {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-}
-
-/** Called by the teacher create-student form */
 export function registerStudentAccount(account: DynamicAccount) {
   const accounts = getDynamicAccounts();
   const idx = accounts.findIndex((a) => a.username === account.username);
@@ -129,181 +122,175 @@ export function registerStudentAccount(account: DynamicAccount) {
   } else {
     accounts.push(account);
   }
-  saveDynamicAccounts(accounts);
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
 }
 
-/** Update the password for a dynamic account */
-function updateDynamicPassword(username: string, password: string) {
-  const accounts = getDynamicAccounts();
-  const acc = accounts.find((a) => a.username === username);
-  if (acc) {
-    acc.password = password;
-    saveDynamicAccounts(accounts);
-  }
-}
-
-// ─── Context ────────────────────────────────────────────────────────────────
+// ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const { data: session, status } = useSession();
+  const [prefs, setPrefs] = useState<Partial<UserPrefs>>({});
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [resolvedStudentId, setResolvedStudentId] = useState<string>("");
 
-  // Load from localStorage on mount
+  const sub = session?.user?.id ?? "";
+  const role = deriveRole(session?.roles);
+
+  // Load prefs from localStorage when user identity is known
   useEffect(() => {
-    const saved = localStorage.getItem("eyeradar_user");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && !parsed.avatarConfig) {
-          parsed.avatarConfig = DEFAULT_AVATAR;
-          parsed.ownedItems = parsed.ownedItems || [];
-          delete parsed.avatarItems;
-          delete parsed.equippedItems;
-        }
-        setUser(parsed);
-        if (parsed?.role === "student" && parsed?.studentId) {
-          api.upsertStudent(parsed.studentId, {
-            name: parsed.displayName,
-            age: parsed.age,
-            grade: Math.max(1, Math.round(parsed.age - 5)),
-            language: "en",
-            interests: parsed.interests || [],
-          }).catch(() => {});
-        }
-      } catch {
-        localStorage.removeItem("eyeradar_user");
-      }
+    if (sub) {
+      const loaded = loadPrefs(sub);
+      setPrefs(loaded);
+      setPrefsLoaded(true);
+    } else {
+      setPrefsLoaded(false);
+      setResolvedStudentId("");
     }
-    setLoaded(true);
+  }, [sub]);
+
+  // Provision student in the backend whenever they log in and capture canonical DB student ID.
+  useEffect(() => {
+    if (sub && role === "student" && prefsLoaded) {
+      api
+        .upsertStudent(sub, {
+          name: session?.user?.name || "Student",
+          age: prefs.age ?? 10,
+          grade: Math.max(1, Math.round((prefs.age ?? 10) - 5)),
+          language: "en",
+          interests: prefs.interests ?? [],
+        })
+        .then((student) => {
+          if (student?.id) setResolvedStudentId(student.id);
+        })
+        .catch(() => {});
+    }
+  }, [sub, role, prefsLoaded]);
+
+  // Ensure Keycloak account is mirrored into backend users/subscriptions on login.
+  useEffect(() => {
+    if (!sub) return;
+    api.syncAccount().catch(() => {});
+  }, [sub]);
+
+  const user: User | null = useMemo(() => {
+    if (!session || !sub) return null;
+    const effectiveStudentId = role === "student" ? (resolvedStudentId || sub) : sub;
+    return {
+      username: session.user?.email || sub,
+      role,
+      displayName: session.user?.name || "User",
+      age: prefs.age ?? 10,
+      studentId: effectiveStudentId,
+      interests: prefs.interests ?? [],
+      wizardCompleted: prefs.wizardCompleted ?? false,
+      ownedItems: prefs.ownedItems ?? [],
+      avatarConfig: prefs.avatarConfig ?? { ...DEFAULT_AVATAR },
+    };
+  }, [session, sub, role, prefs, resolvedStudentId]);
+
+  // ── Auth actions ────────────────────────────────────────────────────────────
+
+  const login = useCallback(() => {
+    signIn("keycloak");
   }, []);
 
-  // Persist to localStorage
-  useEffect(() => {
-    if (loaded) {
-      if (user) {
-        localStorage.setItem("eyeradar_user", JSON.stringify(user));
-      } else {
-        localStorage.removeItem("eyeradar_user");
-      }
-    }
-  }, [user, loaded]);
+  const logout = useCallback(async () => {
+    const idToken = session?.idToken;
+    await signOut({ redirect: false });
 
-  const provisionStudent = useCallback(async (u: User) => {
-    if (u.role !== "student" || !u.studentId) return;
+    const redirectUri =
+      typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+
+    // Always finish with a local redirect so logout cannot get stuck.
+    if (typeof window === "undefined") return;
+
+    const issuer = (process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "").replace(/\/$/, "");
+    const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? "";
+
+    if (!issuer) {
+      window.location.assign("/login");
+      return;
+    }
+
+    // Best-effort Keycloak logout (do not block app logout if Keycloak rejects it).
+    const params = new URLSearchParams({
+      post_logout_redirect_uri: redirectUri,
+    });
+    if (clientId) params.set("client_id", clientId);
+    if (idToken) params.set("id_token_hint", idToken);
+
+    const keycloakLogoutUrl = `${issuer}/protocol/openid-connect/logout?${params.toString()}`;
     try {
-      await api.upsertStudent(u.studentId, {
-        name: u.displayName,
-        age: u.age,
-        grade: Math.max(1, Math.round(u.age - 5)),
-        language: "en",
-        interests: u.interests,
+      window.location.assign(keycloakLogoutUrl);
+    } catch {
+      window.location.assign("/login");
+    }
+  }, [session?.idToken]);
+
+  // ── Preference mutations ────────────────────────────────────────────────────
+
+  const updatePrefs = useCallback(
+    (updates: Partial<UserPrefs>) => {
+      if (!sub) return;
+      setPrefs((prev) => {
+        const next = { ...prev, ...updates };
+        savePrefs(sub, next);
+        return next;
       });
-    } catch { /* non-fatal */ }
-  }, []);
+    },
+    [sub]
+  );
 
-  const login = (username: string, password: string): boolean => {
-    // 1. Check hardcoded demo users
-    const demoEntry = DEMO_USERS[username];
-    if (demoEntry && demoEntry.password === password) {
-      let userToSet: User;
-      const saved = localStorage.getItem(`eyeradar_user_${username}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (!parsed.avatarConfig) {
-            parsed.avatarConfig = DEFAULT_AVATAR;
-            parsed.ownedItems = parsed.ownedItems || [];
-          }
-          userToSet = parsed;
-        } catch {
-          userToSet = { ...demoEntry.user };
-        }
-      } else {
-        userToSet = { ...demoEntry.user };
+  const updateInterests = useCallback(
+    (interests: string[]) => {
+      updatePrefs({ interests });
+      if (sub && role === "student") {
+        api
+          .upsertStudent(sub, {
+            name: user?.displayName || "Student",
+            age: user?.age ?? 10,
+            grade: Math.max(1, Math.round((user?.age ?? 10) - 5)),
+            language: "en",
+            interests,
+          })
+          .catch(() => {});
       }
-      setUser(userToSet);
-      provisionStudent(userToSet);
-      return true;
-    }
+    },
+    [updatePrefs, sub, role, user]
+  );
 
-    // 2. Check dynamic student accounts (created by teacher)
-    const accounts = getDynamicAccounts();
-    const dynAccount = accounts.find((a) => a.username === username);
-    if (dynAccount) {
-      // If no password set, accept any password (including empty)
-      if (dynAccount.password !== null && dynAccount.password !== password) {
-        return false;
+  const completeWizard = useCallback(
+    () => updatePrefs({ wizardCompleted: true }),
+    [updatePrefs]
+  );
+
+  const purchaseItem = useCallback(
+    (itemId: string) => {
+      const current = prefs.ownedItems ?? [];
+      if (!current.includes(itemId)) {
+        updatePrefs({ ownedItems: [...current, itemId] });
       }
+    },
+    [updatePrefs, prefs.ownedItems]
+  );
 
-      let userToSet: User;
-      const saved = localStorage.getItem(`eyeradar_user_${username}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (!parsed.avatarConfig) {
-            parsed.avatarConfig = DEFAULT_AVATAR;
-            parsed.ownedItems = parsed.ownedItems || [];
-          }
-          userToSet = parsed;
-        } catch {
-          userToSet = buildUserFromAccount(dynAccount);
-        }
-      } else {
-        userToSet = buildUserFromAccount(dynAccount);
-      }
-      setUser(userToSet);
-      provisionStudent(userToSet);
-      return true;
-    }
+  const updateAvatar = useCallback(
+    (config: AvatarConfig) => {
+      updatePrefs({ avatarConfig: { ...(prefs.avatarConfig ?? DEFAULT_AVATAR), ...config } });
+    },
+    [updatePrefs, prefs.avatarConfig]
+  );
 
-    return false;
-  };
+  // Passwords are now managed by Keycloak — no-op here
+  const setPassword = useCallback((_: string) => {}, []);
 
-  const logout = () => {
-    if (user) {
-      localStorage.setItem(`eyeradar_user_${user.username}`, JSON.stringify(user));
-    }
-    setUser(null);
-  };
+  // ── Loading state ───────────────────────────────────────────────────────────
 
-  const updateInterests = (interests: string[]) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, interests };
-      provisionStudent(updated);
-      return updated;
-    });
-  };
-
-  const completeWizard = () => {
-    setUser((prev) => prev ? { ...prev, wizardCompleted: true } : null);
-  };
-
-  const purchaseItem = (itemId: string) => {
-    setUser((prev) => {
-      if (!prev || prev.ownedItems.includes(itemId)) return prev;
-      return { ...prev, ownedItems: [...prev.ownedItems, itemId] };
-    });
-  };
-
-  const updateAvatar = (config: AvatarConfig) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      return { ...prev, avatarConfig: { ...prev.avatarConfig, ...config } };
-    });
-  };
-
-  const setPassword = (newPassword: string) => {
-    if (!user) return;
-    // Update dynamic accounts storage
-    updateDynamicPassword(user.username, newPassword);
-  };
-
-  if (!loaded) {
+  if (status === "loading") {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="flex items-center justify-center h-screen bg-[#F5F5F5]">
         <div className="w-8 h-8 border-2 border-[#FF5A39] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -332,20 +319,4 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function buildUserFromAccount(acc: DynamicAccount): User {
-  return {
-    username: acc.username,
-    role: "student",
-    displayName: acc.displayName,
-    age: acc.age,
-    studentId: acc.studentId,
-    interests: [],
-    wizardCompleted: false,
-    ownedItems: [],
-    avatarConfig: { ...DEFAULT_AVATAR },
-  };
 }

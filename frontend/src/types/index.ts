@@ -114,6 +114,8 @@ export interface DiagnosticInfo {
 
 export interface Student {
   id: string;
+  keycloak_id?: string | null;
+  login_username?: string | null;
   name: string;
   age: number;
   grade: number;
@@ -138,6 +140,45 @@ export interface StudentCreate {
   language?: string;
   interests?: string[];
   diagnostic?: DiagnosticInfo;
+}
+
+export interface ParentChildCreate extends StudentCreate {
+  username: string;
+  password: string;
+  confirm_password: string;
+}
+
+// ─── Account / Billing ───────────────────────────────────────────────────────
+
+export interface SubscriptionInfo {
+  id?: string;
+  user_id?: string;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  plan: string;
+  status: string;
+  child_slots: number;
+  current_period_end?: string | null;
+}
+
+export interface AccountSyncResponse {
+  user: {
+    id: string;
+    keycloak_id: string;
+    email: string;
+    full_name: string;
+    created_at: string;
+  };
+  roles: string[];
+  subscription: SubscriptionInfo;
+  parent_student_count: number;
+}
+
+export interface BillingSummary {
+  subscription: SubscriptionInfo;
+  children_count: number;
+  can_add_child: boolean;
+  slots_remaining: number;
 }
 
 // ─── Games ───────────────────────────────────────────────────────────────────

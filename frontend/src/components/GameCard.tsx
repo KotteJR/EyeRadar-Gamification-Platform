@@ -49,11 +49,11 @@ export default function GameCard({ game, studentId, locked }: GameCardProps) {
 
   const cardContent = (
     <div
-      className={`game-card-kids relative group ${locked ? "opacity-60 grayscale" : ""}`}
+      className={`relative group rounded-2xl overflow-hidden border border-neutral-100 bg-cream shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-neutral-200 ${locked ? "opacity-60 grayscale" : ""}`}
     >
       {/* Image area */}
       <div
-        className="relative h-44 overflow-hidden rounded-t-[15px]"
+        className="relative h-44 overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${asset.gradient[0]}, ${asset.gradient[1]})` }}
       >
         <div className="absolute inset-0" style={{

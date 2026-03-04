@@ -24,6 +24,13 @@ const ALL_AREAS: DeficitArea[] = [
   "comprehension",
 ];
 
+const HIDDEN_GAME_IDS = new Set([
+  "castle_challenge",
+  "dungeon_forest",
+  "dungeon_beach",
+  "dungeon_3stage",
+]);
+
 export default function StudentGamesPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -44,7 +51,10 @@ export default function StudentGamesPage() {
   if (!user) return null;
 
   const ageGames = games.filter(
-    (g) => g.age_range_min <= user.age && g.age_range_max >= user.age
+    (g) =>
+      g.age_range_min <= user.age &&
+      g.age_range_max >= user.age &&
+      !HIDDEN_GAME_IDS.has(g.id)
   );
   const filtered =
     activeArea === "all"

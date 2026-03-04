@@ -1,11 +1,26 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/lib/auth";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "EyeRadar - Dyslexia Exercise Platform",
-  description: "AI-powered personalized exercise generation for dyslexia intervention",
+  description:
+    "AI-powered personalized exercise generation for dyslexia intervention",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://eyeradar.app"
+  ),
+  openGraph: {
+    title: "EyeRadar - Dyslexia Exercise Platform",
+    description:
+      "AI-powered personalized exercise generation for dyslexia intervention",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -24,9 +39,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-        </AuthProvider>
+        <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

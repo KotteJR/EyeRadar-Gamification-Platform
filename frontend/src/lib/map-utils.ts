@@ -43,6 +43,34 @@ export const WORLD_GRADIENTS: Record<DeficitArea, [string, string]> = {
 export const MAP_WIDTH = 1200;
 export const MAP_HEIGHT = 750;
 
+// ─── Castle progress persistence ───────────────────────────────────────
+function castleProgressStorageKey(studentId: string, area: DeficitArea): string {
+  return `eyeradar_castle_progress_${studentId}_${area}`;
+}
+
+export function getCompletedCastles(studentId: string, area: DeficitArea): Set<string> {
+  if (typeof window === "undefined" || !studentId) return new Set<string>();
+  try {
+    const raw = localStorage.getItem(castleProgressStorageKey(studentId, area));
+    const parsed = JSON.parse(raw || "[]");
+    if (!Array.isArray(parsed)) return new Set<string>();
+    return new Set(parsed.filter((v) => typeof v === "string"));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export function markCastleCompleted(studentId: string, area: DeficitArea, castleId: string): void {
+  if (typeof window === "undefined" || !studentId || !castleId) return;
+  const completed = getCompletedCastles(studentId, area);
+  completed.add(castleId);
+  try {
+    localStorage.setItem(castleProgressStorageKey(studentId, area), JSON.stringify(Array.from(completed)));
+  } catch {
+    // Ignore storage write errors in gameplay flow.
+  }
+}
+
 // ─── Star calculation ──────────────────────────────────────────────────
 export function getStarCount(accuracy: number): 1 | 2 | 3 {
   if (accuracy >= 85) return 3;
@@ -66,6 +94,7 @@ export interface MapNode {
   id: string;
   type: MapNodeType;
   game: GameDefinition | null;
+  recapGameIds?: string[];
   label: string;
   state: NodeState;
   stars: number;
@@ -121,7 +150,8 @@ const CASTLE_INTERVAL = 2; // Insert a castle after every N regular levels
 
 export function buildMapNodes(
   games: GameDefinition[],
-  sessions: ExerciseSession[]
+  sessions: ExerciseSession[],
+  completedCastles?: Set<string>
 ): MapNode[] {
   if (games.length === 0) return [];
 
@@ -139,6 +169,7 @@ export function buildMapNodes(
       id: ln.game.id,
       type: "level",
       game: ln.game,
+      recapGameIds: undefined,
       label: ln.game.name,
       state: ln.state,
       stars: ln.stars,
@@ -157,14 +188,6 @@ export function buildMapNodes(
         .filter((n) => n.type === "level")
         .slice(-CASTLE_INTERVAL)
         .every((n) => n.state === "completed");
-      const castleState: NodeState = precedingCompleted
-        ? mapNodes.some((n) => n.state === "current")
-          ? "locked"
-          : "completed"
-        : mapNodes[mapNodes.length - 1].state === "completed"
-        ? "current"
-        : "locked";
-
       // Determine if the castle should be current: only if all preceding levels are done
       // and no other node is already current
       const anyCurrent = mapNodes.some((n) => n.state === "current");
@@ -173,8 +196,14 @@ export function buildMapNodes(
         id: `castle_${i}`,
         type: "castle",
         game: null,
+        recapGameIds: mapNodes
+          .filter((n) => n.type === "level")
+          .slice(-CASTLE_INTERVAL)
+          .map((n) => n.id),
         label: "Challenge Castle",
-        state: precedingCompleted && !anyCurrent ? "current" : precedingCompleted ? "completed" : "locked",
+        state: !precedingCompleted
+          ? "locked"
+          : (completedCastles?.has(`castle_${i}`) ? "completed" : (anyCurrent ? "completed" : "current")),
         stars: 0,
         bestAccuracy: 0,
         sessionsPlayed: 0,
@@ -191,8 +220,14 @@ export function buildMapNodes(
     id: `castle_final`,
     type: "castle",
     game: null,
+    recapGameIds: mapNodes
+      .filter((n) => n.type === "level")
+      .slice(-CASTLE_INTERVAL)
+      .map((n) => n.id),
     label: "World Boss",
-    state: allCompleted && !anyCurrent ? "current" : allCompleted ? "completed" : "locked",
+    state: !allCompleted
+      ? "locked"
+      : (completedCastles?.has("castle_final") ? "completed" : (anyCurrent ? "completed" : "current")),
     stars: 0,
     bestAccuracy: 0,
     sessionsPlayed: 0,
@@ -217,7 +252,7 @@ export function buildMapNodes(
   }
 
   // Ensure exactly one current node (first non-completed)
-  let hasCurrent = mapNodes.some((n) => n.state === "current");
+  const hasCurrent = mapNodes.some((n) => n.state === "current");
   if (!hasCurrent) {
     const firstLocked = mapNodes.find((n) => n.state === "locked");
     if (firstLocked) firstLocked.state = "current";
@@ -351,7 +386,8 @@ export function computeCustomWorldsSummary(
         totalStars: completedNodes.reduce((sum, n) => sum + n.stars, 0),
         maxStars: worldGames.length * 3,
       };
-    });
+    })
+    .filter((w) => w.totalLevels > 0);
 }
 
 // ─── SVG path generation — organic curves with deterministic randomness ──

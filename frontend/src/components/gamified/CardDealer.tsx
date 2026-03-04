@@ -45,8 +45,9 @@ export default function CardDealer({
     setShowExplosion(false);
     setShowDamageFlash(false);
     setIsRunning(false);
-    setTimeout(() => setPhase("deal"), 300);
-    setTimeout(() => setPhase("pick"), 700);
+    const t1 = setTimeout(() => setPhase("deal"), 300);
+    const t2 = setTimeout(() => setPhase("pick"), 700);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [item]);
 
   useEffect(() => {

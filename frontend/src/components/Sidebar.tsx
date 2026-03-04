@@ -14,6 +14,8 @@ import {
   Star,
   ChevronDown,
   Map,
+  CreditCard,
+  BarChart3,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -37,6 +39,11 @@ const studentNav: NavItem[] = [
   { href: "/student/shop", label: "Avatar Shop", icon: ShoppingBag },
 ];
 
+const guardianNav: NavItem[] = [
+  { href: "/parent", label: "Overview", icon: BarChart3 },
+  { href: "/parent/pricing", label: "Plans", icon: CreditCard },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -56,48 +63,65 @@ export default function Sidebar() {
   if (!user) return null;
 
   const isStudent = user.role === "student";
-  const navItems = isStudent ? studentNav : teacherNav;
-  const rootPath = isStudent ? "/student" : "/";
+  const isGuardian = user.role === "guardian";
+
+  const navItems = isStudent ? studentNav : isGuardian ? guardianNav : teacherNav;
+  const rootPath = isStudent ? "/student" : isGuardian ? "/parent" : "/";
+  const isParentDashboard = pathname === "/parent";
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md z-30 border-b border-neutral-100">
+    <header
+      className={`fixed top-0 left-0 right-0 h-14 z-30 ${
+        isParentDashboard
+          ? "bg-black/10 backdrop-blur-sm border-b border-white/10"
+          : "bg-white border-b border-neutral-200/80"
+      }`}
+    >
       <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
         {/* Left: Logo + Nav */}
         <div className="flex items-center gap-8">
           <Link href={rootPath} className="flex items-center gap-2 flex-shrink-0">
-            <img src="/full-logo.svg" alt="eyeRadar" className="h-[18px]" />
+            <img
+              src="/full-logo.svg"
+              alt="eyeRadar"
+              className={`h-[18px] ${isParentDashboard ? "brightness-0 invert" : ""}`}
+            />
           </Link>
 
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive =
-                item.href === rootPath
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href) && item.href !== rootPath;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-                    isActive
-                      ? "bg-cream text-neutral-900"
-                      : "text-neutral-400 hover:text-neutral-900"
-                  }`}
-                >
-                  <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {!isParentDashboard && (
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => {
+                const isActive =
+                  item.href === rootPath
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href) && item.href !== rootPath;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
+                      isActive
+                        ? "bg-neutral-100 text-neutral-900"
+                        : "text-neutral-400 hover:text-neutral-900"
+                    }`}
+                  >
+                    <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
         </div>
 
         {/* Right: User */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-2.5 hover:bg-cream rounded-full pl-1 pr-3 py-1 transition-colors"
+            className={`flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 transition-colors ${
+              isParentDashboard ? "hover:bg-white/15" : "hover:bg-neutral-100"
+            }`}
           >
             {isStudent ? (
               <Avatar
@@ -111,16 +135,24 @@ export default function Sidebar() {
                 {user.displayName.charAt(0)}
               </div>
             )}
-            <span className="text-[13px] font-medium text-neutral-700 hidden sm:block">
+            <span
+              className={`text-[13px] font-medium hidden sm:block ${
+                isParentDashboard ? "text-white" : "text-neutral-700"
+              }`}
+            >
               {user.displayName}
             </span>
             {isStudent && (
-              <span className="hidden sm:flex items-center gap-0.5 text-[11px] text-neutral-400 font-medium">
+              <span
+                className={`hidden sm:flex items-center gap-0.5 text-[11px] font-medium ${
+                  isParentDashboard ? "text-white/70" : "text-neutral-400"
+                }`}
+              >
                 <Star size={10} className="text-amber-400" fill="currentColor" />
                 Lv {user.age >= 10 ? 3 : user.age >= 7 ? 2 : 1}
               </span>
             )}
-            <ChevronDown size={14} className="text-neutral-400" />
+            <ChevronDown size={14} className={isParentDashboard ? "text-white/80" : "text-neutral-400"} />
           </button>
 
           {/* Dropdown */}

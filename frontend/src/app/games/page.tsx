@@ -14,6 +14,13 @@ const ALL_AREAS: DeficitArea[] = [
   "comprehension",
 ];
 
+const HIDDEN_GAME_IDS = new Set([
+  "castle_challenge",
+  "dungeon_forest",
+  "dungeon_beach",
+  "dungeon_3stage",
+]);
+
 export default function GamesPage() {
   const [games, setGames] = useState<GameDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,13 +34,14 @@ export default function GamesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const visibleGames = games.filter((g) => !HIDDEN_GAME_IDS.has(g.id));
   const filteredGames =
     activeArea === "all"
-      ? games
-      : games.filter((g) => g.deficit_area === activeArea);
+      ? visibleGames
+      : visibleGames.filter((g) => g.deficit_area === activeArea);
 
   const areaCount = (area: DeficitArea) =>
-    games.filter((g) => g.deficit_area === area).length;
+    visibleGames.filter((g) => g.deficit_area === area).length;
 
   if (loading) {
     return (
@@ -48,7 +56,7 @@ export default function GamesPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-neutral-900 tracking-tight">Game Catalog</h1>
         <p className="text-neutral-400 mt-0.5 text-[13px]">
-          {games.length} games across 6 deficit areas.
+          {visibleGames.length} games across 6 deficit areas.
         </p>
       </div>
 
@@ -58,7 +66,7 @@ export default function GamesPage() {
           onClick={() => setActiveArea("all")}
           className={`pill-tab ${activeArea === "all" ? "active" : ""}`}
         >
-          All ({games.length})
+          All ({visibleGames.length})
         </button>
         {ALL_AREAS.map((area) => {
           const count = areaCount(area);

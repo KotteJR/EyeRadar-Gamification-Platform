@@ -1,143 +1,162 @@
 "use client";
 
+import { signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, getDynamicAccounts } from "@/lib/auth";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
-  const { login } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [shake, setShake] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const dynamicAccounts = getDynamicAccounts();
-  const needsPassword = (() => {
-    if (["teacher", "student5yrs", "student10yrs", "student15yrs"].includes(username)) return true;
-    const dyn = dynamicAccounts.find((a) => a.username === username);
-    if (dyn && dyn.password === null) return false;
-    return true;
-  })();
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const ok = login(username, password);
-    if (ok) {
-      router.push("/");
-    } else {
-      setError("Invalid username or password");
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
+    setLoading(true);
+    try {
+      // Ensure we are not reusing an existing session when switching users.
+      await signOut({ redirect: false });
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
+        callbackUrl: "/",
+      });
+      if (!result || result.error) {
+        setError("Invalid username or password. Please try again.");
+      } else {
+        router.push(result.url ?? "/");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4">
-      <div className={`w-full max-w-sm ${shake ? "animate-shake" : ""}`}>
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img src="/full-logo.svg" alt="eyeRadar" className="h-7 mx-auto mb-2" />
-          <p className="text-[13px] text-neutral-400">The Exercise Platform</p>
+    <div className="relative min-h-screen overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('/game-assets/backgrounds/sunset.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          imageRendering: "pixelated",
+        }}
+      />
+      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/70" />
+
+      <div className="relative z-10 min-h-screen px-4 py-6 sm:px-8 sm:py-10 flex flex-col">
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
+          <Link href="/" className="inline-flex">
+            <Image
+              src="/full-logo.svg"
+              alt="eyeRadar"
+              width={120}
+              height={20}
+              className="h-5 w-auto brightness-0 invert"
+              priority
+            />
+          </Link>
+          <Link
+            href="/pricing"
+            className="h-9 px-4 inline-flex items-center rounded-full text-[13px] font-semibold text-white bg-[#171717]/30 hover:bg-[#171717]/20 transition-colors transition-all duration-300"
+          >
+            Pricing
+          </Link>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-cream rounded-2xl p-7">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-5 text-center">Sign In</h2>
-
-          <form onSubmit={handleLogin} className="space-y-3.5">
-            <div>
-              <label className="block text-[13px] font-medium text-neutral-600 mb-1.5">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-lg text-[13px] bg-white placeholder:text-neutral-300 transition-all"
-                autoFocus
-              />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-[460px] rounded-2xl border border-white/25 bg-white/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl">
+            <div className="mb-6 text-center">
+              <h2 className="text-[30px] font-bold text-neutral-900 tracking-tight leading-tight">
+                Welcome back
+              </h2>
+              <p className="text-[14px] text-neutral-500 mt-2 leading-relaxed">
+                Sign in to continue your learning journey.
+              </p>
             </div>
 
-            {needsPassword ? (
-              <div>
-                <label className="block text-[13px] font-medium text-neutral-600 mb-1.5">Password</label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-neutral-600">
+                  Username or email
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-900/[0.06] transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[13px] font-medium text-neutral-600">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[12px] italic font-medium text-neutral-500 hover:text-neutral-800 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-lg text-[13px] bg-white placeholder:text-neutral-300 transition-all"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                  className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-white text-[14px] text-neutral-900 placeholder:text-neutral-300 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-900/[0.06] transition-all"
                 />
               </div>
-            ) : (
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-xs text-emerald-700 font-medium">No password needed - just click Sign In!</p>
-              </div>
-            )}
 
-            {error && (
-              <p className="text-[13px] text-red-500 text-center bg-red-50 rounded-lg py-2 font-medium">{error}</p>
-            )}
-
-            <button type="submit" className="btn-primary w-full justify-center py-2.5">
-              Sign In
-            </button>
-          </form>
-
-          {/* Quick login hints */}
-          <div className="mt-6 pt-5 border-t border-neutral-100">
-            <p className="text-[11px] text-neutral-400 text-center mb-3 uppercase tracking-wider font-medium">
-              Demo accounts
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {[
-                { u: "teacher", label: "Teacher", icon: "T" },
-                { u: "student5yrs", label: "Student (5yr)", icon: "5" },
-                { u: "student10yrs", label: "Student (10yr)", icon: "10" },
-                { u: "student15yrs", label: "Student (15yr)", icon: "15" },
-              ].map((acc) => (
-                <button
-                  key={acc.u}
-                  onClick={() => { setUsername(acc.u); setPassword(acc.u); }}
-                  className="flex items-center gap-2 text-[12px] py-2 px-3 bg-neutral-50 text-neutral-500 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
-                >
-                  <span className="w-5 h-5 rounded bg-neutral-200 flex items-center justify-center text-[10px] font-semibold text-neutral-500">
-                    {acc.icon}
-                  </span>
-                  {acc.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Dynamic student accounts */}
-            {dynamicAccounts.length > 0 && (
-              <>
-                <p className="text-[11px] text-neutral-400 text-center mt-4 mb-3 uppercase tracking-wider font-medium">
-                  Student accounts
-                </p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {dynamicAccounts.map((acc) => (
-                    <button
-                      key={acc.username}
-                      onClick={() => { setUsername(acc.username); setPassword(""); }}
-                      className="flex items-center gap-2 text-[12px] py-2 px-3 bg-neutral-50 text-neutral-500 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
-                    >
-                      <span className="w-5 h-5 rounded-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-white">
-                        {acc.displayName.charAt(0)}
-                      </span>
-                      <span className="truncate">{acc.displayName}</span>
-                      {acc.password === null && (
-                        <span className="ml-auto text-[9px] text-emerald-500 font-semibold">No PW</span>
-                      )}
-                    </button>
-                  ))}
+              {error && (
+                <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  <p className="text-[13px] text-red-600 font-medium">{error}</p>
                 </div>
-              </>
-            )}
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2.5 h-12 hover:brightness-110 active:scale-[0.99] active:brightness-95 text-white text-[14px] font-semibold rounded-xl transition-all disabled:opacity-60 select-none"
+                style={{ background: "linear-gradient(90deg, #FF9E75 0%, #FF5A39 100%)" }}
+              >
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRight size={16} strokeWidth={2.5} />
+                  </>
+                )}
+              </button>
+
+            </form>
+
+            <div className="mt-6 text-center space-y-2.5">
+              <p className="text-[14px] text-neutral-500">
+                New guardian account?{" "}
+                <Link href="/register" className="text-[#FF5A39] font-semibold hover:underline">
+                  Create an account
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -43,6 +43,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (!user || !user.studentId) return;
+    let cancelled = false;
     async function load() {
       try {
         await api.upsertStudent(user!.studentId, {
@@ -63,6 +64,7 @@ export default function StudentDashboard() {
         api.getStudentAdventure(user!.studentId).catch(() => null),
         api.getStudentSessions(user!.studentId).catch(() => []),
       ]);
+      if (cancelled) return;
       setStudent(s);
       setGamification(g);
       setGames(allGames);
@@ -71,6 +73,7 @@ export default function StudentDashboard() {
       setLoading(false);
     }
     load();
+    return () => { cancelled = true; };
   }, [user]);
 
   if (!user) return null;

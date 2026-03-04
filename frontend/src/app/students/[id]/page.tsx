@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type {
   Student,
   GameDefinition,
@@ -36,10 +37,34 @@ import {
   Gamepad2,
 } from "lucide-react";
 
+const HIDDEN_GAME_IDS = new Set([
+  "castle_challenge",
+  "dungeon_forest",
+  "dungeon_beach",
+  "dungeon_3stage",
+]);
+
+function normalizeAdventureWorlds(worlds: AdventureWorld[]): AdventureWorld[] {
+  const normalized: AdventureWorld[] = [];
+  for (const world of worlds) {
+    const uniqueIds = Array.from(new Set((world.game_ids || []).filter(Boolean))).filter(
+      (id) => !HIDDEN_GAME_IDS.has(id)
+    );
+    if (uniqueIds.length === 0) continue;
+    normalized.push({
+      ...world,
+      world_number: normalized.length + 1,
+      game_ids: uniqueIds,
+    });
+  }
+  return normalized;
+}
+
 export default function StudentDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const studentId = params.id as string;
   const initialTab = searchParams.get("tab") as "overview" | "sessions" | "adventure" | null;
 
@@ -64,6 +89,22 @@ export default function StudentDetailPage() {
   const [expandedWorld, setExpandedWorld] = useState<number | null>(null);
   const [availableGamesCache, setAvailableGamesCache] = useState<Record<string, AvailableGameForArea[]>>({});
   const [adventureReasoning, setAdventureReasoning] = useState<string[]>([]);
+  const [savingDiagnostic, setSavingDiagnostic] = useState(false);
+  const [diagnosticDraft, setDiagnosticDraft] = useState<DiagnosticInfo>({
+    dyslexia_type: "unspecified",
+    dyslexia_types: [],
+    severity_level: "moderate",
+    phonological_severity: 3,
+    rapid_naming_severity: 3,
+    working_memory_severity: 3,
+    visual_processing_severity: 3,
+    reading_fluency_severity: 3,
+    comprehension_severity: 3,
+    has_adhd: false,
+    has_dyscalculia: false,
+    has_dysgraphia: false,
+    notes: "",
+  });
 
   useEffect(() => {
     if (!studentId) return;
@@ -85,7 +126,7 @@ export default function StudentDetailPage() {
         setSessions(sess);
         if (adv) {
           setAdventure(adv);
-          setAdventureWorlds(adv.worlds);
+          setAdventureWorlds(normalizeAdventureWorlds(adv.worlds));
         }
       } catch {
         if (!cancelled) router.push("/students");
@@ -99,6 +140,23 @@ export default function StudentDetailPage() {
       cancelled = true;
     };
   }, [studentId, router]);
+
+  useEffect(() => {
+    if (!student) return;
+    const existing = student.diagnostic as Partial<DiagnosticInfo> | undefined;
+    setDiagnosticDraft((prev) => ({
+      ...prev,
+      ...existing,
+      dyslexia_type: existing?.dyslexia_type || "unspecified",
+      severity_level: existing?.severity_level || "moderate",
+      phonological_severity: Math.min(5, Math.max(1, Number(existing?.phonological_severity ?? 3))),
+      rapid_naming_severity: Math.min(5, Math.max(1, Number(existing?.rapid_naming_severity ?? 3))),
+      working_memory_severity: Math.min(5, Math.max(1, Number(existing?.working_memory_severity ?? 3))),
+      visual_processing_severity: Math.min(5, Math.max(1, Number(existing?.visual_processing_severity ?? 3))),
+      reading_fluency_severity: Math.min(5, Math.max(1, Number(existing?.reading_fluency_severity ?? 3))),
+      comprehension_severity: Math.min(5, Math.max(1, Number(existing?.comprehension_severity ?? 3))),
+    }));
+  }, [student]);
 
   const handleImportAssessment = async () => {
     setImporting(true);
@@ -163,6 +221,13 @@ export default function StudentDetailPage() {
     if (!student || adventureWorlds.length === 0) return;
     setSavingAdventure(true);
     try {
+      const normalizedWorlds = normalizeAdventureWorlds(adventureWorlds);
+      if (normalizedWorlds.length === 0) {
+        alert("Please select at least one exercise in at least one world before saving.");
+        setSavingAdventure(false);
+        return;
+      }
+
       const themeConfig = suggestion?.theme_config || {
         primary_interest: student.interests[0] || "",
         color_palette: "default",
@@ -171,19 +236,21 @@ export default function StudentDetailPage() {
 
       if (adventure) {
         const updated = await api.updateAdventure(adventure.id, {
-          worlds: adventureWorlds,
+          worlds: normalizedWorlds,
           theme_config: themeConfig,
         });
         setAdventure(updated);
+        setAdventureWorlds(normalizeAdventureWorlds(updated.worlds));
       } else {
         const created = await api.createAdventure({
           student_id: studentId,
           created_by: "teacher",
           title: `${student.name}'s Adventure`,
-          worlds: adventureWorlds,
+          worlds: normalizedWorlds,
           theme_config: themeConfig,
         });
         setAdventure(created);
+        setAdventureWorlds(normalizeAdventureWorlds(created.worlds));
       }
     } catch (err) {
       console.error("Failed to save adventure:", err);
@@ -212,7 +279,10 @@ export default function StudentDetailPage() {
       const diag = student.diagnostic as DiagnosticInfo | null;
       const severity = diag?.severity_level;
       const result = await api.getGamesForArea(area, student.age, severity);
-      setAvailableGamesCache((prev) => ({ ...prev, [area]: result }));
+      setAvailableGamesCache((prev) => ({
+        ...prev,
+        [area]: result.filter((g) => !HIDDEN_GAME_IDS.has(g.id)),
+      }));
     } catch {
       // fallback
     }
@@ -295,7 +365,18 @@ export default function StudentDetailPage() {
   const diagData = (student.diagnostic && Object.keys(student.diagnostic).length > 0
     ? student.diagnostic
     : null) as DiagnosticInfo | null;
-  const hasDiag = diagData && diagData.dyslexia_type && diagData.dyslexia_type !== "unspecified";
+  const hasDiag = Boolean(
+    diagData &&
+      (diagData.dyslexia_type !== "unspecified" ||
+        [
+          diagData.phonological_severity,
+          diagData.rapid_naming_severity,
+          diagData.working_memory_severity,
+          diagData.visual_processing_severity,
+          diagData.reading_fluency_severity,
+          diagData.comprehension_severity,
+        ].some((v) => Number(v) >= 1))
+  );
 
   const completedSessions = sessions.filter((s) => s.status === "completed");
   const totalCorrect = completedSessions.reduce((sum, s) => sum + s.correct_count, 0);
@@ -330,22 +411,64 @@ export default function StudentDetailPage() {
 
   const getGameIcon = (gameId: string) =>
     games.find((g) => g.id === gameId)?.icon || "?";
+  const isGuardianView = user?.role === "guardian";
+  const cardClass = isGuardianView
+    ? "rounded-2xl border border-white/25 bg-white/90 backdrop-blur-xl shadow-2xl"
+    : "bg-cream rounded-2xl";
+  const SurfaceCard = ({
+    className,
+    children,
+  }: {
+    className: string;
+    children: React.ReactNode;
+  }) => <div className={`${cardClass} ${className}`}>{children}</div>;
+
+  const handleDiagnosticSeverityChange = (key: keyof DiagnosticInfo, value: number) => {
+    setDiagnosticDraft((prev) => ({ ...prev, [key]: Math.min(5, Math.max(1, value)) }));
+  };
+
+  const saveDiagnostic = async () => {
+    try {
+      setSavingDiagnostic(true);
+      const avg =
+        (diagnosticDraft.phonological_severity +
+          diagnosticDraft.rapid_naming_severity +
+          diagnosticDraft.working_memory_severity +
+          diagnosticDraft.visual_processing_severity +
+          diagnosticDraft.reading_fluency_severity +
+          diagnosticDraft.comprehension_severity) /
+        6;
+      const severity_level = avg >= 4 ? "severe" : avg >= 3 ? "moderate" : "mild";
+      const updated = await api.updateStudent(studentId, {
+        diagnostic: {
+          ...diagnosticDraft,
+          severity_level,
+          dyslexia_type: diagnosticDraft.dyslexia_type || "unspecified",
+        },
+      });
+      setStudent(updated);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to save diagnostic");
+    } finally {
+      setSavingDiagnostic(false);
+    }
+  };
 
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-neutral-400 mb-6">
-        <Link href="/students" className="hover:text-[#FF5A39] transition-colors">
+      <div className={`flex items-center gap-2 text-sm mb-6 ${isGuardianView ? "text-white/80" : "text-neutral-400"}`}>
+        <Link href="/students" className={`transition-colors ${isGuardianView ? "hover:text-white" : "hover:text-[#FF5A39]"}`}>
           Students
         </Link>
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-neutral-700 font-medium">{student.name}</span>
+        <span className={`font-medium ${isGuardianView ? "text-white" : "text-neutral-700"}`}>{student.name}</span>
       </div>
 
       {/* Student Header */}
-      <div className="bg-cream rounded-2xl p-6 mb-6">
+      <SurfaceCard className="p-6 mb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div
@@ -416,11 +539,49 @@ export default function StudentDetailPage() {
             </button>
           </div>
         </div>
-      </div>
+      </SurfaceCard>
+
+      {isGuardianView && !hasDiag && (
+        <SurfaceCard className="p-6 mb-6">
+          <h2 className="text-sm font-semibold text-neutral-900 mb-4">
+            Set Diagnostic Severity (1-5)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {([
+              ["phonological_severity", "Phonological Awareness"],
+              ["rapid_naming_severity", "Rapid Naming"],
+              ["working_memory_severity", "Working Memory"],
+              ["visual_processing_severity", "Visual Processing"],
+              ["reading_fluency_severity", "Reading Fluency"],
+              ["comprehension_severity", "Comprehension"],
+            ] as [keyof DiagnosticInfo, string][]).map(([key, label]) => (
+              <label key={key} className="text-sm">
+                <span className="block text-neutral-600 mb-1.5">{label}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={Number(diagnosticDraft[key] || 3)}
+                  onChange={(e) => handleDiagnosticSeverityChange(key, Number(e.target.value))}
+                  className="w-full h-10 px-3 rounded-xl border border-neutral-200 bg-white text-neutral-900"
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={saveDiagnostic}
+            disabled={savingDiagnostic}
+            className="mt-4 h-11 px-5 rounded-xl text-white text-[14px] font-semibold hover:brightness-110 active:scale-[0.99] active:brightness-95 transition-all disabled:opacity-60"
+            style={{ background: "linear-gradient(90deg, #FF9E75 0%, #FF5A39 100%)" }}
+          >
+            {savingDiagnostic ? "Saving..." : "Save Diagnostic"}
+          </button>
+        </SurfaceCard>
+      )}
 
       {/* Diagnostic Summary Card */}
       {hasDiag && diagData && (
-        <div className="bg-cream rounded-2xl p-5 mb-6">
+        <SurfaceCard className="p-5 mb-6">
           <h2 className="text-sm font-semibold text-[#303030] mb-3">Deficit Area Severity Ratings</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {([
@@ -448,12 +609,12 @@ export default function StudentDetailPage() {
               <span className="text-xs text-[#555]">{diagData.notes}</span>
             </div>
           )}
-        </div>
+        </SurfaceCard>
       )}
 
       {/* Assessment Import */}
       {showAssessment && (
-        <div className="bg-cream rounded-2xl p-6 mb-6">
+        <SurfaceCard className="p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-semibold text-neutral-900">
@@ -533,17 +694,17 @@ export default function StudentDetailPage() {
               Cancel
             </button>
           </div>
-        </div>
+        </SurfaceCard>
       )}
 
       {/* 3 Key Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-cream rounded-2xl p-5">
+        <div className={`${cardClass} p-5`}>
           <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Sessions</p>
           <p className="text-3xl font-bold text-neutral-900">{completedSessions.length}</p>
           <p className="text-xs text-neutral-400 mt-1">Completed total</p>
         </div>
-        <div className="bg-cream rounded-2xl p-5">
+        <div className={`${cardClass} p-5`}>
           <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Accuracy</p>
           <p
             className="text-3xl font-bold"
@@ -561,7 +722,7 @@ export default function StudentDetailPage() {
             {totalItems > 0 ? `${totalCorrect} / ${totalItems} correct` : "No sessions yet"}
           </p>
         </div>
-        <div className="bg-cream rounded-2xl p-5">
+        <div className={`${cardClass} p-5`}>
           <p className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider mb-1">Streak</p>
           <p className="text-3xl font-bold text-neutral-900">{student.current_streak}</p>
           <p className="text-xs text-neutral-400 mt-1">
@@ -597,7 +758,7 @@ export default function StudentDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Performance by Area (all time) */}
-          <div className="bg-cream rounded-2xl p-6">
+          <div className={`${cardClass} p-6`}>
             <h2 className="text-sm font-semibold text-neutral-900 mb-4">
               Performance by Area
             </h2>
@@ -642,7 +803,7 @@ export default function StudentDetailPage() {
           <div className="space-y-6">
 
             {/* Recent Sessions (last 3) */}
-            <div className="bg-cream rounded-2xl p-6">
+            <div className={`${cardClass} p-6`}>
               <h2 className="text-sm font-semibold text-neutral-900 mb-4">Recent Sessions</h2>
               {completedSessions.length === 0 ? (
                 <p className="text-sm text-neutral-400">No sessions yet.</p>
@@ -683,7 +844,7 @@ export default function StudentDetailPage() {
             </div>
 
             {/* Monthly Performance */}
-            <div className="bg-cream rounded-2xl p-6">
+            <div className={`${cardClass} p-6`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-neutral-900">This Month</h2>
                 <span className="text-xs text-neutral-400">
@@ -728,7 +889,7 @@ export default function StudentDetailPage() {
 
           {/* Assessment Summary - full width */}
           {student.assessment && (
-            <div className="bg-cream rounded-2xl p-6 lg:col-span-2">
+            <SurfaceCard className="p-6 lg:col-span-2">
               <h2 className="text-sm font-semibold text-neutral-900 mb-4">Assessment Summary</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="p-3 bg-neutral-50 rounded-xl text-center">
@@ -770,7 +931,7 @@ export default function StudentDetailPage() {
                   );
                 })}
               </div>
-            </div>
+            </SurfaceCard>
           )}
         </div>
       )}
@@ -779,14 +940,14 @@ export default function StudentDetailPage() {
       {activeTab === "adventure" && (
         <div className="space-y-6">
           {/* Header */}
-          <div className="bg-cream rounded-2xl p-6">
+          <SurfaceCard className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-base font-semibold text-[#303030] flex items-center gap-2">
                   <Map size={18} className="text-[#475093]" />
                   Adventure Map Builder
                 </h2>
-                <p className="text-xs text-[#ABABAB] mt-1">
+                <p className="text-xs text-neutral-500 mt-1">
                   {adventure
                     ? `Active adventure with ${adventure.worlds.length} worlds — last updated ${new Date(adventure.updated_at).toLocaleDateString()}`
                     : "Create a personalized adventure map for this student with AI-assisted exercise selection."}
@@ -815,38 +976,38 @@ export default function StudentDetailPage() {
                 <Wand2 size={15} />
                 {suggesting ? "Analyzing profile..." : adventure ? "Re-generate with AI" : "Generate with AI"}
               </button>
-              <span className="text-[11px] text-[#ABABAB]">
+              <span className="text-[11px] text-neutral-500">
                 AI analyzes dyslexia type, severity, age, and interests to recommend worlds &amp; exercises
               </span>
             </div>
-          </div>
+          </SurfaceCard>
 
           {/* AI Reasoning */}
           {adventureReasoning.length > 0 && (
-            <div className="bg-[#475093]/5 border border-[#475093]/10 rounded-2xl p-5">
-              <h3 className="text-xs font-semibold text-[#475093] mb-2 flex items-center gap-1.5">
+            <SurfaceCard className="p-5">
+              <h3 className="text-xs font-semibold text-neutral-800 mb-2 flex items-center gap-1.5">
                 <Sparkles size={13} />
                 AI Reasoning
               </h3>
               <ul className="space-y-1">
                 {adventureReasoning.map((r, i) => (
-                  <li key={i} className="text-xs text-[#555] flex items-start gap-2">
-                    <span className="text-[#475093] mt-0.5">-</span>
+                  <li key={i} className="text-xs text-neutral-700 flex items-start gap-2">
+                    <span className="text-neutral-500 mt-0.5">-</span>
                     {r}
                   </li>
                 ))}
               </ul>
-            </div>
+            </SurfaceCard>
           )}
 
           {/* Worlds Editor */}
           {adventureWorlds.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[#303030]">
+                <h3 className="text-sm font-semibold text-neutral-900">
                   Worlds ({adventureWorlds.length})
                 </h3>
-                <span className="text-[11px] text-[#ABABAB]">
+                <span className="text-[11px] text-neutral-500">
                   {adventureWorlds.reduce((s, w) => s + w.game_ids.length, 0)} total exercises
                 </span>
               </div>
@@ -857,7 +1018,7 @@ export default function StudentDetailPage() {
                 const areaLabel = DEFICIT_AREA_LABELS[world.deficit_area as keyof typeof DEFICIT_AREA_LABELS] || world.deficit_area;
 
                 return (
-                  <div key={`${world.deficit_area}-${wIdx}`} className="bg-cream rounded-2xl overflow-hidden border border-[#E3E3E3]">
+                  <SurfaceCard key={`${world.deficit_area}-${wIdx}`} className="overflow-hidden border border-neutral-200">
                     {/* World Header */}
                     <div className="flex items-center gap-3 p-4">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -869,10 +1030,10 @@ export default function StudentDetailPage() {
                           {world.world_number}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-[#303030] truncate">
+                          <h4 className="text-sm font-semibold text-neutral-900 truncate">
                             {world.world_name}
                           </h4>
-                          <p className="text-[11px] text-[#ABABAB]">
+                          <p className="text-[11px] text-neutral-500">
                             {areaLabel} - {world.game_ids.length} exercises
                           </p>
                         </div>
@@ -898,12 +1059,12 @@ export default function StudentDetailPage() {
 
                     {/* Expanded: Game Selection */}
                     {isExpanded && (
-                      <div className="border-t border-[#E3E3E3] p-4 bg-white/50">
+                      <div className="border-t border-neutral-200 p-4 bg-white/70">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs font-medium text-[#555]">
+                          <p className="text-xs font-medium text-neutral-700">
                             Select exercises for this world (3-6 recommended):
                           </p>
-                          <span className="text-[10px] text-[#ABABAB] px-2 py-0.5 bg-neutral-100 rounded-full">
+                          <span className="text-[10px] text-neutral-500 px-2 py-0.5 bg-neutral-100 rounded-full">
                             {world.game_ids.length} selected
                           </span>
                         </div>
@@ -911,7 +1072,7 @@ export default function StudentDetailPage() {
                         {areaGames.length === 0 ? (
                           <div className="flex items-center justify-center py-6">
                             <div className="w-5 h-5 border-2 border-[#CDCDCD] border-t-[#475093] rounded-full animate-spin" />
-                            <span className="text-xs text-[#ABABAB] ml-2">Loading games...</span>
+                            <span className="text-xs text-neutral-500 ml-2">Loading games...</span>
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -924,7 +1085,7 @@ export default function StudentDetailPage() {
                                   className={`flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all ${
                                     isSelected
                                       ? "border-[#475093] bg-[#475093]/5"
-                                      : "border-[#E3E3E3] hover:border-[#CDCDCD]"
+                                      : "border-neutral-200 hover:border-neutral-300"
                                   }`}
                                 >
                                   <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center mt-0.5 flex-shrink-0 transition-all ${
@@ -934,17 +1095,17 @@ export default function StudentDetailPage() {
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <Gamepad2 size={13} className={isSelected ? "text-[#475093]" : "text-[#ABABAB]"} />
-                                      <span className={`text-sm font-medium ${isSelected ? "text-[#303030]" : "text-[#555]"}`}>
+                                      <Gamepad2 size={13} className={isSelected ? "text-[#475093]" : "text-neutral-500"} />
+                                      <span className={`text-sm font-medium ${isSelected ? "text-neutral-900" : "text-neutral-700"}`}>
                                         {game.name}
                                       </span>
                                     </div>
-                                    <p className="text-[11px] text-[#999] mt-0.5 line-clamp-2">{game.description}</p>
+                                    <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-2">{game.description}</p>
                                     <div className="flex gap-2 mt-1.5">
-                                      <span className="text-[10px] text-[#ABABAB] px-1.5 py-0.5 bg-neutral-100 rounded">
+                                      <span className="text-[10px] text-neutral-500 px-1.5 py-0.5 bg-neutral-100 rounded">
                                         Ages {game.age_range_min}-{game.age_range_max}
                                       </span>
-                                      <span className="text-[10px] text-[#ABABAB] px-1.5 py-0.5 bg-neutral-100 rounded">
+                                      <span className="text-[10px] text-neutral-500 px-1.5 py-0.5 bg-neutral-100 rounded">
                                         {game.game_type.replace(/_/g, " ")}
                                       </span>
                                     </div>
@@ -956,14 +1117,14 @@ export default function StudentDetailPage() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </SurfaceCard>
                 );
               })}
 
               {/* Add World */}
               {unusedAreas.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-[#ABABAB]">Add world:</span>
+                  <span className="text-xs text-neutral-500">Add world:</span>
                   {unusedAreas.map((area) => (
                     <button
                       key={area}
@@ -981,12 +1142,12 @@ export default function StudentDetailPage() {
 
           {/* Empty State */}
           {adventureWorlds.length === 0 && !suggesting && (
-            <div className="bg-cream rounded-2xl p-12 text-center">
+            <SurfaceCard className="p-12 text-center">
               <div className="w-14 h-14 rounded-2xl bg-[#475093]/10 flex items-center justify-center mx-auto mb-4">
                 <Map size={24} className="text-[#475093]" />
               </div>
               <h3 className="text-base font-semibold text-[#303030] mb-1">No Adventure Map Yet</h3>
-              <p className="text-sm text-[#ABABAB] mb-4 max-w-sm mx-auto">
+              <p className="text-sm text-neutral-500 mb-4 max-w-sm mx-auto">
                 Click &quot;Generate with AI&quot; to create a personalized adventure based on this student&apos;s profile, or manually add worlds below.
               </p>
               <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -1001,17 +1162,17 @@ export default function StudentDetailPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </SurfaceCard>
           )}
 
           {/* Save Button */}
           {adventureWorlds.length > 0 && (
-            <div className="flex items-center justify-between bg-cream rounded-2xl p-5">
+            <SurfaceCard className="flex items-center justify-between p-5">
               <div>
-                <p className="text-sm font-medium text-[#303030]">
+                <p className="text-sm font-medium text-neutral-900">
                   {adventure ? "Update Adventure Map" : "Save Adventure Map"}
                 </p>
-                <p className="text-[11px] text-[#ABABAB] mt-0.5">
+                <p className="text-[11px] text-neutral-500 mt-0.5">
                   {adventureWorlds.length} worlds with{" "}
                   {adventureWorlds.reduce((s, w) => s + w.game_ids.length, 0)} exercises total.
                   {adventureWorlds.some((w) => w.game_ids.length === 0) && (
@@ -1027,7 +1188,7 @@ export default function StudentDetailPage() {
                 <Check size={15} />
                 {savingAdventure ? "Saving..." : adventure ? "Update" : "Save & Activate"}
               </button>
-            </div>
+            </SurfaceCard>
           )}
         </div>
       )}
@@ -1036,7 +1197,7 @@ export default function StudentDetailPage() {
       {activeTab === "sessions" && (
         <div>
           {sessions.length === 0 ? (
-            <div className="bg-cream rounded-2xl p-16 text-center">
+            <SurfaceCard className="p-16 text-center">
               <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-4">
                 <svg
                   className="w-7 h-7 text-neutral-400"
@@ -1056,7 +1217,7 @@ export default function StudentDetailPage() {
               <p className="text-neutral-400 text-sm">
                 This student hasn&apos;t played any games yet.
               </p>
-            </div>
+            </SurfaceCard>
           ) : (
             <div className="space-y-3">
               {sessions.map((session) => {
@@ -1071,7 +1232,7 @@ export default function StudentDetailPage() {
                   DEFICIT_AREA_COLORS[session.deficit_area] || "#6366f1";
 
                 return (
-                  <div key={session.id} className="bg-cream rounded-2xl overflow-hidden">
+                  <SurfaceCard key={session.id} className="overflow-hidden">
                     <button
                       onClick={() => setExpandedSession(isExpanded ? null : session.id)}
                       className="w-full p-4 flex items-center justify-between hover:bg-neutral-50/50 transition-colors text-left"
@@ -1179,7 +1340,7 @@ export default function StudentDetailPage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </SurfaceCard>
                 );
               })}
             </div>

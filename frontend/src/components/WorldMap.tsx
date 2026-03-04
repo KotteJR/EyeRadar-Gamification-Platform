@@ -8,6 +8,7 @@ import { getGameAsset } from "@/lib/game-assets";
 import type { AvatarConfig } from "@/components/Avatar";
 import {
   buildMapNodes,
+  getCompletedCastles,
   generateSVGPath,
   generatePartialPath,
   WORLD_NAMES,
@@ -383,8 +384,9 @@ function CastleNode({ node, color, worldThemeKey, studentId, area }: { node: Map
   const isCompleted = node.state === "completed";
   const isLocked = node.state === "locked";
 
+  const recapIds = (node.recapGameIds ?? []).join(",");
   const castleHref = !isLocked
-    ? `/exercises/castle?studentId=${studentId}&area=${area}&castleId=${node.id}`
+    ? `/exercises/dungeon3?studentId=${studentId}&area=${area}&checkpointId=${node.id}&recap=${encodeURIComponent(recapIds)}`
     : "";
 
   const sharedProps = {
@@ -404,7 +406,7 @@ function CastleNode({ node, color, worldThemeKey, studentId, area }: { node: Map
         <div className="absolute bottom-full mb-2 px-3 py-1.5 bg-[#3E2723]/95 text-[#FFD700] text-[11px] font-bold rounded-sm whitespace-nowrap z-30 shadow-xl border border-[#8B6914]" style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.5)" }}>
           {node.label}
           {isLocked && " — Complete preceding levels!"}
-          {isCurrent && " — Ready to challenge!"}
+          {isCurrent && " — Recap dungeon ready!"}
           <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-[#3E2723]/95 rotate-45 -mt-1 border-r border-b border-[#8B6914]" />
         </div>
       )}
@@ -551,7 +553,7 @@ function CastleNode({ node, color, worldThemeKey, studentId, area }: { node: Map
 
       {isCurrent && (
         <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: "linear-gradient(180deg, #FFD700, #F9A825)", color: "#5D3A00", border: "1px solid #8B6508", fontFamily: "'Fredoka', sans-serif" }}>
-          Challenge
+          Recap
         </div>
       )}
     </>
@@ -582,7 +584,14 @@ export default function WorldMap({
   const worldName = WORLD_NAMES[area];
   const worldNum = WORLD_NUMBERS[area];
 
-  const mapNodes = useMemo(() => buildMapNodes(games, sessions), [games, sessions]);
+  const completedCastles = useMemo(
+    () => getCompletedCastles(studentId, area),
+    [studentId, area]
+  );
+  const mapNodes = useMemo(
+    () => buildMapNodes(games, sessions, completedCastles),
+    [games, sessions, completedCastles]
+  );
   const positions = useMemo(() => mapNodes.map((n) => n.position), [mapNodes]);
   const fullPathD = useMemo(() => generateSVGPath(positions), [positions]);
 

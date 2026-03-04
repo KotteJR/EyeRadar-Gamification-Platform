@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import { MusicManager } from "@/lib/music-manager";
-import { eventBus, GameEvents } from "@/lib/phaser/EventBus";
-import type { ExerciseSession, ExerciseItem } from "@/types";
+import type { ExerciseSession, ExerciseItem, DeficitArea } from "@/types";
+import { DEFICIT_AREA_THEME } from "@/lib/level-config";
+import { markCastleCompleted } from "@/lib/map-utils";
 import Dungeon3StageOverlay from "@/components/phaser/Dungeon3StageOverlay";
 
 const PhaserCanvas = dynamic(
@@ -44,34 +45,82 @@ function Dungeon3Content() {
   const router = useRouter();
   const studentId = searchParams.get("studentId");
   const levelParam = searchParams.get("level");
+  const areaParam = searchParams.get("area") as DeficitArea | null;
+  const gameIdParam = searchParams.get("gameId");
+  const recapParam = searchParams.get("recap");
+  const checkpointId = searchParams.get("checkpointId");
 
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [gameReady, setGameReady] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
+  const [resolvedArea, setResolvedArea] = useState<DeficitArea | null>(null);
+
+  const recapGameIds = (recapParam || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  const isRecapEligible = (gameType: string) =>
+    !["castle_boss", "castle_dungeon", "castle_dungeon_3stage", "memory_recall"].includes(gameType);
 
   useEffect(() => {
     if (!studentId) {
-      setUseFallback(true);
       setLoading(false);
       return;
     }
+
     (async () => {
       try {
-        const s = await api.startSession(studentId, "castle_challenge");
-        setSession(s);
-      } catch {
-        try {
-          const s = await api.startSession(studentId, "sound_safari");
-          setSession(s);
-        } catch {
-          setUseFallback(true);
+        const candidateIds: string[] = [];
+        const checkpointNum = Number((checkpointId || "").replace(/\D/g, "")) || 0;
+        if (recapGameIds.length > 0) {
+          const picked = recapGameIds[checkpointNum % recapGameIds.length];
+          candidateIds.push(picked, ...recapGameIds.filter((id) => id !== picked));
         }
+        if (gameIdParam) {
+          candidateIds.unshift(gameIdParam);
+        }
+
+        if (candidateIds.length === 0 && areaParam) {
+          try {
+            const areaGames = await api.getGamesByArea(areaParam);
+            const eligible = areaGames.filter((g) => isRecapEligible(g.game_type));
+            if (eligible[0]) candidateIds.push(eligible[0].id);
+          } catch {
+            // Area game lookup failed; we'll fallback below.
+          }
+        }
+
+        if (candidateIds.length === 0) {
+          candidateIds.push("dungeon_3stage");
+        }
+
+        const tried = new Set<string>();
+        let started: ExerciseSession | null = null;
+        for (const gid of candidateIds) {
+          if (tried.has(gid)) continue;
+          tried.add(gid);
+          try {
+            started = await api.startSession(studentId, gid);
+            break;
+          } catch {
+            // try next candidate
+          }
+        }
+
+        if (started) {
+          setSession(started);
+          setResolvedArea(areaParam || started.deficit_area);
+        } else {
+          setResolvedArea(areaParam);
+        }
+      } catch {
+        setResolvedArea(areaParam);
       } finally {
         setLoading(false);
       }
     })();
-  }, [studentId]);
+  }, [studentId, gameIdParam, areaParam, recapParam, checkpointId]);
 
   useEffect(() => {
     MusicManager.play("boss");
@@ -89,7 +138,10 @@ function Dungeon3Content() {
     if (session) {
       try { await api.completeSession(session.id); } catch { /* */ }
     }
-  }, [session]);
+    if (studentId && areaParam && checkpointId) {
+      markCastleCompleted(studentId, areaParam, checkpointId);
+    }
+  }, [session, studentId, areaParam, checkpointId]);
 
   if (loading) {
     return (
@@ -105,17 +157,29 @@ function Dungeon3Content() {
   const items = session ? session.items.slice(0, 10) : FALLBACK_ITEMS;
   const sessionId = session?.id || "test-session";
   const level = parseInt(levelParam || "0", 10);
+  const worldTheme = resolvedArea ? DEFICIT_AREA_THEME[resolvedArea] : "cloud_kingdom";
+  const dungeonMapNameByTheme: Record<string, string> = {
+    grassland: "terrain",
+    forest: "default",
+    mountain: "best-so-far",
+    sunset: "beach-map",
+    night: "n",
+    cloud_kingdom: "base-map",
+  };
+  const dungeonMapName = dungeonMapNameByTheme[worldTheme] || "terrain";
 
   const levelConfig = {
-    worldTheme: "cloud_kingdom",
+    worldTheme,
     bossType: "castle_dungeon_3stage",
     itemType: "multiple_choice",
     questionData: { question: "", options: [], itemType: "multiple_choice" },
     progress: 0,
-    maxProgress: 10,
+    maxProgress: items.length,
     streak: 0,
     points: 0,
     level,
+    dungeonMapName,
+    dungeonTerrainPreset: worldTheme,
   };
 
   return (
