@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 _pool: Optional[asyncpg.Pool] = None
 
-# Fields that need ISO string → datetime conversion when passed to update functions
+# Fields that need ISO string → datetime conversion when passed to update functionsss
 _TIMESTAMP_FIELDS = {"last_session_date", "created_at", "completed_at", "started_at", "updated_at"}
 
 

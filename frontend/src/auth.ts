@@ -17,6 +17,9 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
 
+const REFRESH_SKEW_SECONDS = 30;
+const refreshInFlight = new Map<string, Promise<Record<string, unknown>>>();
+
 async function refreshAccessToken(token: Record<string, unknown>) {
   const issuer =
     process.env.AUTH_KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
@@ -25,38 +28,62 @@ async function refreshAccessToken(token: Record<string, unknown>) {
   const clientSecret = process.env.AUTH_KEYCLOAK_SECRET;
   const refreshToken = token.refreshToken as string | undefined;
 
-  if (!issuer || !clientId || !clientSecret || !refreshToken) {
+  if (!issuer || !clientId || !clientSecret) {
     return { ...token, error: "RefreshAccessTokenError" };
   }
+  // Some realms/clients do not issue refresh tokens for certain flows.
+  // Keep current access token until actual expiry in that case.
+  if (!refreshToken) {
+    return token;
+  }
 
-  try {
-    const tokenUrl = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/token`;
-    const res = await fetch(tokenUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-      }).toString(),
-    });
+  // Prevent parallel refresh calls from invalidating rotating refresh tokens.
+  // When many requests arrive at once, only one refresh should hit Keycloak.
+  const existingRefresh = refreshInFlight.get(refreshToken);
+  if (existingRefresh) {
+    const shared = await existingRefresh;
+    return { ...token, ...shared };
+  }
 
-    const refreshed = await res.json();
-    if (!res.ok || refreshed?.error) {
+  const refreshPromise = (async () => {
+    try {
+      const tokenUrl = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/token`;
+      const res = await fetch(tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+        }).toString(),
+      });
+
+      const refreshed = await res.json();
+      if (!res.ok || refreshed?.error) {
+        return { ...token, error: "RefreshAccessTokenError" };
+      }
+
+      return {
+        ...token,
+        accessToken: refreshed.access_token ?? token.accessToken,
+        idToken: refreshed.id_token ?? token.idToken,
+        refreshToken: refreshed.refresh_token ?? refreshToken,
+        expiresAt: Math.floor(Date.now() / 1000) + (Number(refreshed.expires_in) || 300),
+        error: undefined,
+      };
+    } catch {
       return { ...token, error: "RefreshAccessTokenError" };
     }
+  })();
 
-    return {
-      ...token,
-      accessToken: refreshed.access_token ?? token.accessToken,
-      idToken: refreshed.id_token ?? token.idToken,
-      refreshToken: refreshed.refresh_token ?? refreshToken,
-      expiresAt: Math.floor(Date.now() / 1000) + (Number(refreshed.expires_in) || 300),
-      error: undefined,
-    };
-  } catch {
-    return { ...token, error: "RefreshAccessTokenError" };
+  refreshInFlight.set(refreshToken, refreshPromise);
+
+  try {
+    const result = await refreshPromise;
+    return { ...token, ...result };
+  } finally {
+    refreshInFlight.delete(refreshToken);
   }
 }
 
@@ -198,11 +225,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.sub = p.sub as string | undefined;
       }
 
-      // Refresh well before expiry to avoid mid-request expiration during gameplay.
+      // Refresh shortly before expiry to avoid refresh loops on short token lifetimes.
       const expiresAt = Number(token.expiresAt || 0);
       const now = Math.floor(Date.now() / 1000);
-      if (expiresAt && now >= expiresAt - 120) {
-        return refreshAccessToken(token);
+      if (expiresAt && now >= expiresAt - REFRESH_SKEW_SECONDS) {
+        const refreshed = await refreshAccessToken(token);
+        // If refresh failed but token is still valid for a bit, keep playing.
+        if (
+          refreshed?.error === "RefreshAccessTokenError" &&
+          now < expiresAt
+        ) {
+          return { ...token, error: undefined };
+        }
+        return refreshed;
       }
       return token;
     },

@@ -48,6 +48,13 @@ function getPassageAndQuestion(item: ExerciseItem): { passage: string | null; qu
   };
 }
 
+function getQuestionSounds(item: ExerciseItem): string[] {
+  const ed = item.extra_data || {};
+  const sounds = (ed as Record<string, unknown>).sounds;
+  if (!Array.isArray(sounds)) return [];
+  return sounds.filter((s): s is string => typeof s === "string" && s.trim().length > 0);
+}
+
 export default function Dungeon3StageOverlay({
   sessionId,
   items,
@@ -329,6 +336,23 @@ export default function Dungeon3StageOverlay({
                     <p className="text-white text-center text-base font-bold mb-5 leading-relaxed" style={{ fontFamily: "'Fredoka', sans-serif" }}>
                       {parsed.question}
                     </p>
+                    {(() => {
+                      const sounds = getQuestionSounds(currentQuestion);
+                      if (sounds.length === 0) return null;
+                      return (
+                        <div className="mb-4 flex flex-wrap justify-center gap-2">
+                          {sounds.map((sound, idx) => (
+                            <span
+                              key={`${sound}-${idx}`}
+                              className="inline-flex items-center rounded-full border border-purple-300/30 bg-purple-500/15 px-3 py-1 text-sm font-bold text-purple-100"
+                              style={{ fontFamily: "'Fredoka', sans-serif" }}
+                            >
+                              {sound}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-2 gap-3">
                       {currentQuestion.options.map((option, idx) => {
                         const isC = lastResult && option === lastResult.correct_answer;
