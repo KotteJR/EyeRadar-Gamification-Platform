@@ -28,6 +28,30 @@ export const DEFICIT_AREA_COLORS: Record<DeficitArea, string> = {
   comprehension: "#ef4444",
 };
 
+/** Stable ordering for selectors and builders (matches backend deficit areas). */
+export const DEFICIT_AREAS_ALL: readonly DeficitArea[] = [
+  "phonological_awareness",
+  "rapid_naming",
+  "working_memory",
+  "visual_processing",
+  "reading_fluency",
+  "comprehension",
+] as const;
+
+/** Themed names on the adventure map (aligned with backend `adventure_builder.WORLD_NAMES`). */
+export const DEFICIT_AREA_MAP_NAMES: Record<DeficitArea, string> = {
+  phonological_awareness: "Sound Kingdom",
+  rapid_naming: "Speed Valley",
+  working_memory: "Memory Mountains",
+  visual_processing: "Vision Forest",
+  reading_fluency: "Fluency River",
+  comprehension: "Story Castle",
+};
+
+export function isDeficitArea(value: string): value is DeficitArea {
+  return (DEFICIT_AREAS_ALL as readonly string[]).includes(value);
+}
+
 // ─── Assessment ──────────────────────────────────────────────────────────────
 
 export interface DeficitInfo {

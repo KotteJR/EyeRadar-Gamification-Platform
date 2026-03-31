@@ -19,9 +19,16 @@ import type {
 import {
   DEFICIT_AREA_LABELS,
   DEFICIT_AREA_COLORS,
+  DEFICIT_AREA_MAP_NAMES,
+  DEFICIT_AREAS_ALL,
   DYSLEXIA_TYPE_LABELS,
   SEVERITY_LABELS,
 } from "@/types";
+import {
+  HIDDEN_ADVENTURE_GAME_IDS,
+  normalizeAdventureWorlds,
+  sanitizeSuggestedAdventureWorlds,
+} from "@/lib/adventure-worlds";
 import ProgressBar from "@/components/ProgressBar";
 import {
   Map,
@@ -36,29 +43,6 @@ import {
   GripVertical,
   Gamepad2,
 } from "lucide-react";
-
-const HIDDEN_GAME_IDS = new Set([
-  "castle_challenge",
-  "dungeon_forest",
-  "dungeon_beach",
-  "dungeon_3stage",
-]);
-
-function normalizeAdventureWorlds(worlds: AdventureWorld[]): AdventureWorld[] {
-  const normalized: AdventureWorld[] = [];
-  for (const world of worlds) {
-    const uniqueIds = Array.from(new Set((world.game_ids || []).filter(Boolean))).filter(
-      (id) => !HIDDEN_GAME_IDS.has(id)
-    );
-    if (uniqueIds.length === 0) continue;
-    normalized.push({
-      ...world,
-      world_number: normalized.length + 1,
-      game_ids: uniqueIds,
-    });
-  }
-  return normalized;
-}
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -89,6 +73,8 @@ export default function StudentDetailPage() {
   const [expandedWorld, setExpandedWorld] = useState<number | null>(null);
   const [availableGamesCache, setAvailableGamesCache] = useState<Record<string, AvailableGameForArea[]>>({});
   const [adventureReasoning, setAdventureReasoning] = useState<string[]>([]);
+  const [suggestError, setSuggestError] = useState("");
+  const [areaPick, setAreaPick] = useState("");
   const [savingDiagnostic, setSavingDiagnostic] = useState(false);
   const [diagnosticDraft, setDiagnosticDraft] = useState<DiagnosticInfo>({
     dyslexia_type: "unspecified",
@@ -205,13 +191,30 @@ export default function StudentDetailPage() {
   const handleSuggestAdventure = async () => {
     if (!student) return;
     setSuggesting(true);
+    setSuggestError("");
     try {
       const result = await api.suggestAdventure({ student_id: studentId });
       setSuggestion(result);
-      setAdventureWorlds(result.suggested_worlds);
+      const sanitized = sanitizeSuggestedAdventureWorlds(
+        result.suggested_worlds,
+        student.age,
+        games
+      );
+      if (sanitized.length === 0) {
+        setSuggestError(
+          "The suggestion had no valid exercises for this child's age. Add worlds manually or ensure the game catalog loaded."
+        );
+        setAdventureWorlds([]);
+        setAdventureReasoning(result.reasoning);
+        return;
+      }
+      setAdventureWorlds(sanitized);
       setAdventureReasoning(result.reasoning);
     } catch (err) {
       console.error("Failed to get suggestion:", err);
+      setSuggestError(
+        err instanceof Error ? err.message : "Could not generate adventure. Try again or add worlds manually."
+      );
     } finally {
       setSuggesting(false);
     }
@@ -244,7 +247,7 @@ export default function StudentDetailPage() {
       } else {
         const created = await api.createAdventure({
           student_id: studentId,
-          created_by: "teacher",
+          created_by: user?.role === "teacher" ? "teacher" : user?.role === "guardian" ? "guardian" : "teacher",
           title: `${student.name}'s Adventure`,
           worlds: normalizedWorlds,
           theme_config: themeConfig,
@@ -281,7 +284,7 @@ export default function StudentDetailPage() {
       const result = await api.getGamesForArea(area, student.age, severity);
       setAvailableGamesCache((prev) => ({
         ...prev,
-        [area]: result.filter((g) => !HIDDEN_GAME_IDS.has(g.id)),
+        [area]: result.filter((g) => !HIDDEN_ADVENTURE_GAME_IDS.has(g.id)),
       }));
     } catch {
       // fallback
@@ -310,23 +313,6 @@ export default function StudentDetailPage() {
   };
 
   const addWorld = (area: string) => {
-    const WORLD_NAMES: Record<string, string> = {
-      phonological_awareness: "Sound Kingdom",
-      rapid_naming: "Speed Valley",
-      working_memory: "Memory Mountains",
-      visual_processing: "Vision Forest",
-      reading_fluency: "Fluency River",
-      comprehension: "Story Castle",
-    };
-    const WORLD_COLORS: Record<string, string> = {
-      phonological_awareness: "#6366f1",
-      rapid_naming: "#f59e0b",
-      working_memory: "#8b5cf6",
-      visual_processing: "#10b981",
-      reading_fluency: "#3b82f6",
-      comprehension: "#ef4444",
-    };
-
     if (adventureWorlds.some((w) => w.deficit_area === area)) return;
 
     setAdventureWorlds((prev) => [
@@ -334,23 +320,14 @@ export default function StudentDetailPage() {
       {
         deficit_area: area,
         world_number: prev.length + 1,
-        world_name: WORLD_NAMES[area] || area,
-        color: WORLD_COLORS[area] || "#6366f1",
+        world_name: DEFICIT_AREA_MAP_NAMES[area as keyof typeof DEFICIT_AREA_MAP_NAMES] || area,
+        color: DEFICIT_AREA_COLORS[area as keyof typeof DEFICIT_AREA_COLORS] || "#6366f1",
         game_ids: [],
       },
     ]);
   };
 
-  const ALL_DEFICIT_AREAS = [
-    "phonological_awareness",
-    "rapid_naming",
-    "working_memory",
-    "visual_processing",
-    "reading_fluency",
-    "comprehension",
-  ];
-
-  const unusedAreas = ALL_DEFICIT_AREAS.filter(
+  const unusedAreas = DEFICIT_AREAS_ALL.filter(
     (a) => !adventureWorlds.some((w) => w.deficit_area === a)
   );
 
@@ -967,18 +944,26 @@ export default function StudentDetailPage() {
             </div>
 
             {/* AI Suggestion */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSuggestAdventure}
-                disabled={suggesting}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#475093] to-[#303FAE] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                <Wand2 size={15} />
-                {suggesting ? "Analyzing profile..." : adventure ? "Re-generate with AI" : "Generate with AI"}
-              </button>
-              <span className="text-[11px] text-neutral-500">
-                AI analyzes dyslexia type, severity, age, and interests to recommend worlds &amp; exercises
-              </span>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleSuggestAdventure}
+                  disabled={suggesting || games.length === 0}
+                  title={games.length === 0 ? "Game catalog still loading" : undefined}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#475093] to-[#303FAE] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  <Wand2 size={15} />
+                  {suggesting ? "Analyzing profile..." : adventure ? "Re-generate with AI" : "Generate with AI"}
+                </button>
+                <span className="text-[11px] text-neutral-500">
+                  AI analyzes dyslexia type, severity, age, and interests to recommend worlds &amp; exercises (IDs are checked against the real game list).
+                </span>
+              </div>
+              {suggestError && (
+                <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-950">
+                  {suggestError}
+                </div>
+              )}
             </div>
           </SurfaceCard>
 
@@ -1121,20 +1106,54 @@ export default function StudentDetailPage() {
                 );
               })}
 
-              {/* Add World */}
+              {/* Add World — dropdown uses same canonical list as backend (`DEFICIT_AREAS_ALL`) */}
               {unusedAreas.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-neutral-500">Add world:</span>
-                  {unusedAreas.map((area) => (
-                    <button
-                      key={area}
-                      onClick={() => addWorld(area)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors"
+                <div className="flex flex-col gap-2 rounded-xl border border-dashed border-[#CDCDCD] bg-neutral-50/50 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="add-world-select" className="text-xs font-medium text-neutral-600">
+                      Add world
+                    </label>
+                    <select
+                      id="add-world-select"
+                      value={areaPick}
+                      onChange={(e) => setAreaPick(e.target.value)}
+                      className="h-9 min-w-[min(100%,220px)] max-w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#475093]/25"
                     >
-                      <Plus size={12} />
-                      {DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS] || area}
+                      <option value="">Choose skill area…</option>
+                      {unusedAreas.map((area) => (
+                        <option key={area} value={area}>
+                          {DEFICIT_AREA_LABELS[area]}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!areaPick}
+                      onClick={() => {
+                        if (areaPick) {
+                          addWorld(areaPick);
+                          setAreaPick("");
+                        }
+                      }}
+                      className="h-9 px-3 rounded-lg text-xs font-semibold bg-[#475093] text-white hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      Add
                     </button>
-                  ))}
+                  </div>
+                  <p className="text-[10px] text-neutral-500">Quick add:</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {unusedAreas.map((area) => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => addWorld(area)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors bg-white"
+                      >
+                        <Plus size={12} />
+                        {DEFICIT_AREA_LABELS[area]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1148,19 +1167,50 @@ export default function StudentDetailPage() {
               </div>
               <h3 className="text-base font-semibold text-[#303030] mb-1">No Adventure Map Yet</h3>
               <p className="text-sm text-neutral-500 mb-4 max-w-sm mx-auto">
-                Click &quot;Generate with AI&quot; to create a personalized adventure based on this student&apos;s profile, or manually add worlds below.
+                Use &quot;Generate with AI&quot; for a draft map, or add worlds with the selector below. Exercises are always validated against the live game catalog for this child&apos;s age.
               </p>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {ALL_DEFICIT_AREAS.map((area) => (
-                  <button
-                    key={area}
-                    onClick={() => addWorld(area)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors"
+              <div className="flex flex-col items-stretch gap-3 max-w-sm mx-auto w-full">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <select
+                    value={areaPick}
+                    onChange={(e) => setAreaPick(e.target.value)}
+                    className="h-10 flex-1 min-w-[200px] rounded-lg border border-neutral-200 bg-white px-3 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#475093]/25"
                   >
-                    <Plus size={12} />
-                    {DEFICIT_AREA_LABELS[area as keyof typeof DEFICIT_AREA_LABELS]}
+                    <option value="">Choose skill area…</option>
+                    {DEFICIT_AREAS_ALL.map((area) => (
+                      <option key={area} value={area}>
+                        {DEFICIT_AREA_LABELS[area]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!areaPick || adventureWorlds.some((w) => w.deficit_area === areaPick)}
+                    onClick={() => {
+                      if (areaPick) {
+                        addWorld(areaPick);
+                        setAreaPick("");
+                      }
+                    }}
+                    className="h-10 px-4 rounded-lg text-xs font-semibold bg-[#475093] text-white hover:opacity-90 disabled:opacity-40"
+                  >
+                    Add world
                   </button>
-                ))}
+                </div>
+                <p className="text-[10px] text-neutral-400 text-center">Or quick add</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {DEFICIT_AREAS_ALL.map((area) => (
+                    <button
+                      key={area}
+                      type="button"
+                      onClick={() => addWorld(area)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-dashed border-[#CDCDCD] text-[#777] hover:border-[#475093] hover:text-[#475093] transition-colors"
+                    >
+                      <Plus size={12} />
+                      {DEFICIT_AREA_LABELS[area]}
+                    </button>
+                  ))}
+                </div>
               </div>
             </SurfaceCard>
           )}
