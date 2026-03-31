@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useAuth } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import ParentTopbar from "@/components/ParentTopbar";
@@ -13,6 +14,7 @@ const FULLSCREEN_PATHS = ["/login", "/register", "/forgot-password", "/reset-pas
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn } = useAuth();
+  const { status: sessionStatus } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -77,7 +79,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [isLoggedIn, user, pathname, router, isPublic]);
 
-  // Show nothing while redirecting
+  // Avoid blank screen: server middleware may see JWT before client session hydrates.
+  if (!isPublic && sessionStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F5F5F5]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#FF5A39] border-t-transparent" />
+      </div>
+    );
+  }
+
   if (!isLoggedIn && !isPublic) {
     return null;
   }

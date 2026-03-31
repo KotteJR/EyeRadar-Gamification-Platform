@@ -1,21 +1,22 @@
 import { getSession } from "next-auth/react";
+import {
+  BEARER_CACHE_TTL_MS,
+  clearBearerTokenCache,
+  readBearerCache,
+  writeBearerCache,
+} from "@/lib/bearer-cache";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 const API_ROOT = API_BASE.replace(/\/api\/v1$/, "");
-const SESSION_CACHE_TTL_MS = 30_000;
 
-let cachedBearerToken = "";
-let cachedAtMs = 0;
-
-function clearBearerTokenCache() {
-  cachedBearerToken = "";
-  cachedAtMs = 0;
-}
+/** Re-export for login/logout flows. */
+export { clearBearerTokenCache };
 
 async function getBearerToken(forceRefresh = false): Promise<string> {
   if (forceRefresh) clearBearerTokenCache();
   const now = Date.now();
-  if (cachedBearerToken && now - cachedAtMs < SESSION_CACHE_TTL_MS) {
+  const { token: cachedBearerToken, at: cachedAtMs } = readBearerCache();
+  if (cachedBearerToken && now - cachedAtMs < BEARER_CACHE_TTL_MS) {
     return cachedBearerToken;
   }
 
@@ -29,9 +30,8 @@ async function getBearerToken(forceRefresh = false): Promise<string> {
     ((session as unknown as { user?: { accessToken?: string } })?.user
       ?.accessToken ?? "");
 
-  cachedBearerToken = bearerToken || "";
-  cachedAtMs = now;
-  return cachedBearerToken;
+  writeBearerCache(bearerToken || "");
+  return bearerToken || "";
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;

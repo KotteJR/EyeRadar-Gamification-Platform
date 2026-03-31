@@ -39,7 +39,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
+        <SessionProvider
+          refetchOnWindowFocus
+          refetchWhenOffline={false}
+          refetchInterval={60}
+        >
           <AuthProvider>
             <AppShell>{children}</AppShell>
           </AuthProvider>

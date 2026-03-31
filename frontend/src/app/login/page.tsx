@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut } from "next-auth/react";
+import { clearBearerTokenCache } from "@/lib/api";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +22,7 @@ export default function LoginPage() {
     try {
       // Ensure we are not reusing an existing session when switching users.
       await signOut({ redirect: false });
+      clearBearerTokenCache();
       const result = await signIn("credentials", {
         username,
         password,

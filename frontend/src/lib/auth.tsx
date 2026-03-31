@@ -21,7 +21,7 @@ import {
   useMemo,
 } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { api } from "@/lib/api";
+import { api, clearBearerTokenCache } from "@/lib/api";
 import type { AvatarConfig } from "@/components/Avatar";
 import { DEFAULT_AVATAR } from "@/components/Avatar";
 
@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const idToken = session?.idToken;
     await signOut({ redirect: false });
+    clearBearerTokenCache();
 
     const redirectUri =
       typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";

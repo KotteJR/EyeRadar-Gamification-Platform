@@ -16,6 +16,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
+import { clearBearerTokenCache } from "@/lib/bearer-cache";
 
 const REFRESH_SKEW_SECONDS = 30;
 const refreshInFlight = new Map<string, Promise<Record<string, unknown>>>();
@@ -97,6 +98,26 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  /**
+   * Production behind Railway / reverse proxy: required so callback URLs and cookies resolve.
+   * Also set AUTH_TRUST_HOST=true in env (Auth.js reads it; explicit here for clarity).
+   */
+  trustHost: true,
+  /**
+   * Long-lived app session cookie; access tokens still expire per Keycloak but refresh
+   * runs in jwt callback. Short NextAuth maxAge is a common cause of "logged out every few minutes"
+   * while Keycloak SSO is still valid — see Auth.js session vs token lifetime notes.
+   */
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 60,
+  },
+  events: {
+    async signOut() {
+      clearBearerTokenCache();
+    },
+  },
   // Prefer AUTH_* vars, but allow NEXT_PUBLIC_* fallbacks to reduce setup friction.
   // This keeps server-side auth config aligned with client-side issuer/client-id usage.
   providers: [
