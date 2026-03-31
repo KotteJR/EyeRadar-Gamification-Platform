@@ -3,13 +3,11 @@
 import { signIn, signOut } from "next-auth/react";
 import { clearBearerTokenCache } from "@/lib/api";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,10 +27,12 @@ export default function LoginPage() {
         redirect: false,
         callbackUrl: "/",
       });
-      if (!result || result.error) {
+      if (!result?.ok) {
         setError("Invalid username or password. Please try again.");
       } else {
-        router.push(result.url ?? "/");
+        // Full navigation so SessionProvider reads the new session cookies. Client-only
+        // router.push can leave useSession stale and AppShell may redirect back to /login.
+        window.location.assign(result.url ?? "/");
       }
     } catch {
       setError("Something went wrong. Please try again.");
