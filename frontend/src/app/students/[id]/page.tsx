@@ -956,7 +956,7 @@ export default function StudentDetailPage() {
                   {suggesting ? "Analyzing profile..." : adventure ? "Re-generate with AI" : "Generate with AI"}
                 </button>
                 <span className="text-[11px] text-neutral-500">
-                  AI analyzes dyslexia type, severity, age, and interests to recommend worlds &amp; exercises (IDs are checked against the real game list).
+                  Picks from the six fixed skill worlds and assigns catalog exercise IDs per world for this child&apos;s age (validated on the server).
                 </span>
               </div>
               {suggestError && (

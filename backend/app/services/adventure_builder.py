@@ -1,14 +1,12 @@
 """
-Adventure Builder Service — creates personalized adventure maps for students.
+Adventure Builder Service — personalized adventure maps for students.
 
-Two modes:
-1. AI mode (GPT-4o): Full clinical reasoning using student profile + assessment data.
-   Activated automatically when OPENAI_API_KEY is set.
-2. Template mode: Rule-based fallback when OpenAI is unavailable.
+1. AI mode (OPENAI_API_KEY set): model only chooses (a) which fixed worlds appear and in what order,
+   and (b) which catalog game ids (levels) go in each world. World titles/colors are never model-authored.
+2. Template mode: rule-based fallback when AI is unavailable.
 
-Environment variables:
-  OPENAI_API_KEY       — enables AI mode (same key used by the rest of the app)
-  ADVENTURE_AI_MODEL   — model to use for adventure generation (default: gpt-4o)
+Environment:
+  OPENAI_API_KEY, ADVENTURE_AI_MODEL (default gpt-4o)
 """
 
 import json
@@ -25,9 +23,8 @@ from app.models_enhanced import (
     DYSLEXIA_TYPE_PRIORITIES,
     SEVERITY_EXCLUSIONS,
     DYSLEXIA_TYPE_GAME_PREFERENCES,
-    get_age_group,
 )
-from app.games.game_definitions import get_all_games, get_games_by_area
+from app.games.game_definitions import get_all_games, get_game, get_games_by_area
 from app.models import DeficitArea
 
 logger = logging.getLogger(__name__)
@@ -36,271 +33,12 @@ logger = logging.getLogger(__name__)
 
 ADVENTURE_AI_MODEL = os.getenv("ADVENTURE_AI_MODEL", "gpt-4o")
 
-_SYSTEM_PROMPT = """You are an expert educational psychologist and dyslexia intervention specialist \
-with 20+ years of clinical experience designing evidence-based personalized learning programs for \
-children with dyslexia across all age groups and severity levels.
+# Dungeon/recap games — not assignable via the adventure builder (same as API normalization).
+_BUILDER_EXCLUDED_GAME_IDS = frozenset(
+    {"castle_challenge", "dungeon_forest", "dungeon_beach", "dungeon_3stage"}
+)
 
-Your deep expertise includes:
-- All dyslexia subtypes: phonological (~75% of cases), surface, rapid naming, visual, double deficit, mixed
-- Evidence-based interventions: Orton-Gillingham, Wilson Reading System, RAVE-O, PHAST, multisensory instruction
-- Vygotsky's Zone of Proximal Development — sequencing tasks just beyond current ability
-- Motivational design for children with learning differences: interest-based hooks, scaffolding, gamification
-- Co-occurring conditions: ADHD (attention management), Dysgraphia (motor load), Dyscalculia (number cognition)
-- Interpreting eye-tracking diagnostic data (fixation duration, regression rates, words per minute)
-- Age-appropriate intervention sequencing: younger children need phonological foundations first, \
-  older children benefit more from fluency automaticity and comprehension strategies
-
-DYSLEXIA SUBTYPE INTERVENTION PRIORITIES:
-- Phonological (most common): Core deficit in phoneme awareness and grapheme-phoneme mapping. \
-  PRIORITY: phonological_awareness first, then reading_fluency, then working_memory
-- Surface: Difficulty with orthographic whole-word recognition. \
-  PRIORITY: reading_fluency, rapid_naming, then phonological_awareness
-- Rapid Naming: Slow automatic retrieval of verbal labels. \
-  PRIORITY: rapid_naming, phonological_awareness, then reading_fluency
-- Visual: Visual-spatial processing, letter orientation. \
-  PRIORITY: visual_processing, working_memory, then reading_fluency
-- Double Deficit: Both phonological + rapid naming. \
-  PRIORITY: phonological_awareness AND rapid_naming equally, then reading_fluency
-- Mixed: Multiple deficit types. Balanced across phonological, rapid_naming, reading_fluency, working_memory
-- Unspecified: Evidence-based balanced intervention — include foundational phonological work \
-  plus fluency and comprehension
-
-SEVERITY-BASED WORLD AND GAME COUNT:
-- Mild (severity 1-2/5): 5-6 worlds, 5 games per world — broad intervention
-- Moderate (severity 3/5): 4-5 worlds, 4 games per world — focused intervention
-- Severe (severity 4-5/5): 2-3 worlds, 3 games per world — intensive narrow focus
-
-WORLD SEQUENCING PRINCIPLES:
-1. Always start with the most foundational deficit area first (phonological before fluency before comprehension)
-2. Working memory and visual processing are support systems — include when severity >= 3/5 in that area
-3. For severe cases: narrow focus — only the 2-3 most critical areas
-4. For mild/moderate: broader coverage builds a more complete reading profile
-5. Avoid cognitive overload — if ADHD is present, fewer worlds, more focused worlds
-
-GAME SELECTION PRINCIPLES:
-1. Do NOT repeat the same game mechanic in the same world
-2. Balance speed-based vs. untimed games (anxious learners need some untimed options)
-3. If ADHD is present: prefer shorter, more engaging games; avoid long text-heavy games
-4. If Dysgraphia is present: minimize text-input games (backward_spell, word_ladder)
-5. Sequence from concrete/accessible to abstract within each world
-6. Younger students (age 4-7): sound-based, visual, and kinesthetic games only
-7. Older students (age 11+): can include text-input and dual-task games
-8. CRITICAL: Only use game IDs from the provided catalog — never invent IDs
-
-EYE-TRACKING DATA INTERPRETATION:
-- WPM < 60 (ages 8-10) or < 80 (ages 11+): Reading fluency is a critical priority
-- Fixation duration > 250ms: Visual processing and working memory need support
-- Regression rate > 15%: Phonological decoding and comprehension are breaking down
-- Overall severity 4-5: Reduce worlds to 2-3, intensive scaffolding, max 3 games per world
-
-THEME PERSONALIZATION:
-Match the student's primary interest to a color palette and decoration style that will \
-motivate engagement. Children with dyslexia especially benefit from interest-based motivation \
-as it counteracts the frustration of effortful reading tasks."""
-
-
-async def suggest_adventure_ai(
-    student: Dict[str, Any],
-    dyslexia_type_override: Optional[str] = None,
-    severity_override: Optional[str] = None,
-    age_override: Optional[int] = None,
-) -> Optional[Dict[str, Any]]:
-    """
-    Use GPT-4o to generate a clinically-reasoned, personalized adventure map.
-    Returns None if OpenAI is unavailable — caller falls back to suggest_adventure().
-    """
-    from app.services.ollama_client import OPENAI_API_KEY, OPENAI_BASE_URL
-
-    if not OPENAI_API_KEY:
-        return None
-
-    diag = student.get("diagnostic") or {}
-    age = age_override or student.get("age", 8)
-    interests = student.get("interests", [])
-    assessment = student.get("assessment")
-
-    dyslexia_type = dyslexia_type_override or diag.get("dyslexia_type", "unspecified")
-    severity = severity_override or diag.get("severity_level", "moderate")
-
-    # Build age-filtered game catalog text
-    all_games = get_all_games()
-    games_by_area: Dict[str, list] = {}
-    for game in all_games.values():
-        area = game.deficit_area.value
-        if game.age_range_min <= age <= game.age_range_max:
-            games_by_area.setdefault(area, []).append({
-                "id": game.id,
-                "name": game.name,
-                "description": game.description,
-                "mechanics": game.mechanics,
-            })
-
-    games_catalog_text = ""
-    for area, games in sorted(games_by_area.items()):
-        label = area.upper().replace("_", " ")
-        games_catalog_text += f"\n{label} ({len(games)} games available for age {age}):\n"
-        for g in games:
-            games_catalog_text += (
-                f"  [{g['id']}] {g['name']} — {g['description']} | Mechanic: {g['mechanics']}\n"
-            )
-
-    # Per-area severity lines
-    area_sev_keys = [
-        ("phonological_awareness", "phonological_severity"),
-        ("rapid_naming", "rapid_naming_severity"),
-        ("working_memory", "working_memory_severity"),
-        ("visual_processing", "visual_processing_severity"),
-        ("reading_fluency", "reading_fluency_severity"),
-        ("comprehension", "comprehension_severity"),
-    ]
-    per_area_lines = "\n".join(
-        f"  {area}: {diag.get(diag_key, 'not set')}/5"
-        for area, diag_key in area_sev_keys
-    )
-
-    # Assessment section
-    assessment_section = "(No EyeRadar assessment data — use diagnostic profile only)"
-    if assessment:
-        rm = assessment.get("reading_metrics", {})
-        assessment_section = (
-            f"EyeRadar Eye-Tracking Assessment:\n"
-            f"  Overall Severity: {assessment.get('overall_severity', 'N/A')}/5\n"
-            f"  Words Per Minute: {rm.get('words_per_minute', 'N/A')}\n"
-            f"  Fixation Duration: {rm.get('fixation_duration_ms', 'N/A')} ms (norm ~200ms)\n"
-            f"  Fixations Per Line: {rm.get('fixation_count_per_line', 'N/A')}\n"
-            f"  Regression Rate: {rm.get('regression_rate', 'N/A')}% (norm <10%)\n"
-            f"  Per-Area Deficit Scores from Eye-Tracking:\n"
-            f"{json.dumps(assessment.get('deficits', {}), indent=4)}"
-        )
-
-    user_prompt = f"""Design a personalized adventure map for this student. Analyze every data point.
-
-STUDENT PROFILE
-Name: {student.get('name', 'Student')} | Age: {age} | Grade: {student.get('grade', 'N/A')} | Language: {student.get('language', 'en')}
-Interests: {', '.join(interests) if interests else 'None specified'}
-Dyslexia Type: {dyslexia_type} | Overall Severity: {severity}
-Co-occurring: ADHD={diag.get('has_adhd', False)}, Dyscalculia={diag.get('has_dyscalculia', False)}, Dysgraphia={diag.get('has_dysgraphia', False)}
-Specialist Notes: {diag.get('notes') or 'None'}
-
-PER-AREA SEVERITY (1=mild, 5=severe):
-{per_area_lines}
-
-{assessment_section}
-
-AVAILABLE GAMES FOR AGE {age}:
-{games_catalog_text}
-
-WORLD METADATA (use these exact values):
-phonological_awareness → world_name: "Sound Kingdom",    color: "#6366f1"
-rapid_naming           → world_name: "Speed Valley",     color: "#f59e0b"
-working_memory         → world_name: "Memory Mountains", color: "#8b5cf6"
-visual_processing      → world_name: "Vision Forest",    color: "#10b981"
-reading_fluency        → world_name: "Fluency River",    color: "#3b82f6"
-comprehension          → world_name: "Story Castle",     color: "#ef4444"
-
-THEME OPTIONS:
-color_palette: "warm"|"cosmic"|"nature"|"vibrant"|"energetic"|"rainbow"|"forest"|"aquatic"|"tech"|"magical"|"default"
-decoration_style: "prehistoric"|"space"|"wildlife"|"musical"|"athletic"|"creative"|"nature"|"underwater"|"futuristic"|"fantasy"|"culinary"|"racing"|"heroic"|"default"
-
-Respond ONLY with valid JSON:
-{{
-  "worlds": [
-    {{
-      "deficit_area": "phonological_awareness",
-      "world_number": 1,
-      "world_name": "Sound Kingdom",
-      "color": "#6366f1",
-      "game_ids": ["sound_safari", "rhyme_time_race", "phoneme_blender"]
-    }}
-  ],
-  "reasoning": [
-    "Profile analysis: [specific observations about this student's data]",
-    "Priority selection: [why these areas in this order]",
-    "World 1 (Sound Kingdom): [clinical justification referencing actual scores]",
-    "World 1 games: [why these specific games suit this student]"
-  ],
-  "theme_config": {{
-    "primary_interest": "ocean",
-    "color_palette": "aquatic",
-    "decoration_style": "underwater"
-  }}
-}}"""
-
-    try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            resp = await client.post(
-                f"{OPENAI_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENAI_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": ADVENTURE_AI_MODEL,
-                    "messages": [
-                        {"role": "system", "content": _SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "temperature": 0.35,
-                    "max_tokens": 3500,
-                    "response_format": {"type": "json_object"},
-                },
-            )
-            resp.raise_for_status()
-            raw = resp.json()["choices"][0]["message"]["content"].strip()
-    except httpx.TimeoutException:
-        logger.warning("GPT-4o adventure suggestion timed out")
-        return None
-    except Exception as exc:
-        logger.warning("GPT-4o adventure suggestion failed: %s", exc)
-        return None
-
-    try:
-        result = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        logger.warning("GPT-4o returned invalid JSON for adventure: %s", exc)
-        return None
-
-    try:
-        worlds: List[AdventureWorld] = []
-        for w in result.get("worlds", []):
-            worlds.append(AdventureWorld(
-                deficit_area=w["deficit_area"],
-                world_number=w["world_number"],
-                world_name=w["world_name"],
-                color=w["color"],
-                game_ids=w["game_ids"],
-            ))
-
-        if not worlds:
-            logger.warning("GPT-4o returned no worlds — falling back to template")
-            return None
-
-        td = result.get("theme_config", {})
-        theme_config = AdventureThemeConfig(
-            primary_interest=td.get("primary_interest", interests[0].lower() if interests else ""),
-            color_palette=td.get("color_palette", "default"),
-            decoration_style=td.get("decoration_style", "nature"),
-        )
-
-        reasoning = result.get("reasoning") or [
-            f"GPT-4o generated adventure map for {student.get('name', 'student')}"
-        ]
-
-        logger.info(
-            "GPT-4o generated %d worlds for student %s",
-            len(worlds), student.get("id", "unknown"),
-        )
-        return {
-            "suggested_worlds": worlds,
-            "reasoning": reasoning,
-            "theme_config": theme_config,
-        }
-
-    except Exception as exc:
-        logger.warning("Failed to parse GPT-4o adventure response: %s", exc)
-        return None
-
-# World metadata
+# Only these worlds exist on the map; the model picks a subset + order — never invents worlds.
 WORLD_NAMES: Dict[str, str] = {
     "phonological_awareness": "Sound Kingdom",
     "rapid_naming": "Speed Valley",
@@ -318,6 +56,279 @@ WORLD_COLORS: Dict[str, str] = {
     "reading_fluency": "#3b82f6",
     "comprehension": "#ef4444",
 }
+
+FIXED_WORLD_DEFICIT_AREAS: tuple[str, ...] = tuple(WORLD_NAMES.keys())
+
+ADVENTURE_AI_SYSTEM_PROMPT = """You are a routing assistant for a reading intervention app.
+
+The app has exactly six fixed worlds (skill areas). Each world has a fixed display name and color — you do not invent worlds or rename them.
+
+Your job is only:
+1) Choose which of those six worlds appear on this student's map, in what order (3–6 worlds, each deficit_area at most once). ALWAYS CHOOSE 3 WORLDS AT LEAST!!!! 3 OR MORE!!! NEVER LESS THAN 3!!!! THE MORE THE BETTER!!!! FOLLOW STRICTLY WHAT DEFICIT AREAS THE CHILD HAS AND BY THIS CHOOSE WORLDS AND LEVELS!!! IMPORTNAT AT LEAST 3 BUT MORE IS ALWAYS BETTER!!!! BUT DONT SUGGEST LIKE A PSEUDO-SCIENTIEST A WORLD THAT THE CHILD DOES NOT NEED OR HAS A DEFICIT AREA IN!!!!!!!!!!
+2) For each chosen world, choose !!!!!!5+!!!!!! exercise levels by listing game ids from the allowed list for that world (the user message includes JSON: allowed ids per world for this student's age).
+
+Rules:
+- Output JSON only. Each world object must have exactly "deficit_area" and "game_ids".
+- deficit_area must be one of the keys from FIXED_WORLDS in the user message.
+- Every id in game_ids must appear in GAMES_BY_AREA[deficit_area] in the user message — copy strings exactly.
+- Do not output world_name, color, or new game names — the server fills those from deficit_area.
+- Prefer higher per-area severity and dyslexia profile when ordering worlds and picking exercises; avoid overloading ADHD learners with many worlds."""
+
+
+def _sanitize_ai_worlds_to_catalog(worlds: List[AdventureWorld], age: int) -> List[AdventureWorld]:
+    """
+    Keep only game ids that exist in games.json, match the world's deficit area, fit age,
+    and are allowed in the builder. If a world has no valid picks left, backfill from catalog.
+    """
+    out: List[AdventureWorld] = []
+    for w in worlds:
+        try:
+            area_enum = DeficitArea(w.deficit_area)
+        except ValueError:
+            logger.warning("Skipping world with unknown deficit_area: %s", w.deficit_area)
+            continue
+
+        seen: set[str] = set()
+        valid_ids: List[str] = []
+        for gid in w.game_ids or []:
+            if gid in _BUILDER_EXCLUDED_GAME_IDS:
+                continue
+            game = get_game(gid)
+            if game is None or game.deficit_area != area_enum:
+                continue
+            if not (game.age_range_min <= age <= game.age_range_max):
+                continue
+            if gid in seen:
+                continue
+            seen.add(gid)
+            valid_ids.append(gid)
+
+        if not valid_ids:
+            pool = [
+                g
+                for g in get_games_by_area(area_enum)
+                if g.age_range_min <= age <= g.age_range_max and g.id not in _BUILDER_EXCLUDED_GAME_IDS
+            ]
+            if not pool:
+                logger.warning(
+                    "World %s: no valid catalog games after sanitization (age %s)",
+                    w.deficit_area,
+                    age,
+                )
+                continue
+            take = min(4, len(pool))
+            valid_ids = [pool[i].id for i in range(take)]
+
+        area_key = w.deficit_area
+        out.append(
+            AdventureWorld(
+                deficit_area=area_key,
+                world_number=len(out) + 1,
+                world_name=WORLD_NAMES.get(area_key, area_key.replace("_", " ").title()),
+                color=WORLD_COLORS.get(area_key, "#6366f1"),
+                game_ids=valid_ids,
+            )
+        )
+    return out
+
+
+def _allowed_game_ids_by_area_for_age(age: int) -> Dict[str, List[str]]:
+    """Catalog game ids per deficit area for this age (builder-eligible only)."""
+    by_area: Dict[str, List[str]] = {k: [] for k in FIXED_WORLD_DEFICIT_AREAS}
+    for game in get_all_games():
+        area = game.deficit_area.value
+        if area not in by_area:
+            continue
+        if game.id in _BUILDER_EXCLUDED_GAME_IDS:
+            continue
+        if game.age_range_min <= age <= game.age_range_max:
+            by_area[area].append(game.id)
+    return by_area
+
+
+async def suggest_adventure_ai(
+    student: Dict[str, Any],
+    dyslexia_type_override: Optional[str] = None,
+    severity_override: Optional[str] = None,
+    age_override: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Ask the model to pick worlds (from fixed six) and game_ids per world from allowed lists.
+    Returns None if OpenAI is unavailable or output is unusable — caller uses suggest_adventure().
+    """
+    from app.services.ollama_client import OPENAI_API_KEY, OPENAI_BASE_URL
+
+    if not OPENAI_API_KEY:
+        return None
+
+    diag = student.get("diagnostic") or {}
+    age = age_override or student.get("age", 8)
+    interests = student.get("interests", [])
+    assessment = student.get("assessment")
+
+    dyslexia_type = dyslexia_type_override or diag.get("dyslexia_type", "unspecified")
+    severity = severity_override or diag.get("severity_level", "moderate")
+
+    games_by_area_ids = _allowed_game_ids_by_area_for_age(age)
+    fixed_worlds_payload = {k: {"world_name": WORLD_NAMES[k], "color": WORLD_COLORS[k]} for k in FIXED_WORLD_DEFICIT_AREAS}
+
+    area_sev_keys = [
+        ("phonological_awareness", "phonological_severity"),
+        ("rapid_naming", "rapid_naming_severity"),
+        ("working_memory", "working_memory_severity"),
+        ("visual_processing", "visual_processing_severity"),
+        ("reading_fluency", "reading_fluency_severity"),
+        ("comprehension", "comprehension_severity"),
+    ]
+    per_area = {area: diag.get(key, None) for area, key in area_sev_keys}
+
+    student_context = {
+        "name": student.get("name", "Student"),
+        "age": age,
+        "grade": student.get("grade"),
+        "language": student.get("language", "en"),
+        "interests": interests,
+        "dyslexia_type": dyslexia_type,
+        "severity_level": severity,
+        "per_area_severity_1_to_5": per_area,
+        "has_adhd": diag.get("has_adhd", False),
+        "has_dyscalculia": diag.get("has_dyscalculia", False),
+        "has_dysgraphia": diag.get("has_dysgraphia", False),
+        "notes": diag.get("notes") or "",
+    }
+    if assessment:
+        student_context["eye_tracking_summary"] = {
+            "overall_severity": assessment.get("overall_severity"),
+            "reading_metrics": assessment.get("reading_metrics"),
+            "deficits": assessment.get("deficits"),
+        }
+
+    user_prompt = f"""Configure this student's adventure map.
+
+FIXED_WORLDS — you may ONLY use these deficit_area keys (each has a fixed map name and color; do not output names/colors):
+{json.dumps(fixed_worlds_payload, indent=2)}
+
+GAMES_BY_AREA — allowed game ids for age {age} (each id is one exercise level). game_ids MUST be copied from the list for that world only:
+{json.dumps(games_by_area_ids, indent=2)}
+
+STUDENT_CONTEXT (use to prioritize world order and which exercises):
+{json.dumps(student_context, indent=2, default=str)}
+
+THEME_CONFIG options:
+- color_palette: warm|cosmic|nature|vibrant|energetic|rainbow|forest|aquatic|tech|magical|default
+- decoration_style: prehistoric|space|wildlife|musical|athletic|creative|nature|underwater|futuristic|fantasy|culinary|racing|heroic|default
+
+Return JSON with this exact shape (worlds: 2–6 entries, unique deficit_area, 3–5 game_ids each when enough ids exist):
+{{
+  "worlds": [
+    {{ "deficit_area": "phonological_awareness", "game_ids": ["sound_safari", "rhyme_time_race"] }}
+  ],
+  "reasoning": ["short string", "..."],
+  "theme_config": {{
+    "primary_interest": "",
+    "color_palette": "default",
+    "decoration_style": "nature"
+  }}
+}}"""
+
+    try:
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            resp = await client.post(
+                f"{OPENAI_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": ADVENTURE_AI_MODEL,
+                    "messages": [
+                        {"role": "system", "content": ADVENTURE_AI_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.15,
+                    "max_tokens": 2800,
+                    "response_format": {"type": "json_object"},
+                },
+            )
+            resp.raise_for_status()
+            raw = resp.json()["choices"][0]["message"]["content"].strip()
+    except httpx.TimeoutException:
+        logger.warning("Adventure AI suggestion timed out")
+        return None
+    except Exception as exc:
+        logger.warning("Adventure AI suggestion failed: %s", exc)
+        return None
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        logger.warning("Adventure AI returned invalid JSON: %s", exc)
+        return None
+
+    try:
+        worlds: List[AdventureWorld] = []
+        seen_areas: set[str] = set()
+        for w in result.get("worlds", []):
+            if not isinstance(w, dict):
+                continue
+            area = w.get("deficit_area")
+            if not isinstance(area, str) or area not in WORLD_NAMES:
+                continue
+            if area in seen_areas:
+                continue
+            seen_areas.add(area)
+            gids = w.get("game_ids")
+            if not isinstance(gids, list):
+                gids = []
+            gids = [x for x in gids if isinstance(x, str)]
+            worlds.append(
+                AdventureWorld(
+                    deficit_area=area,
+                    world_number=len(worlds) + 1,
+                    world_name=WORLD_NAMES[area],
+                    color=WORLD_COLORS[area],
+                    game_ids=gids,
+                )
+            )
+
+        if not worlds:
+            logger.warning("Adventure AI returned no valid worlds — falling back to template")
+            return None
+
+        worlds = _sanitize_ai_worlds_to_catalog(worlds, age)
+        if not worlds:
+            logger.warning("Adventure AI worlds empty after catalog validation — falling back to template")
+            return None
+
+        td = result.get("theme_config") if isinstance(result.get("theme_config"), dict) else {}
+        theme_config = AdventureThemeConfig(
+            primary_interest=str(td.get("primary_interest", interests[0] if interests else "") or "").lower(),
+            color_palette=str(td.get("color_palette", "default") or "default"),
+            decoration_style=str(td.get("decoration_style", "nature") or "nature"),
+        )
+
+        reasoning = result.get("reasoning")
+        if not isinstance(reasoning, list):
+            reasoning = []
+        reasoning = [str(x) for x in reasoning if x]
+        if not reasoning:
+            reasoning = [f"Selected {len(worlds)} worlds and exercises from catalog for age {age}."]
+
+        logger.info(
+            "Adventure AI returned %d worlds for student %s",
+            len(worlds),
+            student.get("id", "unknown"),
+        )
+        return {
+            "suggested_worlds": worlds,
+            "reasoning": reasoning,
+            "theme_config": theme_config,
+        }
+
+    except Exception as exc:
+        logger.warning("Failed to parse adventure AI response: %s", exc)
+        return None
+
 
 # Interest → decoration style mapping
 INTEREST_THEME_MAP: Dict[str, Dict[str, str]] = {
