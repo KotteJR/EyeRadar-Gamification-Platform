@@ -25,6 +25,9 @@ MIN_SESSIONS_BEFORE_INCREASE = 3  # Warm-up protection
 RECENT_WEIGHT = 0.7
 HISTORY_WEIGHT = 0.3
 
+# Items (questions) per exercise session — single product default
+SESSION_ITEM_COUNT = 5
+
 
 # ─── Base Level Calculation ───────────────────────────────────────────────────
 
@@ -163,10 +166,10 @@ def calculate_difficulty_level(
 def calculate_session_parameters(difficulty_level: int) -> Dict:
     """
     Get session parameters based on difficulty level.
-    Returns item count, time limits, and hint availability.
+    Item count is fixed (SESSION_ITEM_COUNT); other params still scale with difficulty.
     """
     return {
-        "item_count": _clamp(8 + difficulty_level * 2, 10, 30),
+        "item_count": SESSION_ITEM_COUNT,
         "time_limit_seconds": max(5, 30 - difficulty_level * 2),
         "hints_available": max(0, 5 - difficulty_level // 2),
         "distractor_count": min(3, 1 + difficulty_level // 3),

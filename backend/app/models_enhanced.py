@@ -85,7 +85,7 @@ AGE_CONFIGURATIONS: Dict[AgeGroup, AgeConfiguration] = {
 # ─── Intervention profiles per severity ──────────────────────────────────────
 
 class InterventionProfile(BaseModel):
-    items_per_session: int = 15
+    items_per_session: int = 5
     starting_difficulty: int = 3
     max_difficulty: int = 10
     difficulty_increment: float = 0.3
@@ -101,19 +101,19 @@ class InterventionProfile(BaseModel):
 
 SEVERITY_PROFILES: Dict[SeverityLevel, InterventionProfile] = {
     SeverityLevel.MILD: InterventionProfile(
-        items_per_session=20, starting_difficulty=4, max_difficulty=10,
+        items_per_session=5, starting_difficulty=4, max_difficulty=10,
         difficulty_increment=0.4, difficulty_decrement=0.2,
         increase_threshold=0.80, decrease_threshold=0.55,
         show_hints=False, repeat_on_error=False, max_attempts_per_item=2,
     ),
     SeverityLevel.MODERATE: InterventionProfile(
-        items_per_session=15, starting_difficulty=3, max_difficulty=10,
+        items_per_session=5, starting_difficulty=3, max_difficulty=10,
         difficulty_increment=0.3, difficulty_decrement=0.2,
         increase_threshold=0.85, decrease_threshold=0.60,
         show_hints=True, repeat_on_error=True, max_attempts_per_item=3,
     ),
     SeverityLevel.SEVERE: InterventionProfile(
-        items_per_session=10, starting_difficulty=1, max_difficulty=7,
+        items_per_session=5, starting_difficulty=1, max_difficulty=7,
         difficulty_increment=0.2, difficulty_decrement=0.3,
         increase_threshold=0.90, decrease_threshold=0.65,
         show_hints=True, repeat_on_error=True, max_attempts_per_item=4,

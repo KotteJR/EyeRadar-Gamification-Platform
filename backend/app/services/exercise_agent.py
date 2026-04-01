@@ -20,9 +20,10 @@ from app.models_enhanced import (
     DYSLEXIA_TYPE_GAME_PREFERENCES,
     SEVERITY_EXCLUSIONS,
     SEVERITY_PROFILES,
-    get_age_group, get_age_config,
+    get_age_config,
 )
 from app.models import GameDefinition
+from app.services.adaptive_difficulty import SESSION_ITEM_COUNT
 
 logger = logging.getLogger(__name__)
 
@@ -250,14 +251,8 @@ class ExerciseSelectionAgent:
         return diff
 
     def _calc_items(self, age: int, severity: SeverityLevel) -> int:
-        profile = SEVERITY_PROFILES[severity]
-        base = profile.items_per_session
-        age_group = get_age_group(age)
-        if age_group.value == "preschool":
-            return max(5, int(base * 0.7))
-        elif age_group.value == "secondary":
-            return min(30, int(base * 1.2))
-        return base
+        """Fixed session length — same as classic path (adaptive_difficulty.SESSION_ITEM_COUNT)."""
+        return SESSION_ITEM_COUNT
 
     def _weighted_select(
         self, recs: List[GameRecommendation]
